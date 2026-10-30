@@ -1,0 +1,23 @@
+# ==========================================
+# Core Dependencies for Smart E-Mobility Hub
+# Python 3.10+
+# ==========================================
+
+# High-performance async ASGI web framework
+starlette>=0.36.0,<1.0.0
+
+# Production-grade ASGI web server implementation
+uvicorn[standard]>=0.28.0
+
+# Data validation and parsing using Python type hints
+pydantic>=2.6.0,<3.0.0
+
+# ==========================================
+# Optional / Testing & Development Utilities
+# ==========================================
+
+# HTTP client for Starlette TestClient & integration testing
+httpx>=0.27.0
+
+# Multipart form-data parser support
+python-multipart>=0.0.9

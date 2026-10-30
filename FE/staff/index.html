@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Smart E-Mobility - Ứng Dụng Hiện Trường & Bảo Vệ (Staff App)</title>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Staff Stylesheet -->
+  <link rel="stylesheet" href="css/staff.css">
+</head>
+<body>
+
+  <!-- Floating Role Switcher for Staff Demo -->
+  <div class="role-selector-floating">
+    <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Chuyển vai trò thử nghiệm:</div>
+    <select id="staffRoleSelect" onchange="StaffApp.switchRole(this.value)">
+      <option value="relocation">1. Nhân viên điều phối xe (Relocation - Ảnh 3, 4, 5)</option>
+      <option value="maintenance">2. Nhân viên bảo trì / Kỹ thuật (Maintenance - Ảnh 6, 7, 8, 9, 10)</option>
+      <option value="security">3. Bảo vệ Hub / Gửi xe cá nhân (Security Guard - Ảnh 11, 12, 13)</option>
+    </select>
+  </div>
+
+  <div class="staff-app-container">
+    
+    <!-- Top System Status Bar -->
+    <div class="mobile-status-bar">
+      <span>09:41</span>
+      <span>100% <i class="fa-solid fa-battery-full"></i></span>
+    </div>
+
+    <!-- Main Dynamic Viewport Container -->
+    <div class="staff-viewport" id="staffViewport">
+
+      <!-- ======================================================== -->
+      <!-- SECTION A: WORKFLOW ĐIỀU PHỐI (Wireframes 4, 3, 5)        -->
+      <!-- ======================================================== -->
+
+      <!-- 1. LỘ TRÌNH ĐIỀU CHUYỂN (Wireframe 4.jpg) -->
+      <section id="screen-reloc-route" class="staff-screen active">
+        <div class="screen-top-bar">
+          <button class="nav-back-btn" onclick="StaffApp.switchRole('relocation')"><i class="fa-solid fa-angle-left"></i></button>
+          <div class="top-bar-title-wrap">
+            <div class="sub-label">LỘ TRÌNH ĐIỀU CHUYỂN</div>
+            <div class="main-label">Hướng dẫn di chuyển</div>
+          </div>
+          <span class="tag-badge-pill">Nhiệm vụ #102</span>
+        </div>
+
+        <!-- Map Card with Suggested Route -->
+        <div class="staff-card" style="margin-bottom: 12px; padding: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 13px; font-weight: 800;">BẢN ĐỒ TUYẾN ĐƯỜNG GỢI Ý</span>
+            <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Đang điều hướng</span>
+          </div>
+
+          <!-- SVG Simulated Map -->
+          <div class="route-map-box">
+            <svg viewBox="0 0 360 160" style="width: 100%; height: 100%;">
+              <!-- Road network lines -->
+              <path d="M 20 40 L 340 40 M 20 120 L 340 120 M 80 10 L 80 150 M 280 10 L 280 150" stroke="#f1f5f9" stroke-width="6" />
+              <!-- Curved Route -->
+              <path d="M 60 40 Q 120 140 200 40 T 300 120" fill="none" stroke="#0f172a" stroke-width="4" stroke-linecap="round" />
+              
+              <!-- Source Hub Marker -->
+              <circle cx="60" cy="40" r="8" fill="#0f172a" />
+              <path d="M 60 48 L 52 64 L 68 64 Z" fill="#0f172a" />
+              <text x="35" y="24" font-size="10" font-weight="700" fill="#0f172a">HUB NGUỒN</text>
+
+              <!-- Destination Hub Marker -->
+              <circle cx="300" cy="120" r="8" fill="#0f172a" />
+              <path d="M 300 128 L 292 144 L 308 144 Z" fill="#0f172a" />
+              <text x="275" y="156" font-size="10" font-weight="700" fill="#0f172a">HUB ĐÍCH</text>
+
+              <!-- Route Distance Badge -->
+              <rect x="110" y="65" width="140" height="34" rx="6" fill="#ffffff" stroke="#e2e8f0" />
+              <text x="120" y="80" font-size="11" font-weight="800" fill="#0f172a">2,5 km · 10 phút</text>
+              <text x="120" y="93" font-size="9" fill="#64748b">Tuyến đường đề xuất</text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Handover Points Card -->
+        <div class="staff-card" style="margin-bottom: 12px; padding: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 12.5px; font-weight: 800;">ĐIỂM BÀN GIAO</span>
+            <span style="font-size: 11.5px; color: var(--text-muted);">Xe đạp điện</span>
+          </div>
+          <div class="handover-flow-row">
+            <div class="hub-flow-box">
+              <span class="hub-flow-sub">ĐI TỪ</span>
+              <strong class="hub-flow-title" id="relocFromHub">Hub KTX Khu A</strong>
+            </div>
+            <i class="fa-solid fa-arrow-right" style="color: var(--text-muted); font-size: 13px;"></i>
+            <div class="hub-flow-box">
+              <span class="hub-flow-sub">ĐI ĐẾN</span>
+              <strong class="hub-flow-title" id="relocToHub">Hub Ga Metro A</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 Metric Boxes -->
+        <div class="stats-3col-row" style="margin-bottom: 12px;">
+          <div class="stat-mini-box">
+            <div class="stat-number" id="relocVehicleCount">20</div>
+            <div class="stat-caption">Xe đang vận chuyển</div>
+          </div>
+          <div class="stat-mini-box">
+            <div class="stat-number" id="relocDistance">2,5 km</div>
+            <div class="stat-caption">Khoảng cách dự kiến</div>
+          </div>
+          <div class="stat-mini-box">
+            <div class="stat-number" id="relocDuration">10 phút</div>
+            <div class="stat-caption">Thời gian dự kiến</div>
+          </div>
+        </div>
+
+        <!-- Progress Card -->
+        <div class="staff-card" style="margin-bottom: 20px; padding: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 12.5px; font-weight: 800;">TIẾN ĐỘ ĐIỀU CHUYỂN</span>
+            <span style="font-size: 11px; color: var(--text-muted);">Đang cập nhật</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px;">
+            <span>Đã nhận và đang di chuyển</span>
+            <span id="relocProgressCount">12 / 20 xe</span>
+          </div>
+          <div class="progress-bar-rail">
+            <div class="progress-bar-fill" id="relocProgressBar" style="width: 60%;"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-muted); margin-top: 6px;">
+            <span id="relocRemainingText">8 xe còn lại tại Hub nguồn</span>
+            <span id="relocPercentText">60%</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <button class="btn-staff-primary" onclick="StaffApp.goToScreen('screen-reloc-handover')">
+          <span>Bắt đầu điều phối</span>
+        </button>
+        <button class="btn-staff-secondary" onclick="StaffApp.openRelocIncidentReport()">
+          <span>BÁO CÁO SỰ CỐ</span>
+        </button>
+      </section>
+
+      <!-- 2. XÁC NHẬN BÀN GIAO HẠ TẦNG (Wireframe 3.jpg) -->
+      <section id="screen-reloc-handover" class="staff-screen">
+        <div class="screen-top-bar">
+          <button class="nav-back-btn" onclick="StaffApp.goToScreen('screen-reloc-route')"><i class="fa-solid fa-angle-left"></i></button>
+          <div class="top-bar-title-wrap">
+            <div class="main-label">XÁC NHẬN BÀN GIAO HẠ TẦNG</div>
+          </div>
+          <span class="tag-badge-pill">Nhiệm vụ #102</span>
+        </div>
+
+        <!-- QR Camera Scanner Viewfinder -->
+        <div class="camera-scanner-frame" style="margin-bottom: 14px;">
+          <div style="font-size: 13px; font-weight: 800; text-align: left; margin-bottom: 24px;">CAMERA QUÉT MÃ QR</div>
+          <div class="qr-target-box">
+            <div class="qr-crosshair top-left"></div>
+            <div class="qr-crosshair top-right"></div>
+            <div class="qr-crosshair bottom-left"></div>
+            <div class="qr-crosshair bottom-right"></div>
+            <span style="font-size: 12px; font-weight: 700; color: #475569;">[ QR FRAME ]</span>
+          </div>
+          <p style="font-size: 11.5px; color: var(--text-muted); margin-top: 20px;">
+            Căn mã QR trên xe hoặc cọc đỗ vào khung quét
+          </p>
+        </div>
+
+        <!-- Reconciliation Table matching 3.jpg -->
+        <div class="staff-card" style="margin-bottom: 20px; padding: 14px;">
+          <div style="font-size: 13.5px; font-weight: 800; margin-bottom: 4px;">BẢNG ĐỐI SOÁT DỮ LIỆU ĐÃ TRẢ</div>
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 800; margin-bottom: 10px;">
+            <span>TIẾN TRÌNH:</span>
+            <span id="handoverProgressCount">18/20 xe</span>
+          </div>
+
+          <div class="reconcile-table-list" id="reconcileRows">
+            <!-- Row 1 -->
+            <div class="reconcile-row done" onclick="StaffApp.toggleBikeRow(this)">
+              <div class="check-box-square"><i class="fa-solid fa-check"></i></div>
+              <strong style="font-size: 12.5px;">BK-EB-001</strong>
+              <span style="font-size: 12px; color: var(--text-muted);">Pin: 85%</span>
+              <span style="font-size: 12px; color: var(--text-muted);">Cọc sạc: 02</span>
+              <span class="status-pill done">Done</span>
+            </div>
+            <!-- Row 2 -->
+            <div class="reconcile-row done" onclick="StaffApp.toggleBikeRow(this)">
+              <div class="check-box-square"><i class="fa-solid fa-check"></i></div>
+              <strong style="font-size: 12.5px;">BK-EB-002</strong>
+              <span style="font-size: 12px; color: var(--text-muted);">Pin: 85%</span>
+              <span style="font-size: 12px; color: var(--text-muted);">Cọc sạc: 02</span>
+              <span class="status-pill done">Done</span>
+            </div>
+            <!-- Row 3: Waiting -->
+            <div class="reconcile-row waiting" id="bikeRow19" onclick="StaffApp.simulateScanBike(19)">
+              <div class="check-box-square"></div>
+              <strong style="font-size: 12.5px;">BK-EB-019</strong>
+              <span style="font-size: 12px; color: var(--text-muted);">Pin: 85%</span>
+              <span style="font-size: 12px; color: var(--text-muted);">Cọc sạc: 02</span>
+              <span class="status-pill waiting">Waiting</span>
+            </div>
+            <!-- Row 4: Waiting -->
+            <div class="reconcile-row waiting" id="bikeRow20" onclick="StaffApp.simulateScanBike(20)">
+              <div class="check-box-square"></div>
+              <strong style="font-size: 12.5px;">BK-EB-020</strong>
+              <span style="font-size: 12px; color: var(--text-muted);">Pin: 85%</span>
+              <span style="font-size: 12px; color: var(--text-muted);">Cọc sạc: 02</span>
+              <span class="status-pill waiting">Waiting</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-staff-primary" onclick="StaffApp.completeHandover()">
+          <span>HOÀN TẤT BÀN GIAO</span>
+        </button>
+        <button class="btn-staff-secondary" onclick="StaffApp.openRelocIncidentReport()">
+          <span>BÁO CÁO SỰ CỐ</span>
+        </button>
+      </section>
+
+      <!-- 3. BÁO CÁO SỰ CỐ TRONG QUÁ TRÌNH ĐIỀU CHUYỂN (Wireframe 5.jpg) -->
+      <section id="screen-reloc-incident" class="staff-screen">
+        <div class="screen-top-bar">
+          <button class="nav-back-btn" onclick="StaffApp.goToScreen('screen-reloc-handover')"><i class="fa-solid fa-angle-left"></i></button>
+          <div class="top-bar-title-wrap">
+            <div class="sub-label">BÁO CÁO TRONG QUÁ TRÌNH ĐIỀU CHUYỂN</div>
+            <div class="main-label">Báo cáo sự cố</div>
+          </div>
+          <span class="tag-badge-pill">Nhiệm vụ #102</span>
+        </div>
+
+        <!-- Dark Alert Banner -->
+        <div class="dark-notice-banner" style="margin-bottom: 16px;">
+          <div class="notice-icon"><i class="fa-solid fa-exclamation"></i></div>
+          <div>
+            <div style="font-weight: 800; font-size: 13.5px; margin-bottom: 2px;">Ghi nhận vấn đề phát sinh</div>
+            <div style="font-size: 11.5px; color: #94a3b8;">Thông tin giúp đội vận hành xử lý nhanh hơn.</div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 800; margin-bottom: 6px;">
+          <span>THÔNG TIN SỰ CỐ</span>
+          <span style="color: var(--accent-red); font-size: 11px;">* Bắt buộc</span>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label class="input-label-sm">Loại sự cố *</label>
+          <select class="form-select-sm" id="relocIncidentType">
+            <option>Xe bị thủng lốp</option>
+            <option>Va chạm giao thông</option>
+            <option>Bình pin tụt áp đột ngột</option>
+            <option>Hỏng chốt khóa cọc sạc</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label class="input-label-sm">Vị trí xảy ra sự cố *</label>
+          <div class="input-with-icon">
+            <i class="fa-solid fa-location-dot"></i>
+            <input type="text" class="form-input-sm" value="Đường nội bộ giữa Hub KTX Khu A và Hub Ga Metro A">
+          </div>
+          <span style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block;">Vị trí hiện tại của bạn sẽ được dùng để hỗ trợ xác minh.</span>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <label class="input-label-sm">MÔ TẢ CHI TIẾT</label>
+            <span style="font-size: 11px; color: var(--text-muted);">0 / 300</span>
+          </div>
+          <textarea class="form-textarea-sm" rows="3" placeholder="Mô tả điều đã xảy ra, mã xe liên quan và tình trạng hiện tại..."></textarea>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+            <label class="input-label-sm">ẢNH THỰC TẾ</label>
+            <span style="font-size: 11px; color: var(--text-muted);">Không bắt buộc</span>
+          </div>
+          <div class="dashed-upload-box" onclick="alert('Đã đính kèm ảnh chụp hiện trường')">
+            <i class="fa-solid fa-camera" style="font-size: 18px; margin-bottom: 6px;"></i>
+            <span style="font-size: 12px; font-weight: 700;">ĐÍNH KÈM ẢNH</span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px; margin-bottom: 24px;">
+          <div class="info-chip-box">
+            <span style="font-size: 11px; color: var(--text-muted);">Mã nhiệm vụ</span>
+            <strong style="font-size: 13px;">#102</strong>
+          </div>
+          <div class="info-chip-box">
+            <span style="font-size: 11px; color: var(--text-muted);">Tuyến đang thực hiện</span>
+            <strong style="font-size: 12px;">Hub KTX A &rarr; Hub Metro A</strong>
+          </div>
+        </div>
+
+        <button class="btn-staff-primary" onclick="StaffApp.submitRelocIncident()">
+          <span>GỬI BÁO CÁO SỰ CỐ</span>
+        </button>
+      </section>
+
+
+      <!-- ======================================================== -->
+      <!-- SECTION B: WORKFLOW BẢO TRÌ & KỸ THUẬT (Wireframes 6..10)  -->
+      <!-- ======================================================== -->
+
+      <!-- 4. DANH SÁCH SỰ CỐ BẢO TRÌ (Wireframe 6.jpg) -->
+      <section id="screen-maint-list" class="staff-screen">
+        <!-- Tech Profile Header -->
+        <div class="staff-profile-header-card">
+          <div class="avatar-black-circle">MT</div>
+          <div style="flex: 1;">
+            <div style="font-size: 15px; font-weight: 800;">Nguyen Van B</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Nhân viên bảo trì</div>
+            <div style="font-size: 11.5px; color: #94a3b8;">Ca chiều · 13:00 - 17:00</div>
+          </div>
+          <span class="tag-badge-pill">4 nhiệm vụ</span>
+        </div>
+
+        <!-- Filter Segmented Tabs matching 6.jpg -->
+        <div class="segmented-tabs-line">
+          <button class="tab-line-btn active">Mới tiếp nhận (3)</button>
+          <button class="tab-line-btn">Đang xử lý (1)</button>
+          <button class="tab-line-btn">Hoàn tất</button>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; margin: 14px 0 10px;">
+          <span>DANH SÁCH SỰ CỐ</span>
+          <span style="color: var(--text-muted);" id="maintCountBadge">3 mới</span>
+        </div>
+
+        <div id="maintTasksContainer">
+          <!-- Ticket 1: MT-102 Khẩn cấp -->
+          <div class="staff-card" style="margin-bottom: 12px; padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span class="badge-urgent-tag">KHẨN CẤP</span>
+              <strong style="font-size: 13px;">MT-102</strong>
+            </div>
+            <div style="font-size: 11.5px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">XE ĐẠP ĐIỆN · HƯ HỎNG</div>
+            <h4 style="font-size: 15px; font-weight: 800; margin-bottom: 6px;">Xe BK-EB-018 không khởi động</h4>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Hub KTX Khu A</div>
+            <div style="font-size: 11.5px; color: #94a3b8; margin-bottom: 12px;">Tạo lúc: Hôm nay, 14:25</div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 10px;">
+              <span style="font-size: 12px; color: var(--accent-red); font-weight: 700;">Cần xử lý trong 35 phút</span>
+              <button class="btn-staff-primary" style="width: auto; padding: 7px 14px; font-size: 12px;" onclick="StaffApp.openMaintenanceDetail('MT-102')">XEM VÀ TIẾP NHẬN</button>
+            </div>
+          </div>
+
+          <!-- Ticket 2: MT-098 Cảnh báo -->
+          <div class="staff-card" style="margin-bottom: 12px; padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span class="badge-warning-tag">CẢNH BÁO</span>
+              <strong style="font-size: 13px;">MT-098</strong>
+            </div>
+            <div style="font-size: 11.5px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">CỔNG SẠC · KHÔNG HOẠT ĐỘNG</div>
+            <h4 style="font-size: 15px; font-weight: 800; margin-bottom: 6px;">Cổng sạc số 05 không nhận điện</h4>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Hub Ga Metro A</div>
+            <div style="font-size: 11.5px; color: #94a3b8; margin-bottom: 12px;">Tạo lúc: Hôm nay, 13:50</div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 10px;">
+              <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Cần kiểm tra trong hôm nay</span>
+              <button class="btn-staff-secondary" style="width: auto; padding: 6px 14px; font-size: 12px; margin-top: 0;" onclick="StaffApp.openMaintenanceDetail('MT-098')">XEM CHI TIẾT</button>
+            </div>
+          </div>
+
+          <!-- Ticket 3: MT-091 Thường -->
+          <div class="staff-card" style="margin-bottom: 14px; padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span class="badge-neutral-tag">THƯỜNG</span>
+              <strong style="font-size: 13px;">MT-091</strong>
+            </div>
+            <h4 style="font-size: 14px; font-weight: 800; margin-bottom: 4px;">Nguồn điện trạm sạc cần bảo dưỡng</h4>
+            <div style="font-size: 12px; color: var(--text-muted);">Hub Trường BK · Tạo lúc: Hôm nay, 11:20</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. CHI TIẾT SỰ CỐ MT-102 (Wireframe 7.jpg) -->
+      <section id="screen-maint-detail" class="staff-screen">
+        <div class="screen-top-bar">
+          <button class="nav-back-btn" onclick="StaffApp.goToScreen('screen-maint-list')"><i class="fa-solid fa-angle-left"></i></button>
+          <div class="top-bar-title-wrap">
+            <div class="sub-label">CHI TIẾT SỰ CỐ</div>
+            <div class="main-label">Nhiệm vụ MT-102</div>
+          </div>
+          <span class="badge-urgent-tag">KHẨN CẤP</span>
+        </div>
+
+        <!-- Black Header Box -->
+        <div class="dark-ticket-card" style="margin-bottom: 14px;">
+          <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">XE ĐẠP ĐIỆN · HƯ HỎNG</div>
+          <div style="font-size: 16px; font-weight: 800; margin-bottom: 6px;">Xe BK-EB-018 không khởi động</div>
+          <div style="font-size: 12px; color: #cbd5e1;">Báo bởi Nhân viên điều chuyển · 14:25 hôm nay</div>
+        </div>
+
+        <!-- Device & Location Boxes -->
+        <div style="font-size: 12px; font-weight: 800; margin-bottom: 6px;">THIẾT BỊ & VỊ TRÍ</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+          <div class="staff-card" style="padding: 12px;">
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Mã thiết bị</div>
+            <strong style="font-size: 14.5px;">BK-EB-018</strong>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 11px; color: var(--text-muted);">
+              <i class="fa-solid fa-qrcode" style="font-size: 16px;"></i>
+              <span>QR / ID đã xác định</span>
+            </div>
+          </div>
+
+          <div class="staff-card" style="padding: 12px;">
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Vị trí chính xác</div>
+            <strong style="font-size: 13.5px;">Hub KTX Khu A</strong>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">
+              Khu đỗ xe · Dãy B<br><strong>Ô số 018</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reporter Description -->
+        <div style="font-size: 12px; font-weight: 800; margin-bottom: 6px;">MÔ TẢ TỪ NGƯỜI BÁO CÁO</div>
+        <div class="staff-card" style="padding: 12px; font-size: 12.5px; line-height: 1.5; margin-bottom: 14px;">
+          Xe không phản hồi khi bật nguồn.<br>
+          Đã thử cắm sạc nhưng đèn báo không sáng.<br>
+          Vui lòng kiểm tra pin và bộ điều khiển.
+        </div>
+
+        <!-- Image Attachment -->
+        <div style="font-size: 12px; font-weight: 800; margin-bottom: 6px;">HÌNH ẢNH ĐÍNH KÈM</div>
+        <div class="staff-card" style="padding: 12px; display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+          <div style="width: 70px; height: 50px; background: #e2e8f0; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #94a3b8;">
+            <i class="fa-regular fa-image" style="font-size: 20px;"></i>
+          </div>
+          <div>
+            <div style="font-size: 13px; font-weight: 700;">anh-hien-trang-01.jpg</div>
+            <div style="font-size: 11.5px; color: var(--text-muted);">Ảnh từ người báo cáo · 1,8 MB</div>
+          </div>
+        </div>
+
+        <!-- Recent Maintenance History -->
+        <div style="font-size: 12px; font-weight: 800; margin-bottom: 6px;">LỊCH SỬ BẢO TRÌ GẦN NHẤT</div>
+        <div class="staff-card" style="padding: 12px; margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: #0f172a;"></div>
+            <div>
+              <div style="font-size: 13px; font-weight: 700;">Kiểm tra pin và phanh</div>
+              <div style="font-size: 11px; color: var(--text-muted);">12/10/2026 · NVKT Tran Minh A · Hoàn tất</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-staff-primary" onclick="StaffApp.goToScreen('screen-maint-scan')">
+          <span>BẮT ĐẦU XỬ LÝ</span>
+        </button>
+        <button class="btn-staff-secondary" onclick="StaffApp.openMaintIncidentReport()">
+          <span>BÁO CÁO SỰ CỐ</span>
+        </button>
+      </section>
+
+      <!-- 6. QUÉT QR XÁC NHẬN THIẾT BỊ (Wireframe 8.jpg) -->
+      <section id="screen-maint-scan" class="staff-screen">
+        <div class="screen-top-bar">
+          <button class="nav-back-btn" onclick="StaffApp.goToScreen('screen-maint-detail')"><i class="fa-solid fa-angle-left"></i></button>
+          <div class="top-bar-title-wrap">
+            <div class="sub-label">XÁC NHẬN THIẾT BỊ</div>
+            <div class="main-label">Quét mã QR</div>
+          </div>
+          <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);">MT-102</span>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <div style="font-size: 13px; font-weight: 800;">QUÉT QR XÁC NHẬN VỊ TRÍ</div>
+          <div style="font-size: 12px; color: var(--text-muted);">Đưa mã QR trên thiết bị vào giữa khung quét.</div>
+        </div>
+
+        <!-- Camera Scanner with Viewfinder -->
+        <div class="camera-scanner-frame" style="margin-bottom: 14px; background: #1e293b; color: #ffffff;">
+          <div class="qr-target-box" style="border: none; width: 200px; height: 130px;">
+            <div class="qr-crosshair top-left" style="border-color: #ffffff;"></div>
+            <div class="qr-crosshair top-right" style="border-color: #ffffff;"></div>
+            <div class="qr-crosshair bottom-left" style="border-color: #ffffff;"></div>
+            <div class="qr-crosshair bottom-right" style="border-color: #ffffff;"></div>
+            <div style="border: 2px solid rgba(255,255,255,0.7); width: 85%; height: 75%; border-radius: 4px;"></div>
+          </div>
+          <p style="font-size: 12px; color: #94a3b8; margin-top: 14px;">Căn mã QR vào khung</p>
+        </div>
+
+        <!-- Recognized Result Card -->
+        <div style="font-size: 12px; font-weight: 800; margin-bottom: 6px;">KẾT QUẢ NHẬN DIỆN</div>
+        <div class="staff-card" style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-qrcode" style="font-size: 26px;"></i>
+            <div>
+              <div style="font-size: 11px; color: var(--text-muted);">MÃ THIẾT BỊ</div>
+              <strong style="font-size: 15px;">BK-EB-018</strong>
+            </div>
+          </div>
+          <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">ĐÃ NHẬN DIỆN</span>
+        </div>
+
+        <!-- Verification Success Banner matching 8.jpg -->
+        <div class="dark-notice-banner" style="margin-bottom: 24px;">
+          <div class="notice-icon" style="background: #ffffff; color: #0f172a;"><i class="fa-solid fa-check"></i></div>
+          <div>
+            <div style="font-weight: 800; font-size: 13.5px; margin-bottom: 2px;">Xác thực thành công</div>
+            <div style="font-size: 11.5px; color: #94a3b8;">Đúng thiết bị tại Hub KTX Khu A · Ô số 018</div>
+          </div>
+        </div>
+
+        <button class="btn-staff-primary" onclick="StaffApp.goToScreen('screen-maint-report')">
+          <span>XÁC NHẬN THIẾT BỊ</span>
+        </button>
+        <button class="btn-staff-secondary" onclick="StaffApp.openMaintIncidentReport()">
+          <span>BÁO CÁO SỰ CỐ</span>
+        </button>
+      </section>
+
+      <!-- 7. BÁO CÁO KẾT QUẢ BẢO TRÌ (Wireframe 9.jpg) -->
+      <section id="screen-maint-report" class="staff-screen">
+        <div class="screen-top-bar">
+          <button class="nav-back-btn" onclick="StaffApp.goToScreen('screen-maint-scan')"><i class="fa-solid fa-angle-left"></i></button>
+          <div class="top-bar-title-wrap">
+            <div class="sub-label">CẬP NHẬT KẾT QUẢ</div>
+            <div class="main-label">Báo cáo bảo trì</div>
+          </div>
+          <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);">MT-102</span>
+        </div>
+
+        <!-- Black Checked Device Box -->
+        <div class="dark-ticket-card" style="margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; color: #94a3b8; font-weight: 700;">THIẾT BỊ ĐÃ KIỂM TRA</span>
+            <span style="font-size: 11px; color: #94a3b8;">Nhiệm vụ #102</span>
+          </div>
+          <div style="font-size: 15px; font-weight: 800;">BK-EB-018 · Hub KTX Khu A</div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; margin-bottom: 6px;">
+          <span>KẾT QUẢ XỬ LÝ</span>
+          <span style="color: var(--accent-red); font-size: 11px;">Bắt buộc</span>
+        </div>
+
+        <!-- 2 Outcome Radios matching 9.jpg -->
+        <div class="staff-card radio-card-select active" style="margin-bottom: 10px; padding: 12px;" onclick="StaffApp.selectMaintOutcome(this, 'onsite')">
+          <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+            <input type="radio" name="maintOutcome" checked>
+            <div>
+              <div style="font-size: 13.5px; font-weight: 800;">Đã sửa tại chỗ</div>
+              <div style="font-size: 11.5px; color: var(--text-muted);">Sẵn sàng hoạt động</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="staff-card radio-card-select" style="margin-bottom: 14px; padding: 12px;" onclick="StaffApp.selectMaintOutcome(this, 'workshop')">
+          <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+            <input type="radio" name="maintOutcome">
+            <div>
+              <div style="font-size: 13.5px; font-weight: 800;">Cần chuyển về xưởng</div>
+              <div style="font-size: 11.5px; color: var(--text-muted);">Khóa tài nguyên</div>
+            </div>
+          </label>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; margin-bottom: 6px;">
+          <span>GHI CHÚ KỸ THUẬT</span>
+          <span style="color: var(--text-muted); font-size: 11px;">MT-05-IncidentReport</span>
+        </div>
+        <textarea class="form-textarea-sm" id="maintTechNotes" rows="3" placeholder="Nhập các bước đã thực hiện, linh kiện thay thế và lưu ý khi đưa thiết bị hoạt động trở lại..." style="margin-bottom: 14px;">Đã kiểm tra tiếp xúc giắc cắm BMS pin, reset mạch sạc và chạy thử động cơ thành công.</textarea>
+
+        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; margin-bottom: 6px;">
+          <span>ẢNH XÁC NHẬN SAU SỬA</span>
+          <span style="font-size: 11px; color: var(--text-muted);">Không bắt buộc</span>
+        </div>
+        <div class="dashed-upload-box" style="margin-bottom: 24px;" onclick="alert('Đã đính kèm ảnh kiểm tra nghiệm thu')">
+          <i class="fa-solid fa-camera" style="font-size: 18px; margin-bottom: 6px;"></i>
+          <span style="font-size: 12px; font-weight: 700;">ĐÍNH KÈM ẢNH</span>
+        </div>
+
+        <button class="btn-staff-primary" onclick="StaffApp.submitMaintResult()">
+          <span>GỬI KẾT QUẢ BẢO TRÌ</span>
+        </button>
+        <button class="btn-staff-secondary" onclick="StaffApp.openMaintIncidentReport()">
+          <span>BÁO CÁO SỰ CỐ</span>
+        </button>
+      </section>
+
+      <!-- 8. BÁO CÁO SỰ CỐ TRONG LÚC BẢO TRÌ (Wireframe 10.jpg) -->
+      <section id="screen-maint-incident" class="staff-screen">
+        <div class="screen-top-bar">
+          <button class="nav-back-btn" onclick="StaffApp.goToScreen('screen-maint-report')"><i class="fa-solid fa-angle-left"></i></button>
+          <div class="top-bar-title-wrap">
+            <div class="sub-label">BÁO CÁO TRONG QUÁ TRÌNH BẢO TRÌ</div>
+            <div class="main-label">Báo cáo sự cố</div>
+          </div>
+          <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);">MT-102</span>
+        </div>
+
+        <!-- Notice Banner -->
+        <div class="dark-notice-banner" style="margin-bottom: 16px;">
+          <div class="notice-icon"><i class="fa-solid fa-exclamation"></i></div>
+          <div>
+            <div style="font-weight: 800; font-size: 13.5px; margin-bottom: 2px;">Ghi nhận sự cố mới</div>
+            <div style="font-size: 11.5px; color: #94a3b8;">Báo cáo để đội vận hành hỗ trợ kịp thời.</div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 800; margin-bottom: 6px;">
+          <span>THÔNG TIN SỰ CỐ</span>
+          <span style="color: var(--accent-red); font-size: 11px;">Bắt buộc</span>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label class="input-label-sm">Loại sự cố</label>
+          <select class="form-select-sm">
+            <option>Xe hư hỏng giữa đường</option>
+            <option>Trạm sạc rò rỉ điện</option>
+            <option>Khóa thông minh không phản hồi</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label class="input-label-sm">Vị trí xảy ra sự cố</label>
+          <div class="input-with-icon">
+            <i class="fa-solid fa-location-dot"></i>
+            <input type="text" class="form-input-sm" value="Đường nội bộ · Hub KTX Khu A">
+          </div>
+          <span style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block;">Vị trí được ghi nhận tại thời điểm báo cáo.</span>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <label class="input-label-sm">MÔ TẢ CHI TIẾT</label>
+            <span style="font-size: 11px; color: var(--text-muted);">0 / 300</span>
+          </div>
+          <textarea class="form-textarea-sm" rows="3" placeholder="Mô tả thiết bị, nguyên nhân và tình trạng hiện tại... Ví dụ: Xe không lên nguồn sau khi đi qua đoạn ngập."></textarea>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+            <label class="input-label-sm">ẢNH HIỆN TRẠNG</label>
+            <span style="font-size: 11px; color: var(--text-muted);">Không bắt buộc</span>
+          </div>
+          <div class="dashed-upload-box" onclick="alert('Đã đính kèm ảnh hiện trạng')">
+            <i class="fa-solid fa-camera" style="font-size: 18px; margin-bottom: 6px;"></i>
+            <span style="font-size: 12px; font-weight: 700;">ĐÍNH KÈM ẢNH</span>
+          </div>
+        </div>
+
+        <button class="btn-staff-primary" onclick="StaffApp.submitMaintIncident()">
+          <span>GỬI BÁO CÁO SỰ CỐ</span>
+        </button>
+      </section>
+
+
+      <!-- ======================================================== -->
+      <!-- SECTION C: WORKFLOW BẢO VỆ & GỬI XE (Wireframes 11..13)   -->
+      <!-- ======================================================== -->
+
+      <!-- 9. TIẾP NHẬN XE VÀO BÃI (Wireframe 11.jpg) -->
+      <section id="screen-guard-checkin" class="staff-screen">
+        <!-- Guard Profile Header -->
+        <div class="staff-profile-header-card" style="margin-bottom: 16px;">
+          <div class="avatar-black-circle">SG</div>
+          <div style="flex: 1;">
+            <div style="font-size: 15px; font-weight: 800;">Nguyen Van B</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Bảo vệ · Ca chiều</div>
+            <div style="font-size: 11.5px; color: #94a3b8;">Hub KTX Khu A · 13:00 - 17:00</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <h3 style="font-size: 15px; font-weight: 800; margin-bottom: 2px;">XÁC NHẬN XE CÁ NHÂN VÀO HUB</h3>
+          <p style="font-size: 12px; color: var(--text-muted);">Ghi nhận lượt gửi xe của sinh viên / giảng viên</p>
+        </div>
+
+        <!-- License Plate Input with QUÉT button -->
+        <div style="margin-bottom: 14px;">
+          <label class="input-label-sm">Biển số xe</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="guardPlateInput" class="form-input-sm" value="59-B2 123.45" style="font-weight: 800; font-size: 16px; letter-spacing: 1px;">
+            <button class="btn-staff-primary" style="width: auto; padding: 0 16px; font-size: 12px;" onclick="StaffApp.simulatePlateScan()">QUÉT</button>
+          </div>
+        </div>
+
+        <!-- Parking Bay & Slot -->
+        <div style="margin-bottom: 14px;">
+          <label class="input-label-sm">Vị trí đỗ xe</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <select class="form-select-sm" id="guardBaySelect">
+              <option>Dãy A</option>
+              <option>Dãy B</option>
+              <option>Dãy C</option>
+            </select>
+            <select class="form-select-sm" id="guardSlotSelect">
+              <option>Ô số 018</option>
+              <option>Ô số 019</option>
+              <option>Ô số 020</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Ticket / QR Card matching 11.jpg -->
+        <div style="margin-bottom: 14px;">
+          <label class="input-label-sm">Mã vé / mã QR lượt gửi</label>
+          <div class="staff-card" style="padding: 14px; display: flex; align-items: center; gap: 16px;">
+            <div style="width: 54px; height: 54px; border: 2px solid #0f172a; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+              <i class="fa-solid fa-qrcode" style="font-size: 32px;"></i>
+            </div>
+            <div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Mã lượt gửi được tạo tự động</div>
+              <strong style="font-size: 15px; letter-spacing: 0.5px;" id="guardTicketCode">SG-20261022-018</strong>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Có hiệu lực trong lượt gửi này</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Checkin Time Box -->
+        <div style="margin-bottom: 16px;">
+          <label class="input-label-sm">Giờ vào bãi</label>
+          <div class="staff-card" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 13.5px;" id="guardCheckinTime">22/10/2026 · 14:36</strong>
+            <span style="font-size: 11.5px; color: var(--text-muted);">Tự động</span>
+          </div>
+        </div>
+
+        <!-- Status banner -->
+        <div class="dark-notice-banner" style="margin-bottom: 20px;">
+          <div class="notice-icon" style="background: #ffffff; color: #0f172a;"><i class="fa-solid fa-check"></i></div>
+          <div>
+            <div style="font-weight: 800; font-size: 13.5px; margin-bottom: 2px;">Thông tin đã sẵn sàng</div>
+            <div style="font-size: 11.5px; color: #94a3b8;">Kiểm tra lại trước khi xác nhận vào bãi.</div>
+          </div>
+        </div>
+
+        <button class="btn-staff-primary" onclick="StaffApp.confirmVehicleCheckin()">
+          <span>XÁC NHẬN VÀO BÃI</span>
+        </button>
+      </section>
+
+      <!-- 10. TRẢ XE & THU TIỀN MẶT (Wireframe 12.jpg) -->
+      <section id="screen-guard-checkout" class="staff-screen">
+        <div class="screen-top-bar">
+          <button class="nav-back-btn" onclick="StaffApp.goToScreen('screen-guard-checkin')"><i class="fa-solid fa-angle-left"></i></button>
+          <div class="top-bar-title-wrap">
+            <div class="sub-label">THU TIỀN MẶT</div>
+            <div class="main-label">Xác nhận trả xe</div>
+          </div>
+          <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);">SG-018</span>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 800; margin-bottom: 6px;">THÔNG TIN LƯỢT GỬI</div>
+        <div class="staff-card" style="padding: 14px; margin-bottom: 14px;">
+          <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">BIỂN SỐ XE</div>
+          <div style="font-size: 20px; font-weight: 800; margin-bottom: 10px;" id="checkoutPlate">59-B2 123.45</div>
+          <div style="border-top: 1px solid #f1f5f9; padding-top: 10px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+            <div id="checkoutTimeInfo">Giờ vào: 22/10/2026 · 14:36 &nbsp;|&nbsp; Giờ ra: 16:42</div>
+            <div style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-top: 4px;" id="checkoutDurationInfo">Tổng thời gian: 2 giờ 06 phút</div>
+          </div>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 800; margin-bottom: 6px;">CƯỚC GIỮ XE CẦN THU</div>
+        <!-- Black Big Fee Box matching 12.jpg -->
+        <div class="dark-ticket-card" style="text-align: left; padding: 18px; margin-bottom: 14px;">
+          <div style="font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Tổng phí giữ xe cá nhân</div>
+          <div style="font-size: 28px; font-weight: 900; margin-bottom: 6px;" id="checkoutFeeDisplay">25.000 VNĐ</div>
+          <div style="font-size: 11.5px; color: #94a3b8;">Thanh toán bằng tiền mặt tại quầy</div>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 800; margin-bottom: 6px;">XÁC NHẬN TIỀN ĐÃ NHẬN</div>
+        <div class="staff-card" style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <strong style="font-size: 16px;" id="checkoutCashConfirm">25.000 VNĐ</strong>
+          <span style="font-size: 12px; font-weight: 800; color: #15803d;">ĐỦ SỐ TIỀN</span>
+        </div>
+
+        <div class="staff-card" style="padding: 12px; margin-bottom: 24px; font-size: 12px; line-height: 1.5;">
+          <div style="font-weight: 700; margin-bottom: 2px;" id="checkoutTicketCode">Mã giao dịch: SG-20261022-018</div>
+          <div style="color: var(--text-muted);">Vui lòng kiểm tra tiền mặt trước khi xác nhận.</div>
+        </div>
+
+        <button class="btn-staff-primary" onclick="StaffApp.confirmCashReceived()">
+          <span>XÁC NHẬN ĐÃ THU TIỀN MẶT</span>
+        </button>
+      </section>
+
+      <!-- 11. NHẬT KÝ CA TRỰC & ĐỐI SOÁT (Wireframe 13.jpg) -->
+      <section id="screen-guard-shift" class="staff-screen">
+        <div class="screen-top-bar">
+          <button class="nav-back-btn" onclick="StaffApp.goToScreen('screen-guard-checkin')"><i class="fa-solid fa-angle-left"></i></button>
+          <div class="top-bar-title-wrap">
+            <div class="sub-label">ĐỐI SOÁT CA TRỰC</div>
+            <div class="main-label">Nhật ký ca trực</div>
+          </div>
+          <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);" id="shiftSubLabel">Ca chiều</span>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <div style="font-size: 13px; font-weight: 800;">TỔNG KẾT CA LÀM VIỆC</div>
+          <div style="font-size: 11.5px; color: var(--text-muted);" id="shiftDetailMeta">22/10/2026 · 13:00 - 17:00 · Hub KTX Khu A</div>
+        </div>
+
+        <!-- 2 Big Stat Boxes matching 13.jpg -->
+        <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 10px; margin-bottom: 16px;">
+          <div class="dark-ticket-card" style="padding: 14px;">
+            <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Lượt xe đã phục vụ</div>
+            <div style="display: flex; align-items: baseline; gap: 4px;">
+              <span style="font-size: 26px; font-weight: 900;" id="shiftServedCount">48</span>
+              <span style="font-size: 12px; color: #cbd5e1;">lượt</span>
+            </div>
+          </div>
+
+          <div class="staff-card" style="padding: 14px;">
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Tiền mặt đã thu</div>
+            <div style="font-size: 19px; font-weight: 900; color: var(--text-main);" id="shiftTotalCash">1.200.000</div>
+            <span style="font-size: 11px; color: var(--text-muted);">VNĐ</span>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; margin-bottom: 8px;">
+          <span>CHI TIẾT GIAO DỊCH</span>
+          <span style="color: var(--text-muted);" id="shiftTransCountBadge">48 lượt</span>
+        </div>
+
+        <!-- Transaction list -->
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;" id="shiftTransactionsContainer">
+          <div class="staff-card" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 12px; font-weight: 800; color: var(--text-muted);">01</span>
+              <div>
+                <strong style="font-size: 13.5px;">59-B2 123.45</strong>
+                <div style="font-size: 11px; color: var(--text-muted);">14:36 · 2 giờ 06 phút</div>
+              </div>
+            </div>
+            <strong style="font-size: 13px;">25.000 VNĐ</strong>
+          </div>
+        </div>
+
+          <div class="staff-card" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 12px; font-weight: 800; color: var(--text-muted);">02</span>
+              <div>
+                <strong style="font-size: 13.5px;">51-H1 678.90</strong>
+                <div style="font-size: 11px; color: var(--text-muted);">14:22 · 1 giờ 48 phút</div>
+              </div>
+            </div>
+            <strong style="font-size: 13px;">25.000 VNĐ</strong>
+          </div>
+
+          <div class="staff-card" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 12px; font-weight: 800; color: var(--text-muted);">03</span>
+              <div>
+                <strong style="font-size: 13.5px;">59-C3 246.80</strong>
+                <div style="font-size: 11px; color: var(--text-muted);">13:58 · 3 giờ 12 phút</div>
+              </div>
+            </div>
+            <strong style="font-size: 13px;">25.000 VNĐ</strong>
+          </div>
+
+          <div class="staff-card" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted);">
+            <span>+ 45 giao dịch khác trong ca</span>
+            <a href="javascript:void(0)" onclick="alert('Đang tải danh sách 45 giao dịch...')" style="color: #2563eb; font-weight: 700;">Xem tất cả</a>
+          </div>
+        </div>
+
+        <!-- Cash Reconciliation Black Box -->
+        <div class="dark-ticket-card" style="margin-bottom: 20px; padding: 14px;">
+          <div style="font-size: 12px; font-weight: 800; margin-bottom: 2px;">Đối soát tiền mặt</div>
+          <div style="font-size: 13.5px; color: #cbd5e1;">Số tiền cần nộp về quầy: <strong style="color: #ffffff;">1.200.000 VNĐ</strong></div>
+        </div>
+
+        <button class="btn-staff-primary" onclick="StaffApp.closeShift()">
+          <span>CHỐT CA TRỰC</span>
+        </button>
+        <p style="text-align: center; font-size: 11.5px; color: var(--text-muted); margin-top: 8px;">
+          Sau khi chốt ca, dữ liệu không thể chỉnh sửa
+        </p>
+      </section>
+
+    </div><!-- End staff viewport -->
+
+    <!-- Persistent Bottom Tab Bar -->
+    <nav class="staff-bottom-nav" id="staffBottomNav">
+      <!-- In Relocation / Maintenance mode -->
+      <button class="staff-nav-item active" id="navItem1" onclick="StaffApp.onNavClick(1)">
+        <i class="fa-solid fa-table-cells-large"></i>
+        <span id="navLabel1">Nhiệm vụ</span>
+      </button>
+      <button class="staff-nav-item" id="navItem2" onclick="StaffApp.onNavClick(2)">
+        <i class="fa-regular fa-calendar-check"></i>
+        <span id="navLabel2">Lịch sử</span>
+      </button>
+      <button class="staff-nav-item" id="navItem3" onclick="StaffApp.onNavClick(3)">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span id="navLabel3">Thông báo</span>
+      </button>
+      <button class="staff-nav-item" id="navItem4" onclick="StaffApp.onNavClick(4)">
+        <i class="fa-regular fa-circle-user"></i>
+        <span id="navLabel4">Cá nhân</span>
+      </button>
+    </nav>
+
+  </div><!-- End staff container -->
+
+  <!-- Staff Application Controller -->
+  <script src="js/staff.js"></script>
+</body>
+</html>

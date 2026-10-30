@@ -1,0 +1,817 @@
+:root {
+  --bg-app: #f4f6f8;
+  --bg-card: #ffffff;
+  --bg-subtle: #f8fafc;
+  --border-color: #e2e8f0;
+  --border-focus: #111827;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
+  --primary-color: #111827;
+  --primary-hover: #1f2937;
+  --primary-text: #ffffff;
+  --accent-green: #10b981;
+  --accent-blue: #2563eb;
+  --accent-red: #ef4444;
+  --accent-amber: #f59e0b;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.1);
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ============================================================
+   RESPONSIVE DESIGN: MOBILE VS DESKTOP / LAPTOP
+   ============================================================ */
+
+/* 1. MẶC ĐỊNH CHO MÁY TÍNH / LAPTOP (Screen > 768px)
+   Hiển thị giao diện Web Dashboard sang trọng, rộng rãi, chia layout logic */
+body {
+  font-family: var(--font-family);
+  background: #f1f5f9;
+  color: var(--text-main);
+  min-height: 100vh;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-x: hidden;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 1080px;
+  height: 94vh;
+  max-height: 920px;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08), 0 0 0 1px #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s ease;
+}
+
+/* Ẩn status bar mô phỏng điện thoại trên máy tính */
+.status-bar {
+  display: none;
+}
+
+/* Tối ưu các khối nội dung trên màn hình máy tính */
+.screen {
+  padding: 32px 40px 90px 40px;
+  max-width: 860px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Màn hình map trên máy tính: rộng rãi, góc nhìn thoáng */
+#screen-map-home {
+  max-width: 100%;
+  padding: 20px 24px 80px 24px;
+}
+
+.sim-map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  background: #f1f5f9;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--border-color);
+}
+
+/* Các form đăng nhập, đăng ký trên máy tính căn giữa vừa vặn */
+#screen-login,
+#screen-register,
+#screen-forgot-password {
+  max-width: 440px;
+  padding: 40px 20px 90px 20px;
+}
+
+/* Grid hiển thị card rộng rãi hơn trên desktop */
+#bookingCardsContainer,
+#hubListContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
+}
+
+/* Bottom Nav bar trên Desktop: thiết kế dạng thanh dock tinh tế */
+.bottom-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: #ffffff;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  align-items: center;
+  z-index: 40;
+  padding-bottom: 0;
+}
+
+.nav-item {
+  flex: none;
+  min-width: 90px;
+  font-size: 12px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  transition: all 0.15s;
+}
+
+.nav-item:hover {
+  background: var(--bg-subtle);
+}
+
+/* Modal Bottom sheet trên Desktop căn thành card popup thanh thoát */
+.bottom-sheet-modal {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  width: 380px;
+  right: auto;
+  border-radius: 20px;
+  padding: 22px 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  border: 1px solid var(--border-color);
+  transform: translateY(140%);
+  transition: transform 0.25s ease;
+  z-index: 45;
+}
+
+.bottom-sheet-modal.open {
+  transform: translateY(0);
+}
+
+
+/* ============================================================
+   2. GIAO DIỆN DÀNH RIÊNG CHO ĐIỆN THOẠI DI ĐỘNG (Screen <= 768px)
+   ============================================================ */
+@media (max-width: 768px) {
+  body {
+    background: #ffffff;
+  }
+
+  .app-container {
+    max-width: 100%;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh; /* Chiều cao động chuẩn trình duyệt di động Safari/Chrome */
+    max-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+  }
+
+  /* Hiển thị status bar trên mobile */
+  .status-bar {
+    height: 44px;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #0f172a;
+    background: #ffffff;
+    z-index: 50;
+    user-select: none;
+  }
+
+  .status-bar .status-icons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .screen {
+    padding: 16px 16px 80px 16px;
+    max-width: 100%;
+  }
+
+  #screen-map-home {
+    padding: 12px 14px 75px 14px;
+  }
+
+  .sim-map-wrapper {
+    height: calc(100dvh - 180px);
+    max-height: 520px;
+    border-radius: var(--radius-lg);
+  }
+
+  #bookingCardsContainer,
+  #hubListContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Bottom nav bar chạm đáy mobile theo đúng tỷ lệ màn hình */
+  .bottom-nav {
+    height: 68px;
+    justify-content: space-around;
+    gap: 0;
+    padding-bottom: 6px;
+  }
+
+  .nav-item {
+    flex: 1;
+    min-width: auto;
+    padding: 6px 0;
+  }
+
+  /* Bottom sheet trên mobile trượt lên từ đáy */
+  .bottom-sheet-modal {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    border-radius: 24px 24px 0 0;
+    padding: 24px 20px 80px 20px;
+    transform: translateY(100%);
+  }
+
+  .bottom-sheet-modal.open {
+    transform: translateY(0);
+  }
+}
+
+/* Screen Viewport & Transitions */
+.view-viewport {
+  flex: 1;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg-card);
+  scroll-behavior: smooth;
+}
+
+.view-viewport::-webkit-scrollbar {
+  width: 4px;
+}
+.view-viewport::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.screen {
+  display: none;
+  padding: 20px 20px 80px 20px;
+  min-height: 100%;
+  flex-direction: column;
+  animation: fadeIn 0.18s ease-in-out;
+}
+
+.screen.active {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Header bar */
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+
+.top-nav .nav-back {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  transition: background 0.15s;
+}
+
+.top-nav .nav-back:hover {
+  background: var(--bg-subtle);
+}
+
+.top-nav .nav-title {
+  font-size: 19px;
+  font-weight: 700;
+  flex: 1;
+  color: var(--text-main);
+}
+
+.top-nav .nav-action {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-main);
+}
+
+/* Step Bar / Progress Indicator */
+.step-indicator {
+  margin-bottom: 16px;
+}
+.step-indicator .step-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.step-indicator .step-bars {
+  display: flex;
+  gap: 8px;
+}
+.step-indicator .bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border-color);
+  border-radius: 2px;
+}
+.step-indicator .bar.active {
+  background: var(--text-main);
+}
+
+/* Bottom Navigation Bar */
+.bottom-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 68px;
+  background: #ffffff;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 40;
+  padding-bottom: 6px;
+}
+
+.bottom-nav.hidden {
+  display: none;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  transition: color 0.15s;
+  padding: 6px 0;
+}
+
+.nav-item i {
+  font-size: 20px;
+}
+
+.nav-item.active {
+  color: var(--text-main);
+}
+
+/* Form controls & Buttons */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.input-box {
+  width: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-box input,
+.input-box select,
+.input-box textarea {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  outline: none;
+  font-family: inherit;
+  color: var(--text-main);
+  background: #ffffff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.input-box input:focus,
+.input-box select:focus,
+.input-box textarea:focus {
+  border-color: var(--border-focus);
+}
+
+.input-box .input-icon {
+  position: absolute;
+  right: 14px;
+  color: var(--text-muted);
+  pointer-events: none;
+  font-size: 16px;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 15px;
+  background: var(--primary-color);
+  color: var(--primary-text);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.btn-primary:active {
+  transform: scale(0.99);
+}
+
+.btn-secondary {
+  width: 100%;
+  padding: 14px;
+  background: #ffffff;
+  color: var(--text-main);
+  border: 1.5px solid var(--border-focus);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s;
+}
+
+.btn-secondary:hover {
+  background: var(--bg-subtle);
+}
+
+.btn-danger-outline {
+  width: 100%;
+  padding: 14px;
+  background: #ffffff;
+  color: var(--accent-red);
+  border: 1.5px solid #fecaca;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Segmented Tabs */
+.segmented-tabs {
+  display: flex;
+  background: #f1f5f9;
+  border-radius: var(--radius-md);
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+
+.segmented-tab {
+  flex: 1;
+  padding: 10px 4px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.segmented-tab.active {
+  background: #ffffff;
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Card Style */
+.card-box {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 14px;
+  transition: border-color 0.15s;
+}
+
+.card-box.selectable {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-box.selectable:hover {
+  border-color: #cbd5e1;
+}
+
+.card-box.selected {
+  border: 2px solid var(--primary-color);
+  background: #fafafa;
+}
+
+/* Radio Indicator */
+.radio-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.radio-circle.checked {
+  border-color: var(--primary-color);
+  background: var(--primary-color);
+}
+
+.radio-circle.checked::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+/* Toast Notification */
+.toast-msg {
+  position: absolute;
+  top: 55px;
+  left: 20px;
+  right: 20px;
+  background: #1e293b;
+  color: #ffffff;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  transform: translateY(-80px);
+  opacity: 0;
+  transition: all 0.25s ease;
+  pointer-events: none;
+}
+
+.toast-msg.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Map Simulation & MapLibre Styles */
+.sim-map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  background: #f1f5f9;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+#maplibre-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* MapLibre GeoJSON Hub Marker Pin (Monochrome Wireframe Style) */
+.maplibre-hub-marker {
+  width: 20px;
+  height: 26px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));
+}
+
+.maplibre-hub-marker:hover {
+  transform: scale(1.3);
+}
+
+.maplibre-hub-marker svg {
+  width: 20px;
+  height: 26px;
+}
+
+.maplibre-place-marker {
+  width: 26px;
+  height: 26px;
+  background: #3b82f6;
+  color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  border: 2px solid #ffffff;
+  cursor: pointer;
+}
+
+.maplibregl-popup-content {
+  border-radius: 12px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.map-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.map-pin {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.map-pin:hover {
+  transform: scale(1.2);
+}
+
+/* Modal Bottom Sheet */
+.bottom-sheet-modal {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-radius: 24px 24px 0 0;
+  padding: 24px 20px 80px 20px;
+  box-shadow: 0 -8px 30px rgba(0,0,0,0.15);
+  transform: translateY(100%);
+  transition: transform 0.25s ease-out;
+  z-index: 45;
+}
+
+.bottom-sheet-modal.open {
+  transform: translateY(0);
+}
+
+.sheet-handle {
+  width: 44px;
+  height: 5px;
+  background: #cbd5e1;
+  border-radius: 3px;
+  margin: 0 auto 16px auto;
+}
+
+/* User Specific EU-08..EU-29 Components */
+.nav-icon-badge-p {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--text-main);
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+.input-with-button {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 4px 6px 4px 14px;
+}
+
+.input-with-button input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  background: transparent;
+}
+
+.input-with-button .btn-inline-action {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.input-with-button .btn-inline-action:hover {
+  background: #f8fafc;
+}
+
+.checkbox-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-main);
+  cursor: pointer;
+  margin-top: 14px;
+  margin-bottom: 14px;
+}
+
+.checkbox-custom-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-color);
+  cursor: pointer;
+}
+
+.note-box-simple {
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.detail-row-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  padding: 7px 0;
+}
+
+.detail-row-line:not(:last-child) {
+  border-bottom: 1px solid #f8fafc;
+}
+
+.status-badge-outline {
+  display: inline-block;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 14px;
+}
+
+#screen-parking-exit-confirm.active {
+  background: #f1f5f9;
+}

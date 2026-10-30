@@ -1,0 +1,1901 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Smart E-Mobility Hub - ĐHQG-HCM</title>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- MapLibre GL CSS -->
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <!-- Mobile/Desktop Container Wrapper -->
+  <div class="app-container">
+    
+    <!-- Status Bar (Chỉ hiển thị trên Mobile) -->
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons">
+        <i class="fa-solid fa-signal"></i>
+        <i class="fa-solid fa-wifi"></i>
+        <i class="fa-solid fa-battery-full"></i>
+      </div>
+    </div>
+
+    <!-- Toast Notification Banner -->
+    <div id="toastMessage" class="toast-msg">
+      <i class="fa-solid fa-circle-check" style="color: #10b981;"></i>
+      <span id="toastText">Thao tác thành công</span>
+    </div>
+
+    <!-- Main Screens Viewport -->
+    <div class="view-viewport" id="viewport">
+
+      <!-- ================= 1. AUTHENTICATION & PROFILE SCREENS ================= -->
+
+      <!-- EU-01: Login -->
+      <section id="screen-login" class="screen active">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 24px;">
+          <span style="font-weight: 700; font-size: 16px;">E-Mobility Hub</span>
+          <i class="fa-solid fa-bicycle" style="font-size: 22px;"></i>
+        </div>
+        <h1 style="font-size: 28px; font-weight: 800; margin-bottom: 6px;">Đăng nhập</h1>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;">Chào mừng bạn trở lại</p>
+
+        <form id="loginForm" onsubmit="App.handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label">Số điện thoại</label>
+            <div class="input-box">
+              <input type="tel" id="loginPhone" placeholder="Nhập số điện thoại" value="0123456789" required>
+              <i class="fa-solid fa-mobile-screen input-icon"></i>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label">Mật khẩu</label>
+            <div class="input-box">
+              <input type="password" id="loginPassword" placeholder="Nhập mật khẩu" value="123456" required>
+              <i class="fa-solid fa-lock input-icon"></i>
+            </div>
+          </div>
+
+          <div style="text-align: right; margin-bottom: 28px;">
+            <a href="javascript:void(0)" onclick="App.navigateTo('screen-forgot-password')" style="font-size: 13px; color: var(--text-main); font-weight: 600; text-decoration: none;">Quên mật khẩu?</a>
+          </div>
+
+          <button type="submit" class="btn-primary" style="margin-bottom: 20px;">Đăng nhập</button>
+        </form>
+
+        <p style="text-align: center; font-size: 13.5px; color: var(--text-muted);">
+          Chưa có tài khoản? <a href="javascript:void(0)" onclick="App.navigateTo('screen-register')" style="font-weight: 600; color: var(--text-main); text-decoration: none;">Đăng ký ngay</a>
+        </p>
+      </section>
+
+      <!-- EU-02: Register -->
+      <section id="screen-register" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-login')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Đăng ký tài khoản</span>
+        </div>
+        <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 20px;">Tạo tài khoản sử dụng phương tiện và trạm sạc</p>
+
+        <form id="registerForm" onsubmit="App.handleRegister(event)">
+          <div class="form-group">
+            <label class="form-label">Họ và tên</label>
+            <div class="input-box">
+              <input type="text" placeholder="Ví dụ: Nguyễn Văn A" required>
+              <i class="fa-regular fa-user input-icon"></i>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Số điện thoại</label>
+            <div class="input-box">
+              <input type="tel" placeholder="09xxxxxxxx" required>
+              <i class="fa-solid fa-phone input-icon"></i>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email trường / cá nhân</label>
+            <div class="input-box">
+              <input type="email" placeholder="example@hcmut.edu.vn" required>
+              <i class="fa-regular fa-envelope input-icon"></i>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mật khẩu</label>
+            <div class="input-box">
+              <input type="password" placeholder="Tối thiểu 6 ký tự" required>
+              <i class="fa-solid fa-lock input-icon"></i>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom: 24px;">
+            <label class="form-label">Xác nhận mật khẩu</label>
+            <div class="input-box">
+              <input type="password" placeholder="Nhập lại mật khẩu" required>
+              <i class="fa-solid fa-lock input-icon"></i>
+            </div>
+          </div>
+          <button type="submit" class="btn-primary" style="margin-bottom: 16px;">Tạo tài khoản</button>
+        </form>
+        <p style="text-align: center; font-size: 13.5px; color: var(--text-muted);">
+          Đã có tài khoản? <a href="javascript:void(0)" onclick="App.navigateTo('screen-login')" style="font-weight: 600; color: var(--text-main); text-decoration: none;">Đăng nhập</a>
+        </p>
+      </section>
+
+      <!-- EU-52: Forgot Password -->
+      <section id="screen-forgot-password" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-login')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Quên mật khẩu</span>
+        </div>
+        <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 24px; line-height: 1.5;">
+          Nhập số điện thoại hoặc email đã đăng ký. Hệ thống sẽ gửi hướng dẫn khôi phục mật khẩu.
+        </p>
+        <div class="form-group" style="margin-bottom: 28px;">
+          <label class="form-label">SĐT hoặc Email</label>
+          <div class="input-box">
+            <input type="text" placeholder="Nhập SĐT hoặc email" value="abc123@hcmut.edu.vn">
+            <i class="fa-regular fa-envelope input-icon"></i>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="App.navigateTo('screen-reset-requested')">Gửi yêu cầu khôi phục</button>
+      </section>
+
+      <!-- EU-53: Reset Requested -->
+      <section id="screen-reset-requested" class="screen" style="text-align: center; justify-content: center; align-items: center;">
+        <div style="width: 72px; height: 72px; background: #e0f2fe; color: var(--accent-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 20px;">
+          <i class="fa-regular fa-paper-plane"></i>
+        </div>
+        <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Đã gửi yêu cầu</h2>
+        <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 30px; max-width: 280px; line-height: 1.5;">
+          Liên kết đặt lại mật khẩu đã được gửi đến email/SĐT của bạn. Vui lòng kiểm tra hộp thư.
+        </p>
+        <button class="btn-primary" onclick="App.navigateTo('screen-login')">Quay lại đăng nhập</button>
+      </section>
+
+      <!-- EU-03: User Profile -->
+      <section id="screen-profile" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Hồ sơ cá nhân</span>
+        </div>
+
+        <div class="card-box" style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+          <div style="width: 64px; height: 64px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #475569;">
+            <i class="fa-regular fa-user"></i>
+          </div>
+          <div>
+            <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 3px;" id="profileName">Nguyễn Văn A</h3>
+            <p style="font-size: 12.5px; color: var(--text-muted);" id="profileEmail">abc123@hcmut.edu.vn</p>
+            <p style="font-size: 12.5px; color: var(--text-muted);" id="profilePhone">0123456789</p>
+          </div>
+        </div>
+
+        <div class="card-box selectable" onclick="App.navigateTo('screen-edit-profile')">
+          <div style="display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600;">
+            <i class="fa-solid fa-pen-to-square" style="color: var(--text-muted);"></i>
+            <span>Chỉnh sửa hồ sơ cá nhân</span>
+          </div>
+          <i class="fa-solid fa-chevron-right" style="color: #cbd5e1; font-size: 13px;"></i>
+        </div>
+
+        <div class="card-box selectable" onclick="App.navigateTo('screen-payment-preferences')">
+          <div style="display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600;">
+            <i class="fa-regular fa-credit-card" style="color: var(--text-muted);"></i>
+            <span>Phương thức thanh toán</span>
+          </div>
+          <i class="fa-solid fa-chevron-right" style="color: #cbd5e1; font-size: 13px;"></i>
+        </div>
+
+        <div class="card-box selectable" onclick="App.navigateTo('screen-booking-history')">
+          <div style="display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600;">
+            <i class="fa-regular fa-calendar-check" style="color: var(--text-muted);"></i>
+            <span>Lịch sử đặt chỗ</span>
+          </div>
+          <i class="fa-solid fa-chevron-right" style="color: #cbd5e1; font-size: 13px;"></i>
+        </div>
+
+        <div class="card-box selectable" onclick="App.navigateTo('screen-incident-history')">
+          <div style="display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600;">
+            <i class="fa-solid fa-triangle-exclamation" style="color: var(--text-muted);"></i>
+            <span>Lịch sử báo cáo sự cố</span>
+          </div>
+          <i class="fa-solid fa-chevron-right" style="color: #cbd5e1; font-size: 13px;"></i>
+        </div>
+
+        <div class="card-box selectable" onclick="App.navigateTo('screen-security')">
+          <div style="display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600;">
+            <i class="fa-solid fa-lock" style="color: var(--text-muted);"></i>
+            <span>Cài đặt bảo mật</span>
+          </div>
+          <i class="fa-solid fa-chevron-right" style="color: #cbd5e1; font-size: 13px;"></i>
+        </div>
+
+        <button class="btn-secondary" style="margin-top: 16px;" onclick="App.handleLogout()">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng xuất
+        </button>
+      </section>
+
+      <!-- EU-54: Edit Profile -->
+      <section id="screen-edit-profile" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-profile')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Chỉnh sửa hồ sơ</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Họ và tên</label>
+          <div class="input-box">
+            <input type="text" id="editFullName" value="Nguyễn Văn A">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <div class="input-box">
+            <input type="email" id="editEmail" value="abc123@hcmut.edu.vn">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 28px;">
+          <label class="form-label">Số điện thoại</label>
+          <div class="input-box">
+            <input type="tel" id="editPhone" value="0123456789">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="App.saveProfile()">Lưu thay đổi</button>
+      </section>
+
+      <!-- EU-55: Security -->
+      <section id="screen-security" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-profile')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Cài đặt bảo mật</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mật khẩu hiện tại</label>
+          <div class="input-box">
+            <input type="password" placeholder="••••••••">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mật khẩu mới</label>
+          <div class="input-box">
+            <input type="password" placeholder="Mật khẩu mới">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 28px;">
+          <label class="form-label">Nhập lại mật khẩu mới</label>
+          <div class="input-box">
+            <input type="password" placeholder="Nhập lại mật khẩu mới">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="App.showToast('Cập nhật mật khẩu thành công!'); App.navigateTo('screen-profile');">Đổi mật khẩu</button>
+      </section>
+
+      <!-- EU-56: Payment Preferences -->
+      <section id="screen-payment-preferences" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-profile')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Phương thức thanh toán</span>
+        </div>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Chọn phương thức mặc định khi thanh toán dịch vụ tự động:</p>
+
+        <div class="card-box selectable selected" id="prefWallet" onclick="App.setPaymentPreference('Ví điện tử')">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-wallet" style="font-size: 18px;"></i>
+            <div>
+              <div style="font-weight: 600; font-size: 14px;">Ví điện tử Momo/ZaloPay</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Đã liên kết (0123***789)</div>
+            </div>
+          </div>
+          <div class="radio-circle checked" id="radioPrefWallet"></div>
+        </div>
+
+        <div class="card-box selectable" id="prefBank" onclick="App.setPaymentPreference('Thẻ ngân hàng')">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-credit-card" style="font-size: 18px;"></i>
+            <div>
+              <div style="font-weight: 600; font-size: 14px;">Thẻ nội địa / Napas</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Vietcombank **** 9821</div>
+            </div>
+          </div>
+          <div class="radio-circle" id="radioPrefBank"></div>
+        </div>
+
+        <button class="btn-primary" style="margin-top: 20px;" onclick="App.showToast('Đã lưu cấu hình thanh toán'); App.navigateTo('screen-profile');">Lưu cấu hình</button>
+      </section>
+
+      <!-- ================= 2. MAP & HUB SEARCH SCREENS ================= -->
+
+      <!-- EU-04: Map Home -->
+      <section id="screen-map-home" class="screen" style="padding: 12px 14px 75px 14px;">
+        <!-- Top Search Bar on Map -->
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+          <div class="input-box" onclick="App.navigateTo('screen-search-hub')" style="cursor: pointer; background: #eef2f6; border-radius: var(--radius-md); border: none; padding: 2px 4px;">
+            <i class="fa-solid fa-magnifying-glass" style="margin-left: 14px; color: #475569; font-size: 15px;"></i>
+            <input type="text" placeholder="Tìm kiếm Hub hoặc địa điểm" readonly style="border: none; background: transparent; cursor: pointer; padding: 12px 10px; font-weight: 500;">
+          </div>
+          <button onclick="App.navigateTo('screen-profile')" style="width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid var(--border-color); background: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;">
+            <i class="fa-regular fa-user" style="font-size: 17px; color: var(--text-main);"></i>
+          </button>
+        </div>
+
+        <!-- Interactive Map Container (MapLibre with OSM fallback) -->
+        <div class="sim-map-wrapper">
+          <div id="maplibre-container"></div>
+
+          <!-- Fallback SVG if offline / WebGL unavailable -->
+          <svg id="fallbackSvgMap" class="map-svg" viewBox="0 0 400 480" style="display: none;">
+            <!-- Road background lines -->
+            <rect width="400" height="480" fill="#e2e8f0"/>
+            <!-- Roads grid -->
+            <path d="M 0,90 Q 200,120 400,90" stroke="#cbd5e1" stroke-width="12" fill="none"/>
+            <path d="M 0,220 Q 180,240 400,210" stroke="#cbd5e1" stroke-width="18" fill="none"/>
+            <path d="M 0,380 L 400,360" stroke="#cbd5e1" stroke-width="14" fill="none"/>
+            <path d="M 70,0 Q 80,200 90,480" stroke="#cbd5e1" stroke-width="14" fill="none"/>
+            <path d="M 200,0 L 210,480" stroke="#cbd5e1" stroke-width="16" fill="none"/>
+            <path d="M 310,0 Q 330,240 320,480" stroke="#cbd5e1" stroke-width="12" fill="none"/>
+            <!-- Curve highway -->
+            <path d="M 40,300 C 120,300 240,250 380,140" stroke="#94a3b8" stroke-width="8" fill="none" opacity="0.6"/>
+
+            <!-- Center label -->
+            <text x="200" y="200" text-anchor="middle" font-size="15" font-weight="700" fill="#334155" font-family="sans-serif">Khu đô thị Đại học Quốc Gia</text>
+
+            <!-- Map Markers for Hubs -->
+            <!-- Hub 1: Ga Metro -->
+            <g class="map-pin" onclick="App.openHubSheet('hub-01')" transform="translate(195, 155)">
+              <circle cx="8" cy="8" r="16" fill="#1e293b" opacity="0.15"/>
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 5.25 8 16 8 16s8-10.75 8-16c0-4.42-3.58-8-8-8z" fill="#0f172a"/>
+              <circle cx="8" cy="8" r="3.5" fill="#ffffff"/>
+            </g>
+            <!-- Hub 2: Bách Khoa -->
+            <g class="map-pin" onclick="App.openHubSheet('hub-02')" transform="translate(265, 215)">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 5.25 8 16 8 16s8-10.75 8-16c0-4.42-3.58-8-8-8z" fill="#0f172a"/>
+              <circle cx="8" cy="8" r="3.5" fill="#ffffff"/>
+            </g>
+            <!-- Hub 3: KTX B -->
+            <g class="map-pin" onclick="App.openHubSheet('hub-03')" transform="translate(95, 255)">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 5.25 8 16 8 16s8-10.75 8-16c0-4.42-3.58-8-8-8z" fill="#0f172a"/>
+              <circle cx="8" cy="8" r="3.5" fill="#ffffff"/>
+            </g>
+            <!-- Hub 4: Quốc Tế -->
+            <g class="map-pin" onclick="App.openHubSheet('hub-04')" transform="translate(105, 130)">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 5.25 8 16 8 16s8-10.75 8-16c0-4.42-3.58-8-8-8z" fill="#0f172a"/>
+              <circle cx="8" cy="8" r="3.5" fill="#ffffff"/>
+            </g>
+          </svg>
+
+          <!-- Current active pill alert if running a trip -->
+          <div id="activeRidePill" style="position: absolute; bottom: 16px; left: 16px; right: 16px; background: #ffffff; border-radius: var(--radius-md); padding: 12px 14px; box-shadow: var(--shadow-md); display: flex; align-items: center; justify-content: space-between;" onclick="App.navigateTo('screen-ride-active')">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; animation: pulse 1.5s infinite;"></div>
+              <div>
+                <div id="activeRidePillText" style="font-size: 13px; font-weight: 700;">Chuyến đi: XE-024 đang hoạt động</div>
+                <div style="font-size: 11.5px; color: var(--text-muted);">Nhấn để xem trạng thái thời gian thực</div>
+              </div>
+            </div>
+            <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 12px;"></i>
+          </div>
+        </div>
+
+        <!-- Bottom Sheet Popup for Hub Preview (EU-06) -->
+        <div id="hubBottomSheet" class="bottom-sheet-modal">
+          <div class="sheet-handle"></div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+            <div>
+              <h2 id="sheetHubName" style="font-size: 18px; font-weight: 800;">Hub Ga Metro ĐHQG</h2>
+              <p id="sheetHubAddress" style="font-size: 12.5px; color: var(--text-muted);">Khu đô thị ĐHQG - HCM</p>
+            </div>
+            <button onclick="App.closeHubSheet()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-muted);"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+
+          <div style="border-top: 1px solid var(--border-color); margin: 16px 0;"></div>
+
+          <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 22px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <i class="fa-solid fa-bicycle" style="font-size: 18px; width: 20px;"></i>
+                <span style="font-weight: 600; font-size: 14px;">Xe đạp điện</span>
+              </div>
+              <span id="sheetHubBikes" style="font-size: 13px; color: var(--text-muted);">5 xe khả dụng</span>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <i class="fa-solid fa-square-parking" style="font-size: 18px; width: 20px;"></i>
+                <span style="font-weight: 600; font-size: 14px;">Chỗ đỗ xe</span>
+              </div>
+              <span id="sheetHubParking" style="font-size: 13px; color: var(--text-muted);">8 chỗ đỗ trống</span>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <i class="fa-solid fa-bolt" style="font-size: 18px; width: 20px;"></i>
+                <span style="font-weight: 600; font-size: 14px;">Cổng sạc</span>
+              </div>
+              <span id="sheetHubChargers" style="font-size: 13px; color: var(--text-muted);">2 cổng khả dụng</span>
+            </div>
+          </div>
+
+          <button class="btn-primary" onclick="App.startBookingFromHub()">Bắt đầu đặt chỗ</button>
+        </div>
+      </section>
+
+      <!-- EU-05: Search Hub Screen -->
+      <section id="screen-search-hub" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+          <div class="input-box" style="flex: 1;">
+            <input type="text" id="searchInput" placeholder="Tìm Hub, trường, KTX, địa điểm..." oninput="App.filterHubs(this.value)">
+            <i class="fa-solid fa-magnifying-glass input-icon"></i>
+          </div>
+        </div>
+
+        <!-- Search filter tags -->
+        <div style="display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px;">
+          <button class="segmented-tab active" id="filterTabAll" style="padding: 6px 14px; font-size: 12px; border-radius: 20px; white-space: nowrap;" onclick="App.setSearchCategory('all')">Tất cả</button>
+          <button class="segmented-tab" id="filterTabHub" style="padding: 6px 14px; font-size: 12px; border-radius: 20px; white-space: nowrap;" onclick="App.setSearchCategory('hub')">Mobility Hub</button>
+          <button class="segmented-tab" id="filterTabSchool" style="padding: 6px 14px; font-size: 12px; border-radius: 20px; white-space: nowrap;" onclick="App.setSearchCategory('school')">Trường & Viện</button>
+          <button class="segmented-tab" id="filterTabDorm" style="padding: 6px 14px; font-size: 12px; border-radius: 20px; white-space: nowrap;" onclick="App.setSearchCategory('dorm')">KTX</button>
+          <button class="segmented-tab" id="filterTabAmenity" style="padding: 6px 14px; font-size: 12px; border-radius: 20px; white-space: nowrap;" onclick="App.setSearchCategory('amenity')">Tiện ích / Điểm đến</button>
+        </div>
+
+        <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;" id="searchHeaderLabel">Gợi ý Hub & Địa điểm ĐHQG</span>
+          <span style="font-size: 11.5px; color: var(--text-muted);" id="searchResultCount">569 địa điểm</span>
+        </div>
+
+        <div id="hubListContainer" style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- Dynamically populated by App.renderSearchList() -->
+        </div>
+      </section>
+
+      <!-- EU-06: Hub Detail Screen (Full page mode) -->
+      <section id="screen-hub-detail" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title" id="fullHubDetailTitle">Hub Ga Metro ĐHQG</span>
+        </div>
+
+        <div style="height: 180px; background: #e2e8f0; border-radius: var(--radius-md); margin-bottom: 16px; display: flex; align-items: center; justify-content: center; position: relative;">
+          <i class="fa-solid fa-map-location-dot" style="font-size: 40px; color: #94a3b8;"></i>
+          <span style="position: absolute; bottom: 8px; right: 10px; font-size: 11px; background: rgba(0,0,0,0.6); color: #fff; padding: 3px 8px; border-radius: 4px;" id="hubDetailAddressBadge">Khu đô thị ĐHQG - HCM</span>
+        </div>
+
+        <div class="card-box" style="margin-bottom: 16px;">
+          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">Tài nguyên tại Hub</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <i class="fa-solid fa-bicycle" style="font-size: 18px; margin-bottom: 4px;"></i>
+              <div style="font-size: 18px; font-weight: 800;" id="hubDetailBikeCount">5</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Xe đạp điện</div>
+            </div>
+            <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <i class="fa-solid fa-square-parking" style="font-size: 18px; margin-bottom: 4px;"></i>
+              <div style="font-size: 18px; font-weight: 800;" id="hubDetailParkingCount">8</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Chỗ đỗ trống</div>
+            </div>
+            <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <i class="fa-solid fa-bolt" style="font-size: 18px; margin-bottom: 4px;"></i>
+              <div style="font-size: 18px; font-weight: 800;" id="hubDetailChargerCount">2</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Cổng sạc sẵn sàng</div>
+            </div>
+            <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <i class="fa-solid fa-car-battery" style="font-size: 18px; margin-bottom: 4px;"></i>
+              <div style="font-size: 18px; font-weight: 800;" id="hubDetailBatteryCount">6</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Pin khả dụng</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-primary" onclick="App.navigateTo('screen-select-bike')">Bắt đầu đặt chỗ</button>
+      </section>
+
+      <!-- ================= 3. RESOURCE SELECTION & BOOKING SCREENS ================= -->
+
+      <!-- EU-07: Select Bike (Step 2/3) -->
+      <section id="screen-select-bike" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-hub-detail')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Chọn tài nguyên</span>
+          <i class="fa-solid fa-bicycle nav-action"></i>
+        </div>
+
+        <div class="step-indicator">
+          <div class="step-label">Bước 2/3 · Chọn tài nguyên</div>
+          <div class="step-bars">
+            <div class="bar active"></div>
+            <div class="bar active"></div>
+            <div class="bar"></div>
+          </div>
+        </div>
+
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;" class="hub-name-display">Hub Ga Metro ĐHQG</div>
+
+        <!-- Resource Type Tabs -->
+        <div class="segmented-tabs">
+          <button class="segmented-tab active" onclick="App.switchBookingTab('screen-select-bike')">Thuê xe</button>
+          <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-parking')">Chỗ đỗ</button>
+          <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-charging')">Sạc</button>
+          <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-battery-swap')">Đổi pin</button>
+        </div>
+
+        <!-- Bike Items Container -->
+        <div id="bikeListContainer">
+          <!-- Bike Item 1 -->
+          <div class="card-box selectable selected" id="bike-item-1" onclick="App.selectBike('XE-024', 85, 'bike-item-1')">
+            <div>
+              <div style="font-weight: 700; font-size: 14.5px; margin-bottom: 4px;">XE-024 · Xe đạp điện</div>
+              <div style="font-size: 12.5px; color: var(--text-muted);">Pin 85% · Sẵn sàng</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <i class="fa-solid fa-bicycle" style="font-size: 18px;"></i>
+              <div class="radio-circle checked" id="radio-bike-1"></div>
+            </div>
+          </div>
+
+          <!-- Bike Item 2 -->
+          <div class="card-box selectable" id="bike-item-2" onclick="App.selectBike('XE-031', 92, 'bike-item-2')">
+            <div>
+              <div style="font-weight: 700; font-size: 14.5px; margin-bottom: 4px;">XE-031 · Xe đạp điện</div>
+              <div style="font-size: 12.5px; color: var(--text-muted);">Pin 92% · Sẵn sàng</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <i class="fa-solid fa-bicycle" style="font-size: 18px;"></i>
+              <div class="radio-circle" id="radio-bike-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;">
+          <label class="form-label">Hub trả xe dự kiến</label>
+          <div class="input-box">
+            <select id="selectDestHub">
+              <option value="Hub Đại học Bách khoa">Hub Đại học Bách khoa</option>
+              <option value="Hub KTX Khu B">Hub KTX Khu B</option>
+              <option value="Hub Đại học Quốc Tế">Hub Đại học Quốc Tế</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; margin-bottom: 16px; font-size: 12.5px; color: var(--text-muted); line-height: 1.4;">
+          Đã chọn 1 xe thuê. Chuyển sang xe cá nhân sẽ thay lựa chọn hiện tại.
+        </div>
+
+        <button class="btn-secondary" style="margin-bottom: 12px; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-select-parking')">Chọn dịch vụ xe cá nhân</button>
+        <button class="btn-primary" style="width: 100%; font-weight: 700; padding: 13px;" onclick="App.navigateTo('screen-review-rental')">Kiểm tra đặt xe</button>
+      </section>
+
+      <!-- EU-08: Select Parking (Personal vehicle) -->
+      <section id="screen-select-parking" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-hub-detail')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Chọn tài nguyên</span>
+          <span class="nav-action nav-icon-badge-p">P</span>
+        </div>
+
+        <div class="step-indicator">
+          <div class="step-label">Bước 2/3 · Chọn tài nguyên</div>
+          <div class="step-bars">
+            <div class="bar active"></div>
+            <div class="bar active"></div>
+            <div class="bar"></div>
+          </div>
+        </div>
+
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;" class="hub-name-display">Hub Ga Metro ĐHQG</div>
+
+        <div class="segmented-tabs">
+          <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-bike')">Thuê xe</button>
+          <button class="segmented-tab active" onclick="App.switchBookingTab('screen-select-parking')">Chỗ đỗ</button>
+          <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-charging')">Sạc</button>
+          <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-battery-swap')">Đổi pin</button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Phương tiện cá nhân *</label>
+          <div class="input-box">
+            <select id="parkingPersonalVehicle">
+              <option value="Xe máy điện · 59-X1 123.45">Xe máy điện · 59-X1 123.45</option>
+              <option value="Xe đạp điện · 59-MD 889.92">Xe đạp điện · 59-MD 889.92</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ngày / giờ đến *</label>
+          <div class="input-box">
+            <select id="parkingArrivalTime">
+              <option value="18/10/2026 · 10:00">18/10/2026 · 10:00</option>
+              <option value="18/10/2026 · 11:00">18/10/2026 · 11:00</option>
+              <option value="18/10/2026 · 14:00">18/10/2026 · 14:00</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label">Thời lượng dự kiến *</label>
+          <div class="input-box">
+            <select id="parkingDuration">
+              <option value="2 giờ">2 giờ</option>
+              <option value="1 giờ">1 giờ</option>
+              <option value="3 giờ">3 giờ</option>
+              <option value="4 giờ">4 giờ</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: inline-block; background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 14px; font-size: 12.5px; font-weight: 700; color: var(--text-main); margin-bottom: 14px;" id="parkingAvailBadge">
+          8 vị trí đỗ còn khả dụng
+        </div>
+
+        <div class="note-box-simple">
+          Đã chọn: chỗ đỗ. Có thể thêm lịch sạc cho cùng phương tiện.
+        </div>
+
+        <button class="btn-secondary" style="margin-bottom: 12px; width: 100%; font-weight: 700; padding: 12px;" onclick="App.switchBookingTab('screen-select-charging')">
+          Thêm lịch sạc cho xe này
+        </button>
+
+        <button class="btn-primary" style="width: 100%; font-weight: 700; padding: 13px;" onclick="App.navigateTo('screen-review-parking')">
+          Kiểm tra đặt chỗ (1)
+        </button>
+      </section>
+
+      <!-- EU-09: Select Charging (Personal vehicle) -->
+      <section id="screen-select-charging" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-select-parking')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Chọn tài nguyên</span>
+          <span class="nav-action"><i class="fa-solid fa-bolt" style="font-size: 18px;"></i></span>
+        </div>
+
+        <div class="step-indicator">
+          <div class="step-label">Bước 2/3 · Chọn tài nguyên</div>
+          <div class="step-bars">
+            <div class="bar active"></div>
+            <div class="bar active"></div>
+            <div class="bar"></div>
+          </div>
+        </div>
+
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;" class="hub-name-display">Hub Ga Metro ĐHQG</div>
+
+        <div class="segmented-tabs">
+          <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-bike')">Thuê xe</button>
+          <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-parking')">Chỗ đỗ</button>
+          <button class="segmented-tab active" onclick="App.switchBookingTab('screen-select-charging')">Sạc</button>
+          <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-battery-swap')">Đổi pin</button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Phương tiện cá nhân *</label>
+          <div class="input-box">
+            <select id="chargingPersonalVehicle">
+              <option value="Xe máy điện · 59-X1 123.45">Xe máy điện · 59-X1 123.45</option>
+              <option value="Xe đạp điện · 59-MD 889.92">Xe đạp điện · 59-MD 889.92</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ngày sử dụng *</label>
+          <div class="input-box">
+            <select id="chargingUseDate">
+              <option value="18/10/2026">18/10/2026</option>
+              <option value="19/10/2026">19/10/2026</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label">Khung giờ và cổng sạc</label>
+          <div id="chargerSlotsContainer">
+            <div class="card-box selectable selected" id="slot-s03" style="display: flex; justify-content: space-between; align-items: center; padding: 14px; margin-bottom: 10px;" onclick="App.selectChargerSlot('10:00 – 11:00 · S03', 'slot-s03')">
+              <span style="font-size: 14px; font-weight: 700;">10:00 – 11:00 · S03</span>
+              <div class="radio-circle checked"></div>
+            </div>
+
+            <div class="card-box selectable" id="slot-s04" style="display: flex; justify-content: space-between; align-items: center; padding: 14px;" onclick="App.selectChargerSlot('11:00 – 12:00 · S04', 'slot-s04')">
+              <span style="font-size: 14px; font-weight: 700;">11:00 – 12:00 · S04</span>
+              <div class="radio-circle"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="note-box-simple">
+          Giỏ dịch vụ: chỗ đỗ + lịch sạc, cùng xe và cùng Hub. Có thể chỉnh trước khi đặt.
+        </div>
+
+        <button class="btn-primary" style="width: 100%; font-weight: 700; padding: 13px;" onclick="App.navigateTo('screen-review-booking')">
+          Kiểm tra đặt chỗ (2)
+        </button>
+      </section>
+
+      <!-- EU-10: Select Battery Swap -->
+      <section id="screen-select-battery-swap" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-hub-detail')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Chọn tài nguyên</span>
+          <span class="nav-action"><i class="fa-solid fa-arrow-right-arrow-left" style="font-size: 16px;"></i></span>
+        </div>
+
+        <div class="step-indicator">
+          <div class="step-label">Bước 2/3 · Chọn tài nguyên</div>
+          <div class="step-bars">
+            <div class="bar active"></div>
+            <div class="bar active"></div>
+            <div class="bar"></div>
+          </div>
+        </div>
+
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Nếu Hub hỗ trợ dịch vụ đổi pin</div>
+
+        <div class="segmented-tabs">
+          <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-bike')">Thuê xe</button>
+          <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-parking')">Chỗ đỗ</button>
+          <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-charging')">Sạc</button>
+          <button class="segmented-tab active" onclick="App.switchBookingTab('screen-select-battery-swap')">Đổi pin</button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Phương tiện cá nhân *</label>
+          <div class="input-box">
+            <select id="swapPersonalVehicle">
+              <option value="Xe máy điện · 59-X1 123.45">Xe máy điện · 59-X1 123.45</option>
+              <option value="Xe máy điện VinFast · 59-V1 456.78">Xe máy điện VinFast · 59-V1 456.78</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Loại pin tương thích *</label>
+          <div class="input-box">
+            <select id="swapBatteryType">
+              <option value="Pin tương thích: B48">Pin tương thích: B48</option>
+              <option value="Pin tương thích: LFP-72">Pin tương thích: LFP-72</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Số lượng pin *</label>
+          <div class="input-box">
+            <select id="swapBatteryQuantity">
+              <option value="2 pin">2 pin</option>
+              <option value="1 pin">1 pin</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label">Ngày / giờ đến *</label>
+          <div class="input-box">
+            <select id="swapArrivalTime">
+              <option value="18/10/2026 · 10:00">18/10/2026 · 10:00</option>
+              <option value="18/10/2026 · 11:30">18/10/2026 · 11:30</option>
+              <option value="18/10/2026 · 14:00">18/10/2026 · 14:00</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="note-box-simple">
+          Chỉ cho đặt khi Hub hỗ trợ và có pin tương thích. Không chọn được pin hết khả dụng.
+        </div>
+
+        <button class="btn-primary" style="width: 100%; font-weight: 700; padding: 13px;" onclick="App.navigateTo('screen-review-swap')">
+          Kiểm tra đặt pin
+        </button>
+      </section>
+
+      <!-- EU-11: Review Booking (Multi services - Personal vehicle) -->
+      <section id="screen-review-booking" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-select-bike')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Kiểm tra đặt trước</span>
+          <i class="fa-regular fa-calendar-check nav-action"></i>
+        </div>
+
+        <div class="step-indicator">
+          <div class="step-label">Bước 3/3 · Xác nhận</div>
+          <div class="step-bars">
+            <div class="bar active"></div>
+            <div class="bar active"></div>
+            <div class="bar active"></div>
+          </div>
+        </div>
+
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Kiểm tra trước khi giữ tài nguyên</p>
+
+        <!-- Plan summary card -->
+        <div class="card-box">
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">Phương án: xe cá nhân</h3>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+            <span style="color: var(--text-muted);">Hub</span>
+            <span style="font-weight: 600;">Ga Metro ĐHQG</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+            <span style="color: var(--text-muted);">Phương tiện</span>
+            <span style="font-weight: 600;">59-X1 123.45</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px;">
+            <span style="color: var(--text-muted);">Khung giờ</span>
+            <span style="font-weight: 600;">10:00 – 12:00</span>
+          </div>
+        </div>
+
+        <!-- Selected services card -->
+        <div class="card-box">
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">Dịch vụ đã chọn</h3>
+          <div style="font-size: 13.5px; margin-bottom: 6px;">1. Chỗ đỗ · 10:00 – 12:00</div>
+          <div style="font-size: 13.5px; margin-bottom: 12px;">2. Sạc S03 · 10:00 – 11:00</div>
+          <a href="javascript:void(0)" onclick="App.navigateTo('screen-select-parking')" style="font-size: 12.5px; color: var(--text-muted); text-decoration: none;">Sửa / bỏ dịch vụ → quay lại bước 2</a>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; margin-bottom: 16px; font-size: 12.5px; color: var(--text-muted); line-height: 1.4;">
+          Hệ thống kiểm tra lại khả dụng trước khi xác nhận, tránh giữ trùng tài nguyên.
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+          <input type="checkbox" id="checkAgree" checked style="width: 18px; height: 18px; accent-color: var(--text-main);">
+          <label for="checkAgree" style="font-size: 13px; font-weight: 500;">Tôi đã kiểm tra và đồng ý đặt các dịch vụ trên.</label>
+        </div>
+
+        <button class="btn-secondary" style="margin-bottom: 12px;" onclick="App.navigateTo('screen-select-parking')">Chỉnh sửa lựa chọn</button>
+        <button class="btn-primary" onclick="App.confirmBooking('personal')">Xác nhận đặt trước</button>
+      </section>
+
+      <!-- EU-43: Review Rental Booking -->
+      <section id="screen-review-rental" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-select-bike')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Kiểm tra đặt xe</span>
+        </div>
+        <div class="card-box">
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">Phương tiện dùng chung</h3>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+            <span style="color: var(--text-muted);">Mã xe</span>
+            <span style="font-weight: 600;" id="reviewRentalBike">XE-024 (Pin 85%)</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+            <span style="color: var(--text-muted);">Hub lấy xe</span>
+            <span style="font-weight: 600;" id="reviewRentalOriginHub">Hub Ga Metro ĐHQG</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px;">
+            <span style="color: var(--text-muted);">Hub trả xe dự kiến</span>
+            <span style="font-weight: 600;" id="reviewRentalDestHub">Hub ĐH Bách Khoa</span>
+          </div>
+        </div>
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; margin-bottom: 24px; font-size: 12.5px; color: var(--text-muted);" id="reviewRentalPolicyNote">
+          Thời gian giữ xe: 10 phút sau khi xác nhận. Cước phí tạm tính: 10,000đ/giờ (thanh toán khi quét mã mở xe tại Hub).
+        </div>
+        <button class="btn-secondary" style="margin-bottom: 10px; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-select-bike')">Chỉnh sửa lựa chọn</button>
+        <button class="btn-primary" style="width: 100%; font-weight: 700;" onclick="App.confirmRental()">Xác nhận thuê xe</button>
+      </section>
+
+      <!-- EU-49: Review Parking Booking -->
+      <section id="screen-review-parking" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-select-parking')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Kiểm tra chỗ đỗ</span>
+        </div>
+        <div class="card-box">
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">Thông tin đặt chỗ đỗ xe</h3>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+            <span style="color: var(--text-muted);">Biển số xe</span>
+            <span style="font-weight: 600;" id="reviewParkingPlate">59-X1 123.45</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+            <span style="color: var(--text-muted);">Vị trí</span>
+            <span style="font-weight: 600;" id="reviewParkingSlotHub">Chỗ P-04 (Hub Ga Metro)</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px;">
+            <span style="color: var(--text-muted);">Khung giờ</span>
+            <span style="font-weight: 600;" id="reviewParkingTime">10:00 – 12:00</span>
+          </div>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">Phí gửi xe thanh toán trực tiếp cho bảo vệ tại cổng.</p>
+        <button class="btn-primary" onclick="App.confirmBooking('parking')">Xác nhận đặt chỗ đỗ</button>
+      </section>
+
+      <!-- EU-45: Review Swap Booking -->
+      <section id="screen-review-swap" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-select-battery-swap')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Kiểm tra đổi pin</span>
+        </div>
+        <div class="card-box">
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">Đổi pin xe điện</h3>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+            <span style="color: var(--text-muted);">Loại pin</span>
+            <span style="font-weight: 600;" id="reviewSwapType">48V - 20Ah Lithium</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+            <span style="color: var(--text-muted);">Trạm đổi</span>
+            <span style="font-weight: 600;" id="reviewSwapHub">Tủ pin Hub Ga Metro</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px;">
+            <span style="color: var(--text-muted);">Chi phí</span>
+            <span style="font-weight: 600;" id="reviewSwapFee">25,000đ / lần</span>
+          </div>
+        </div>
+        <button class="btn-secondary" style="margin-top: 16px; margin-bottom: 10px; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-select-battery-swap')">Chỉnh sửa lựa chọn</button>
+        <button class="btn-primary" style="width: 100%; font-weight: 700;" onclick="App.confirmSwapAndPay()">Xác nhận đặt pin</button>
+      </section>
+
+      <!-- EU-12 & EU-44/46/50: Booking Success Screen -->
+      <section id="screen-booking-success" class="screen" style="text-align: center; justify-content: center; align-items: center;">
+        <div style="width: 72px; height: 72px; background: #ecfdf5; color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 16px;">
+          <i class="fa-solid fa-check"></i>
+        </div>
+        <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 6px;">Đặt chỗ thành công!</h2>
+        <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 24px;" id="successBookingId">Mã đặt: EMH-1024</p>
+
+        <div class="card-box" style="text-align: left; width: 100%; margin-bottom: 24px;">
+          <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+            <span style="color: var(--text-muted);">Hub</span>
+            <span style="font-weight: 600;">Hub Ga Metro ĐHQG</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+            <span style="color: var(--text-muted);">Thời gian giữ chỗ đến</span>
+            <span style="font-weight: 700; color: #ef4444;">08:10</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px;">
+            <span style="color: var(--text-muted);">Trạng thái</span>
+            <span style="color: #10b981; font-weight: 600;">Đã giữ tài nguyên</span>
+          </div>
+        </div>
+
+        <button class="btn-primary" style="margin-bottom: 12px;" onclick="App.navigateTo('screen-my-bookings')">Xem danh sách đặt chỗ</button>
+        <button class="btn-secondary" onclick="App.navigateTo('screen-pickup')">Đến bước nhận xe / dịch vụ</button>
+      </section>
+
+      <!-- EU-13: Resource Unavailable Screen -->
+      <section id="screen-resource-unavailable" class="screen" style="text-align: center; justify-content: center; align-items: center;">
+        <div style="width: 72px; height: 72px; background: #fff1f2; color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 16px;">
+          <i class="fa-solid fa-circle-exclamation"></i>
+        </div>
+        <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 6px;">Tài nguyên không khả dụng</h2>
+        <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 24px; line-height: 1.4;">
+          Xe hoặc vị trí bạn vừa chọn đã được người dùng khác đặt trước ít giây hoặc đang bảo trì.
+        </p>
+        <div class="card-box" style="text-align: left; width: 100%; margin-bottom: 24px;">
+          <div style="font-size: 13px; font-weight: 700; margin-bottom: 6px;">Gợi ý thay thế phù hợp:</div>
+          <div style="font-size: 12.5px; color: var(--text-muted);">Xe XE-031 tại Hub Ga Metro (Pin 92%) đang sẵn sàng.</div>
+        </div>
+        <button class="btn-primary" style="margin-bottom: 12px;" onclick="App.navigateTo('screen-select-bike')">Chọn xe khác</button>
+        <button class="btn-secondary" onclick="App.navigateTo('screen-map-home')">Quay lại bản đồ</button>
+      </section>
+
+      <!-- ================= 4. MY BOOKINGS & MANAGEMENT ================= -->
+
+      <!-- EU-14: My Bookings -->
+      <section id="screen-my-bookings" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Đặt trước của tôi</span>
+          <i class="fa-regular fa-calendar-check nav-action"></i>
+        </div>
+
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Xem lịch và trạng thái của từng đặt trước</p>
+
+        <!-- Segmented Tab for Booking Status -->
+        <div class="segmented-tabs">
+          <button class="segmented-tab active" id="tabBookingUpcoming" onclick="App.switchBookingListTab('upcoming')">Sắp tới</button>
+          <button class="segmented-tab" id="tabBookingActive" onclick="App.switchBookingListTab('active')">Đang dùng</button>
+          <button class="segmented-tab" id="tabBookingHistory" onclick="App.switchBookingListTab('history')">Lịch sử</button>
+        </div>
+
+        <div id="bookingCardsContainer">
+          <!-- Card 1: Rental -->
+          <div class="card-box">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-weight: 800; font-size: 14.5px;">EMH-1023 · Thuê xe</span>
+              <span style="font-size: 11px; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Đã xác nhận</span>
+            </div>
+            <div style="font-size: 13px; margin-bottom: 4px;">XE-024 · Hub Ga Metro ĐHQG</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Giữ đến 08:10 · ví dụ chính sách</div>
+            <button class="btn-primary" onclick="App.navigateTo('screen-booking-detail')">Chi tiết và nhận xe</button>
+          </div>
+
+          <!-- Card 2: Personal Vehicle -->
+          <div class="card-box">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-weight: 800; font-size: 14.5px;">EMH-1024 · Xe cá nhân</span>
+              <span style="font-size: 11px; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Đã xác nhận</span>
+            </div>
+            <div style="font-size: 13px; margin-bottom: 4px;">Chỗ đỗ + sạc · Hub Ga Metro</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">18/10/2026 · từ 10:00</div>
+            <button class="btn-secondary" onclick="App.navigateTo('screen-personal-booking')">Xem dịch vụ xe cá nhân</button>
+          </div>
+        </div>
+
+        <button class="btn-secondary" style="margin-top: 10px;" onclick="App.navigateTo('screen-map-home')">Đặt thêm dịch vụ</button>
+      </section>
+
+      <!-- EU-15: Booking Detail -->
+      <section id="screen-booking-detail" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-my-bookings')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Chi tiết đặt trước</span>
+          <span class="nav-action"><i class="fa-regular fa-calendar" style="font-size: 18px;"></i></span>
+        </div>
+
+        <div style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 12px;" id="bookingDetailSubtitle">EMH-1023 · Xe dùng chung</div>
+
+        <div class="status-badge-outline" id="bookingDetailStatus">Đã xác nhận</div>
+
+        <div class="card-box" style="margin-bottom: 16px;">
+          <div style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--text-main);">Thông tin nhận xe</div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Xe</span>
+            <span style="font-weight: 600; color: var(--text-main);" id="bookingDetailResource">XE-024 · Pin 85%</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Hub lấy xe</span>
+            <span style="font-weight: 600; color: var(--text-main);" id="bookingDetailOriginHub">Ga Metro ĐHQG</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Hub trả dự kiến</span>
+            <span style="font-weight: 600; color: var(--text-main);" id="bookingDetailDestHub">ĐH Bách khoa</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Thời điểm đặt</span>
+            <span style="font-weight: 600; color: var(--text-main);" id="bookingDetailTime">08:00</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Giữ đến</span>
+            <span style="font-weight: 700; color: var(--text-main);" id="bookingDetailHoldUntil">08:10</span>
+          </div>
+        </div>
+
+        <div class="note-box-simple">
+          Đến đúng Hub, kiểm tra mã xe và xác nhận nhận xe. Nếu hết hạn, đặt lại tài nguyên.
+        </div>
+
+        <button class="btn-secondary" style="margin-bottom: 12px; border: 1.5px solid var(--border-color); background: #ffffff; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-cancel-confirm')">Hủy đặt trước</button>
+        <button class="btn-primary" style="width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-pickup')">Nhận phương tiện</button>
+      </section>
+
+      <!-- EU-16: Cancel Confirm -->
+      <section id="screen-cancel-confirm" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-booking-detail')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Hủy đặt trước</span>
+        </div>
+        <p style="font-size: 14px; margin-bottom: 16px; line-height: 1.5;">
+          Bạn có chắc chắn muốn hủy đặt xe <strong>EMH-1023</strong> không? Tài nguyên sẽ được hoàn trả cho người dùng khác.
+        </p>
+        <div class="form-group" style="margin-bottom: 24px;">
+          <label class="form-label">Lý do hủy (tùy chọn)</label>
+          <div class="input-box">
+            <select>
+              <option>Thay đổi kế hoạch di chuyển</option>
+              <option>Đặt nhầm thời gian hoặc địa điểm</option>
+              <option>Lý do khác</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-primary" style="background: #ef4444; margin-bottom: 12px;" onclick="App.executeCancelBooking()">Xác nhận hủy đặt</button>
+        <button class="btn-secondary" onclick="App.navigateTo('screen-booking-detail')">Quay lại</button>
+      </section>
+
+      <!-- EU-17: Cancelled Successfully -->
+      <section id="screen-cancelled" class="screen" style="text-align: center; justify-content: center; align-items: center;">
+        <div style="width: 72px; height: 72px; background: #fef2f2; color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 16px;">
+          <i class="fa-solid fa-ban"></i>
+        </div>
+        <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">Đã hủy đặt trước</h2>
+        <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 28px;">
+          Lệnh đặt trước của bạn đã được hủy thành công. Đơn đã được chuyển vào Lịch sử đặt chỗ.
+        </p>
+        <button class="btn-primary" style="margin-bottom: 10px; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-booking-history')">Xem lịch sử đặt chỗ</button>
+        <button class="btn-secondary" style="width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-my-bookings')">Quay lại đặt trước của tôi</button>
+      </section>
+
+      <!-- EU-47: Personal Booking Details -->
+      <section id="screen-personal-booking" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-my-bookings')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Đặt chỗ xe cá nhân</span>
+        </div>
+        <div class="card-box">
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">EMH-1024 · 59-X1 123.45</h3>
+          <div style="font-size: 13px; margin-bottom: 6px;">• Chỗ đỗ xe P-12: 10:00 – 12:00</div>
+          <div style="font-size: 13px; margin-bottom: 12px;">• Trụ sạc nhanh S03: 10:00 – 11:00</div>
+          <div style="font-size: 12px; color: var(--text-muted);">Hub Ga Metro ĐHQG</div>
+        </div>
+        <button class="btn-primary" style="margin-bottom: 12px; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-parking-arrival')">Đến cổng bãi đỗ (P08)</button>
+        <button class="btn-secondary" style="margin-bottom: 12px; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-charging-start')">Vào cắm sạc pin (S03)</button>
+        <button class="btn-secondary" style="width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-battery-swap')">Xác nhận đổi pin</button>
+      </section>
+
+      <!-- EU-58: Booking History -->
+      <section id="screen-booking-history" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-my-bookings')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Lịch sử đặt chỗ</span>
+        </div>
+        <div id="bookingHistoryContainer">
+          <div class="card-box">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="font-weight: 700; font-size: 14px;">EMH-0988 · Thuê xe</span>
+              <span style="font-size: 12px; color: #10b981; font-weight: 600;">Hoàn thành</span>
+            </div>
+            <div style="font-size: 12.5px; color: var(--text-muted);">15/10/2026 · 45 phút · 15,000đ</div>
+          </div>
+          <div class="card-box">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="font-weight: 700; font-size: 14px;">EMH-0950 · Đỗ xe cá nhân</span>
+              <span style="font-size: 12px; color: #10b981; font-weight: 600;">Hoàn thành</span>
+            </div>
+            <div style="font-size: 12.5px; color: var(--text-muted);">10/10/2026 · 2 giờ · 5,000đ</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 5. VEHICLE OPERATION & ACTIVE SERVICES ================= -->
+
+      <!-- EU-18: Pickup Vehicle -->
+      <section id="screen-pickup" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-my-bookings')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Nhận phương tiện</span>
+        </div>
+        <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 20px;">
+          Quét mã QR dán trên tay lái xe <strong>XE-024</strong> tại Hub Ga Metro để mở khóa nhận xe.
+        </p>
+        <div style="height: 240px; background: #1e293b; border-radius: var(--radius-md); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; margin-bottom: 24px; position: relative;">
+          <i class="fa-solid fa-qrcode" style="font-size: 80px; opacity: 0.8; margin-bottom: 12px;"></i>
+          <span style="font-size: 12px; color: #94a3b8;">Đang tìm mã QR phương tiện...</span>
+          <div style="position: absolute; width: 180px; height: 180px; border: 2px dashed #38bdf8; border-radius: 12px;"></div>
+        </div>
+        <button class="btn-primary" onclick="App.navigateTo('screen-vehicle-ready')">Giả lập quét mã thành công</button>
+      </section>
+
+      <!-- EU-19: Vehicle Ready -->
+      <section id="screen-vehicle-ready" class="screen" style="text-align: center; justify-content: center; align-items: center;">
+        <div style="width: 72px; height: 72px; background: #ecfdf5; color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 16px;">
+          <i class="fa-solid fa-lock-open"></i>
+        </div>
+        <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 6px;">Mở khóa thành công!</h2>
+        <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 16px;">Xe XE-024 đã mở chốt khóa an toàn</p>
+
+        <div class="card-box" style="text-align: left; width: 100%; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 6px;">
+            <span style="color: var(--text-muted);">Phương tiện</span>
+            <span style="font-weight: 700;">XE-024 (Pin 85%)</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 6px;">
+            <span style="color: var(--text-muted);">Cước thuê khởi điểm</span>
+            <span style="font-weight: 700; color: #0284c7;">10,000 đ</span>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted); border-top: 1px dashed var(--border-color); padding-top: 6px; margin-top: 6px;">
+            Vui lòng xác nhận thanh toán cước phí để bắt đầu tính giờ chuyến đi.
+          </div>
+        </div>
+
+        <button class="btn-primary" style="width: 100%; font-weight: 700;" onclick="App.payAndStartRide()">Thanh toán và bắt đầu chuyến đi</button>
+      </section>
+
+      <!-- EU-20: Ride Active -->
+      <section id="screen-ride-active" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Chuyến đi đang diễn ra</span>
+          <i class="fa-solid fa-bicycle nav-action"></i>
+        </div>
+
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;" id="rideActiveSubtitle">
+          XE-024 · Hub Ga Metro → ĐH Bách khoa
+        </div>
+
+        <!-- Duration big card -->
+        <div class="card-box">
+          <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">Thời gian sử dụng</div>
+          <div style="font-size: 38px; font-weight: 800; margin-bottom: 14px;" id="rideTimer">13 phút</div>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 6px;">
+            <span style="color: var(--text-muted);">Pin hiện tại</span>
+            <span style="font-weight: 700;" id="rideBatteryLevel">78%</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px;">
+            <span style="color: var(--text-muted);">Trạng thái</span>
+            <span style="font-weight: 600; color: #10b981;" id="rideStatusBadge">Đang sử dụng</span>
+          </div>
+        </div>
+
+        <!-- Log checkpoints -->
+        <div class="card-box">
+          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">Các mốc ghi nhận</h4>
+          <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+            <span style="color: var(--text-muted);">Đặt xe</span>
+            <span style="font-weight: 500;">08:00</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+            <span style="color: var(--text-muted);">Nhận / bắt đầu</span>
+            <span style="font-weight: 500;">08:05</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px;">
+            <span style="color: var(--text-muted);">Cập nhật gần nhất</span>
+            <span style="font-weight: 500;">08:18:02</span>
+          </div>
+        </div>
+
+        <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 20px;">
+          Tài nguyên và trạng thái dịch vụ được cập nhật sau mỗi thao tác hợp lệ.
+        </p>
+
+        <button class="btn-secondary" style="margin-bottom: 12px;" onclick="App.prepareReport('Phương tiện', 'XE-024')">Báo sự cố phương tiện</button>
+        <button class="btn-primary" onclick="App.navigateTo('screen-return-vehicle')">Kết thúc và trả xe</button>
+      </section>
+
+      <!-- EU-21: Return Vehicle -->
+      <section id="screen-return-vehicle" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-ride-active')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Trả phương tiện</span>
+        </div>
+        <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 16px;">
+          Vui lòng đưa xe vào đúng vạch đỗ tại <strong>Hub Đại học Bách khoa</strong> và khóa chốt an toàn.
+        </p>
+        <div class="card-box" style="margin-bottom: 20px;">
+          <div style="font-size: 13.5px; font-weight: 600; margin-bottom: 4px;">Kiểm tra định vị Hub</div>
+          <div style="font-size: 12.5px; color: #10b981; font-weight: 500;"><i class="fa-solid fa-location-dot"></i> Đã phát hiện vị trí trong Hub hợp lệ</div>
+        </div>
+        <button class="btn-primary" style="width: 100%; font-weight: 700; padding: 13px;" onclick="App.finishReturnRental()">Xác nhận khóa và trả xe</button>
+      </section>
+
+      <!-- EU-22: Service Rejected -->
+      <section id="screen-service-rejected" class="screen" style="text-align: center; justify-content: center; align-items: center;">
+        <div style="width: 72px; height: 72px; background: #fef2f2; color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 16px;">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">Không thể hoàn tất trả xe</h2>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px; line-height: 1.4;">
+          Bạn đang ở ngoài bán kính của Hub hoặc khóa xe chưa được đóng khớp an toàn. Vui lòng kiểm tra lại.
+        </p>
+        <button class="btn-primary" onclick="App.navigateTo('screen-return-vehicle')">Thử lại</button>
+      </section>
+
+      <!-- EU-23: Parking Arrival (User Wireframe EU-23-ParkingArrival.png) -->
+      <section id="screen-parking-arrival" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-personal-booking')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Đưa xe vào chỗ đỗ</span>
+          <span class="nav-icon-badge-p">P</span>
+        </div>
+
+        <div style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 14px;">EMH-1024 · Xe cá nhân</div>
+
+        <div class="card-box" style="margin-bottom: 16px;">
+          <div style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--text-main);">Đặt chỗ đỗ còn hiệu lực</div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Phương tiện</span>
+            <span style="font-weight: 600; color: var(--text-main);">59-X1 123.45</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Hub / vị trí</span>
+            <span style="font-weight: 600; color: var(--text-main);">Ga Metro · P08</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Lịch sử dụng</span>
+            <span style="font-weight: 600; color: var(--text-main);">10:00 – 12:00</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" style="font-weight: 700;">Mã vị trí đỗ *</label>
+          <div class="input-with-button">
+            <input type="text" id="parkingSlotCodeInput" value="P08" />
+            <button type="button" class="btn-inline-action" onclick="App.showToast('Quét QR vị trí đỗ P08 thành công!')">Quét QR</button>
+          </div>
+        </div>
+
+        <label class="checkbox-custom-row">
+          <input type="checkbox" id="parkingCheckConfirm" checked />
+          <span>Tôi đã đưa đúng phương tiện vào vị trí đỗ.</span>
+        </label>
+
+        <div class="note-box-simple" style="margin-top: 20px; margin-bottom: 24px;">
+          Hệ thống kiểm tra đặt trước, lịch và trạng thái vị trí trước khi ghi nhận xe vào.
+        </div>
+
+        <button class="btn-primary" style="width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-parking-active')">Xác nhận xe đã vào chỗ đỗ</button>
+      </section>
+
+      <!-- EU-24: Parking Active (User Wireframe EU-24-ParkingActive.png) -->
+      <section id="screen-parking-active" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-active-services')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Đang sử dụng chỗ đỗ</span>
+          <span class="nav-icon-badge-p">P</span>
+        </div>
+
+        <div style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 12px;" id="parkingActiveSubtitle">EMH-1024 · Hub Ga Metro</div>
+
+        <div class="status-badge-outline" id="parkingActiveStatus">Đang đỗ</div>
+
+        <div class="card-box" style="margin-bottom: 16px;">
+          <div style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--text-main);">Thông tin phiên đỗ</div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Phương tiện</span>
+            <span style="font-weight: 600; color: var(--text-main);" id="parkingActivePlate">59-X1 123.45</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Vị trí</span>
+            <span style="font-weight: 600; color: var(--text-main);" id="parkingActiveSlot">P08</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Giờ vào</span>
+            <span style="font-weight: 600; color: var(--text-main);" id="parkingActiveCheckin">10:00</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Giờ dự kiến rời</span>
+            <span style="font-weight: 600; color: var(--text-main);" id="parkingActiveEstExit">12:00</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Cập nhật gần nhất</span>
+            <span style="font-weight: 600; color: var(--text-main);" id="parkingActiveLastUpdate">10:15:02</span>
+          </div>
+        </div>
+
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5;">
+          Phí giữ xe được thanh toán trực tiếp cho bảo vệ tại Hub.
+        </p>
+
+        <button class="btn-secondary" style="margin-bottom: 12px; border: 1.5px solid var(--border-color); background: #ffffff; width: 100%; font-weight: 700;" onclick="App.prepareReport('Chỗ đỗ', 'P08')">Báo sự cố vị trí đỗ</button>
+        <button class="btn-primary" style="width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-parking-exit-confirm')">Xe rời chỗ đỗ</button>
+      </section>
+
+      <!-- EU-25: Parking Exit Confirm (User Wireframe EU-25-ParkingExitConfirm.png) -->
+      <section id="screen-parking-exit-confirm" class="screen">
+        <div class="top-nav" style="background: #ffffff; border-bottom: 1px solid var(--border-color);">
+          <button class="nav-back" onclick="App.navigateTo('screen-parking-active')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Kết thúc phiên đỗ</span>
+          <span class="nav-icon-badge-p">P</span>
+        </div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 20px 0;">
+          <div class="card-box" style="padding: 24px 20px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); background: #ffffff; border-radius: var(--radius-md);">
+            <h3 style="font-size: 18px; font-weight: 800; margin-bottom: 14px; color: var(--text-main);">Xác nhận xe đã rời?</h3>
+            <p style="font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 28px;">
+              Chỉ xác nhận sau khi đưa xe ra khỏi vị trí P08. Hệ thống sẽ ghi giờ rời và giải phóng chỗ đỗ.
+            </p>
+            <button class="btn-primary" style="margin-bottom: 12px; width: 100%; font-weight: 700;" onclick="App.finishParkingExit()">Xác nhận rời chỗ đỗ</button>
+            <button class="btn-secondary" style="border: 1.5px solid var(--border-color); background: #ffffff; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-parking-active')">Quay lại</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- EU-26: Charging Start (User Wireframe EU-26-ChargingStart.png) -->
+      <section id="screen-charging-start" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-personal-booking')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Bắt đầu sử dụng sạc</span>
+          <span class="nav-action"><i class="fa-solid fa-bolt" style="font-size: 18px;"></i></span>
+        </div>
+
+        <div style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 14px;">EMH-1024 · Hub Ga Metro</div>
+
+        <div class="card-box" style="margin-bottom: 16px;">
+          <div style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--text-main);">Lịch sạc đã đăng ký</div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Phương tiện</span>
+            <span style="font-weight: 600; color: var(--text-main);">59-X1 123.45</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Cổng sạc</span>
+            <span style="font-weight: 600; color: var(--text-main);">S03</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Khung giờ</span>
+            <span style="font-weight: 600; color: var(--text-main);">10:00 – 11:00</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Trạng thái</span>
+            <span style="font-weight: 600; color: var(--text-main);">Sẵn sàng theo lịch</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" style="font-weight: 700;">Mã cổng sạc thực tế *</label>
+          <div class="input-with-button">
+            <input type="text" id="chargingPortCodeInput" value="S03" />
+            <button type="button" class="btn-inline-action" onclick="App.showToast('Quét QR cổng sạc S03 thành công!')">Quét QR</button>
+          </div>
+        </div>
+
+        <label class="checkbox-custom-row">
+          <input type="checkbox" id="chargingCheckConfirm" checked />
+          <span>Tôi đã cắm sạc đúng phương tiện và cổng sạc.</span>
+        </label>
+
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 18px; margin-bottom: 28px; line-height: 1.5;">
+          Chỉ bắt đầu khi quyền sử dụng, lịch, cổng sạc và thứ tự thao tác hợp lệ.
+        </p>
+
+        <button class="btn-primary" style="width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-charging-active')">Xác nhận bắt đầu sạc</button>
+      </section>
+
+      <!-- EU-27: Charging Active -->
+      <section id="screen-charging-active" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-active-services')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Đang sạc điện</span>
+        </div>
+        <div class="card-box">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-size: 13px; color: var(--text-muted);" id="chargingActivePort">Trụ sạc S03</span>
+            <span style="font-size: 13px; color: #10b981; font-weight: 700;">Đang cấp điện</span>
+          </div>
+          <div style="font-size: 38px; font-weight: 800; color: #10b981; margin-bottom: 8px;" id="chargingActivePercent">65%</div>
+          <div style="font-size: 13px; margin-bottom: 4px;">Điện năng đã nạp: <strong id="chargingActivePower">2.4 kWh</strong></div>
+          <div style="font-size: 13px;">Thời gian sạc: <strong id="chargingActiveTime">25 phút</strong></div>
+        </div>
+        <button class="btn-secondary" style="margin-bottom: 12px;" onclick="App.prepareReport('Cổng sạc', 'S03')">Báo sự cố trụ sạc</button>
+        <button class="btn-primary" onclick="App.navigateTo('screen-charging-end-confirm')">Dừng sạc pin</button>
+      </section>
+
+      <!-- EU-28: Charging End Confirm -->
+      <section id="screen-charging-end-confirm" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-charging-active')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Dừng phiên sạc</span>
+        </div>
+        <p style="font-size: 14px; margin-bottom: 24px;">Hệ thống sẽ ngắt điện trụ sạc và tạo hóa đơn điện năng tiêu thụ.</p>
+        <button class="btn-primary" onclick="App.finishChargingSession()">Xác nhận dừng sạc & Xem hóa đơn</button>
+      </section>
+
+      <!-- EU-29: Battery Swap (User Wireframe EU-29-BatterySwap.png) -->
+      <section id="screen-battery-swap" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-personal-booking')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Xác nhận đổi pin</span>
+          <span class="nav-action"><i class="fa-solid fa-arrow-right-arrow-left" style="font-size: 17px;"></i></span>
+        </div>
+
+        <div style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 14px;">Tùy chọn khi Hub có hỗ trợ</div>
+
+        <div class="card-box" style="margin-bottom: 16px;">
+          <div style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--text-main);">Phiên đổi pin đã đặt</div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Hub</span>
+            <span style="font-weight: 600; color: var(--text-main);">Ga Metro ĐHQG</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Phương tiện</span>
+            <span style="font-weight: 600; color: var(--text-main);">59-X1 123.45</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Loại pin</span>
+            <span style="font-weight: 600; color: var(--text-main);">B48 · tương thích</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Số lượng thực tế</span>
+            <span style="font-weight: 600; color: var(--text-main);">2 pin</span>
+          </div>
+          <div class="detail-row-line">
+            <span style="color: var(--text-muted);">Trạng thái</span>
+            <span style="font-weight: 600; color: var(--text-main);">Chờ xác nhận hoàn tất</span>
+          </div>
+        </div>
+
+        <label class="checkbox-custom-row">
+          <input type="checkbox" id="batteryCheckConfirm" checked />
+          <span>Đã đối chiếu pin và hoàn tất việc đổi pin.</span>
+        </label>
+
+        <div class="note-box-simple" style="margin-top: 18px; margin-bottom: 28px;">
+          Hệ thống kiểm tra quyền, pin tương thích và thứ tự thao tác trước khi ghi nhận kết quả.
+        </div>
+
+        <button class="btn-primary" style="width: 100%; font-weight: 700;" onclick="App.finishBatterySwap()">Xác nhận hoàn tất đổi pin</button>
+      </section>
+
+      <!-- EU-51: Active Services Hub -->
+      <section id="screen-active-services" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Dịch vụ đang hoạt động</span>
+        </div>
+        <div id="activeServicesContainer">
+          <div class="card-box selectable" onclick="App.navigateTo('screen-ride-active')">
+            <div>
+              <div style="font-weight: 700; font-size: 14px;">Xe đạp điện XE-024</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Đang sử dụng · 13 phút</div>
+            </div>
+            <span style="font-size: 11px; background: #ecfdf5; color: #10b981; font-weight: 700; padding: 2px 8px; border-radius: 4px;">Hoạt động</span>
+          </div>
+          <div class="card-box selectable" onclick="App.navigateTo('screen-parking-active')">
+            <div>
+              <div style="font-weight: 700; font-size: 14px;">Gửi xe cá nhân (59-X1 123.45)</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Chỗ đỗ P08 · 45 phút</div>
+            </div>
+            <span style="font-size: 11px; background: #e0f2fe; color: #0284c7; font-weight: 700; padding: 2px 8px; border-radius: 4px;">Đang đỗ</span>
+          </div>
+          <div class="card-box selectable" onclick="App.navigateTo('screen-charging-active')">
+            <div>
+              <div style="font-weight: 700; font-size: 14px;">Sạc trụ nhanh S03</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Đã nạp 2.4 kWh · 65%</div>
+            </div>
+            <span style="font-size: 11px; background: #fef3c7; color: #d97706; font-weight: 700; padding: 2px 8px; border-radius: 4px;">Đang sạc</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 6. INVOICE & PAYMENT SCREENS ================= -->
+
+      <!-- EU-34: Invoice Rental -->
+      <section id="screen-invoice-rental" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Hóa đơn dịch vụ</span>
+        </div>
+        <div class="card-box">
+          <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 12px;" id="invoiceRentalTitle">Hóa đơn thuê xe điện</h3>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+            <span style="color: var(--text-muted);" id="invoiceRentalItemLabel">Thời gian sử dụng (45 phút)</span>
+            <span style="font-weight: 600;" id="invoiceRentalItemCost">15,000 đ</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 12px;">
+            <span style="color: var(--text-muted);">Phụ phí trễ hạn</span>
+            <span style="font-weight: 600;" id="invoiceRentalPenaltyCost">0 đ</span>
+          </div>
+          <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; display: flex; justify-content: space-between; font-size: 16px; font-weight: 800;">
+            <span>Tổng thanh toán</span>
+            <span id="invoiceRentalTotalCost">15,000 đ</span>
+          </div>
+        </div>
+        <button class="btn-primary" id="btnPayRental" onclick="App.setupInvoiceAndPay('rental', 15000)">Chọn thanh toán</button>
+      </section>
+
+      <!-- EU-35: Invoice Charging -->
+      <section id="screen-invoice-charging" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Hóa đơn sạc điện</span>
+        </div>
+        <div class="card-box">
+          <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 12px;" id="invoiceChargingTitle">Hóa đơn sạc pin</h3>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+            <span style="color: var(--text-muted);" id="invoiceChargingItemLabel">Điện tiêu thụ (2.4 kWh x 3,500đ)</span>
+            <span style="font-weight: 600;" id="invoiceChargingItemCost">8,400 đ</span>
+          </div>
+          <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; display: flex; justify-content: space-between; font-size: 16px; font-weight: 800;">
+            <span>Tổng thanh toán</span>
+            <span id="invoiceChargingTotalCost">8,400 đ</span>
+          </div>
+        </div>
+        <button class="btn-primary" id="btnPayCharging" onclick="App.setupInvoiceAndPay('charging', 8400)">Chọn thanh toán</button>
+      </section>
+
+      <!-- EU-36: Invoice Swap -->
+      <section id="screen-invoice-swap" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Hóa đơn đổi pin</span>
+        </div>
+        <div class="card-box">
+          <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 12px;" id="invoiceSwapTitle">Hóa đơn đổi pin</h3>
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 12px;">
+            <span style="color: var(--text-muted);" id="invoiceSwapItemLabel">Đổi 1 khối pin 48V</span>
+            <span style="font-weight: 600;" id="invoiceSwapItemCost">25,000 đ</span>
+          </div>
+          <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; display: flex; justify-content: space-between; font-size: 16px; font-weight: 800;">
+            <span>Tổng thanh toán</span>
+            <span id="invoiceSwapTotalCost">25,000 đ</span>
+          </div>
+        </div>
+        <button class="btn-primary" id="btnPaySwap" onclick="App.setupInvoiceAndPay('swap', 25000)">Chọn thanh toán</button>
+      </section>
+
+      <!-- EU-37: Payment Method -->
+      <section id="screen-payment-method" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-invoice-rental')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Phương thức thanh toán</span>
+          <i class="fa-regular fa-credit-card nav-action"></i>
+        </div>
+
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;" id="payServiceDesc">Hóa đơn dịch vụ đã chọn</p>
+
+        <div class="card-box">
+          <div style="font-size: 14px; font-weight: 700; margin-bottom: 6px;">Khoản cần thanh toán</div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 13px; color: var(--text-muted);">Số tiền</span>
+            <span style="font-size: 18px; font-weight: 800;" id="payAmountDisplay">15,000 đ</span>
+          </div>
+        </div>
+
+        <div style="font-size: 13px; font-weight: 700; margin-bottom: 10px;">Chọn phương thức</div>
+
+        <div class="card-box selectable selected" id="methodWallet" onclick="App.selectPayMethod('Ví điện tử', 'methodWallet')">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="radio-circle checked" id="radioMethodWallet"></div>
+            <div>
+              <div style="font-weight: 700; font-size: 14px;">Ví điện tử</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Thanh toán tích hợp</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-box selectable" id="methodBank" onclick="App.selectPayMethod('Thẻ ngân hàng', 'methodBank')">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="radio-circle" id="radioMethodBank"></div>
+            <div>
+              <div style="font-weight: 700; font-size: 14px;">Thẻ ngân hàng</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Thanh toán tích hợp</div>
+            </div>
+          </div>
+        </div>
+
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 24px;">
+          Kiểm tra dịch vụ, số tiền và phương thức trước khi tiếp tục.
+        </p>
+
+        <button class="btn-primary" onclick="App.navigateTo('screen-payment-confirm')">Tiếp tục thanh toán</button>
+      </section>
+
+      <!-- EU-38: Payment Confirm -->
+      <section id="screen-payment-confirm" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-payment-method')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Xác nhận thanh toán</span>
+        </div>
+        <div class="card-box">
+          <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;" id="confirmPayTitle">Xác nhận trừ tiền từ ví</div>
+          <div style="font-size: 24px; font-weight: 800; margin-bottom: 12px;" id="confirmPayAmount">15,000 đ</div>
+          <div style="font-size: 13px; color: var(--text-muted);">Phương thức: <strong id="confirmPayMethod">Ví điện tử</strong></div>
+        </div>
+        <button class="btn-primary" onclick="App.executePaymentProcess()">Xác thực & Trừ tiền</button>
+      </section>
+
+      <!-- EU-39: Payment Pending -->
+      <section id="screen-payment-pending" class="screen" style="text-align: center; justify-content: center; align-items: center;">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size: 48px; color: var(--text-main); margin-bottom: 20px;"></i>
+        <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">Đang xử lý giao dịch...</h2>
+        <p style="color: var(--text-muted); font-size: 13px;">Vui lòng không đóng ứng dụng.</p>
+      </section>
+
+      <!-- EU-40: Payment Success -->
+      <section id="screen-payment-success" class="screen" style="text-align: center; justify-content: center; align-items: center;">
+        <div style="width: 72px; height: 72px; background: #ecfdf5; color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 16px;">
+          <i class="fa-solid fa-check"></i>
+        </div>
+        <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 6px;">Thanh toán thành công!</h2>
+        <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 24px;">Giao dịch mã TXN-88492019 hoàn tất</p>
+        <button class="btn-primary" id="btnPaymentSuccessAction" onclick="App.handlePaymentSuccessNext()">Về màn hình chính</button>
+      </section>
+
+      <!-- EU-41: Payment Failed -->
+      <section id="screen-payment-failed" class="screen" style="text-align: center; justify-content: center; align-items: center;">
+        <div style="width: 72px; height: 72px; background: #fef2f2; color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 16px;">
+          <i class="fa-solid fa-xmark"></i>
+        </div>
+        <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 6px;">Thanh toán không thành công</h2>
+        <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 24px;">Số dư tài khoản không đủ hoặc kết nối bị gián đoạn.</p>
+        <button class="btn-primary" style="margin-bottom: 12px;" onclick="App.navigateTo('screen-payment-method')">Thử phương thức khác</button>
+        <button class="btn-secondary" onclick="App.navigateTo('screen-map-home')">Về trang chủ</button>
+      </section>
+
+      <!-- EU-42: Parking Cash Payment (Security Guard & User Wireframe Other/12.jpg) -->
+      <section id="screen-parking-cash" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-parking-active')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Xác nhận trả xe & Thu phí</span>
+        </div>
+        <div class="card-box" style="margin-bottom: 12px;">
+          <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">BIỂN SỐ XE GỬI</div>
+          <div style="font-size: 20px; font-weight: 900; margin-bottom: 8px;">59-B2 123.45</div>
+          <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5; border-top: 1px solid #f1f5f9; padding-top: 8px;">
+            <div>Giờ vào: <strong>22/10/2026 · 14:36</strong> &nbsp;|&nbsp; Giờ ra: <strong>16:42</strong></div>
+            <div style="margin-top: 4px; font-weight: 800; color: var(--text-main);">Tổng thời gian gửi: 2 giờ 06 phút</div>
+          </div>
+        </div>
+
+        <div style="background: #0f172a; color: #ffffff; border-radius: 12px; padding: 18px; margin-bottom: 12px;">
+          <div style="font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Tổng phí giữ xe cá nhân</div>
+          <div style="font-size: 28px; font-weight: 900; margin-bottom: 6px;">25.000 VNĐ</div>
+          <div style="font-size: 11.5px; color: #94a3b8;">Thanh toán bằng tiền mặt tại quầy bảo vệ</div>
+        </div>
+
+        <div class="card-box" style="margin-bottom: 20px; font-size: 12px; color: var(--text-muted);">
+          Mã vé lượt gửi: <strong style="color: var(--text-main);">SG-20261022-018</strong><br>
+          Vui lòng thanh toán tiền mặt 25.000 VNĐ cho nhân viên bảo vệ tại barrier để xuất bãi.
+        </div>
+        <button class="btn-primary" onclick="App.navigateTo('screen-parking-paid')">Đã thanh toán cho bảo vệ</button>
+      </section>
+
+      <!-- EU-48: Parking Paid Finished -->
+      <section id="screen-parking-paid" class="screen" style="text-align: center; justify-content: center; align-items: center;">
+        <div style="width: 72px; height: 72px; background: #ecfdf5; color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 16px;">
+          <i class="fa-solid fa-check"></i>
+        </div>
+        <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 6px;">Hoàn tất trả xe cá nhân</h2>
+        <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 8px;">Đã hoàn tất thanh toán 25.000 VNĐ cho lượt gửi SG-20261022-018.</p>
+        <p style="font-size: 12px; color: #10b981; font-weight: 700; margin-bottom: 24px;">Barrier đã mở. Chúc bạn một ngày tốt lành!</p>
+        <button class="btn-primary" onclick="App.navigateTo('screen-map-home')">Về trang chủ</button>
+      </section>
+
+      <!-- ================= 7. INCIDENT REPORTING SCREENS ================= -->
+
+      <!-- EU-30: Report Incident -->
+      <section id="screen-report-incident" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Báo cáo sự cố</span>
+          <i class="fa-solid fa-triangle-exclamation nav-action"></i>
+        </div>
+
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Sự cố được chuyển đến đơn vị vận hành</p>
+
+        <form id="incidentForm" onsubmit="App.handleIncidentSubmit(event)">
+          <div class="form-group">
+            <label class="form-label">Loại tài nguyên *</label>
+            <div class="input-box">
+              <select id="incResourceType">
+                <option value="Phương tiện">Phương tiện</option>
+                <option value="Chỗ đỗ">Chỗ đỗ xe</option>
+                <option value="Cổng sạc">Cổng sạc pin</option>
+                <option value="Cơ sở hạ tầng">Cơ sở hạ tầng Hub</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Mã thiết bị / tài nguyên *</label>
+            <div style="display: flex; gap: 8px;">
+              <div class="input-box" style="flex: 1;">
+                <input type="text" id="incResourceCode" value="XE-024" required>
+              </div>
+              <button type="button" class="btn-secondary" style="width: auto; padding: 0 14px; font-size: 13px;" onclick="App.showToast('Đã quét mã QR thiết bị')">Quét QR</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Hub xảy ra sự cố *</label>
+            <div class="input-box">
+              <select id="incHubName">
+                <option value="Hub Ga Metro ĐHQG">Hub Ga Metro ĐHQG</option>
+                <option value="Hub Đại học Bách khoa">Hub Đại học Bách khoa</option>
+                <option value="Hub KTX Khu B">Hub KTX Khu B</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Loại sự cố *</label>
+            <div class="input-box">
+              <select id="incType">
+                <option value="Không mở được khóa">Không mở được khóa</option>
+                <option value="Lỗi phanh / xích / động cơ">Lỗi phanh / xích / động cơ</option>
+                <option value="Trụ sạc không vào điện">Trụ sạc không vào điện</option>
+                <option value="Chỗ đỗ bị chiếm trái phép">Chỗ đỗ bị chiếm trái phép</option>
+                <option value="Khác">Khác</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Mô tả sự cố *</label>
+            <div class="input-box">
+              <textarea id="incDescription" rows="3" placeholder="Mô tả cụ thể sự cố gặp phải..." required>Xe không mở được khóa sau khi xác nhận nhận xe.</textarea>
+            </div>
+          </div>
+
+          <div class="card-box" style="display: flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px dashed var(--border-color); cursor: pointer;" onclick="App.showToast('Đã đính kèm hình ảnh sự cố')">
+            <i class="fa-solid fa-camera" style="font-size: 18px; color: var(--text-muted);"></i>
+            <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">Thêm ảnh minh họa (tùy chọn)</span>
+          </div>
+
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">Các trường có dấu * là bắt buộc.</p>
+
+          <button type="submit" class="btn-primary">Gửi báo cáo</button>
+        </form>
+      </section>
+
+      <!-- EU-31: Report Validation -->
+      <section id="screen-report-validation" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-report-incident')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Xác thực báo cáo</span>
+        </div>
+        <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 20px;">Hệ thống đang đối chiếu dữ liệu thiết bị trước khi chuyển sang điều hành viên...</p>
+        <button class="btn-primary" onclick="App.navigateTo('screen-report-sent')">Tiếp tục chuyển sự cố</button>
+      </section>
+
+      <!-- EU-32: Report Sent -->
+      <section id="screen-report-sent" class="screen" style="text-align: center; justify-content: center; align-items: center;">
+        <div style="width: 72px; height: 72px; background: #ecfdf5; color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 16px;">
+          <i class="fa-solid fa-check"></i>
+        </div>
+        <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 6px;">Báo cáo đã gửi thành công</h2>
+        <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 24px;">Mã sự cố: <strong id="createdIncidentId">INC-2026-089</strong></p>
+        <button class="btn-primary" style="margin-bottom: 12px;" onclick="App.navigateTo('screen-report-detail')">Xem tiến độ xử lý</button>
+        <button class="btn-secondary" onclick="App.navigateTo('screen-map-home')">Về trang chủ</button>
+      </section>
+
+      <!-- EU-33: Report Detail -->
+      <section id="screen-report-detail" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-incident-history')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Chi tiết sự cố</span>
+        </div>
+
+        <div class="card-box" id="reportDetailCard">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-size: 15px; font-weight: 800;" id="reportDetailId">INC-2026-089</span>
+            <span style="font-size: 11.5px; background: #fef3c7; color: #d97706; font-weight: 700; padding: 2px 8px; border-radius: 4px;" id="reportDetailStatus">Đang xử lý</span>
+          </div>
+          <div style="font-size: 13px; margin-bottom: 6px;">Thiết bị: <strong id="reportDetailResource">XE-024 (Phương tiện)</strong></div>
+          <div style="font-size: 13px; margin-bottom: 6px;">Hub: <strong id="reportDetailHub">Hub Ga Metro ĐHQG</strong></div>
+          <div style="font-size: 13px; margin-bottom: 12px;">Vấn đề: <span id="reportDetailIssue">Không mở được khóa</span></div>
+          <div style="border-top: 1px solid var(--border-color); padding-top: 10px; font-size: 12.5px; color: var(--text-muted);">
+            <strong>Phản hồi từ Operator:</strong> <span id="reportDetailOperatorNote">Đã tiếp nhận yêu cầu, kỹ thuật viên đang đến kiểm tra thiết bị.</span>
+          </div>
+        </div>
+
+        <button class="btn-secondary" onclick="App.navigateTo('screen-map-home')">Quay lại bản đồ</button>
+      </section>
+
+      <!-- EU-57: Incident History -->
+      <section id="screen-incident-history" class="screen">
+        <div class="top-nav">
+          <button class="nav-back" onclick="App.navigateTo('screen-profile')"><i class="fa-solid fa-arrow-left"></i></button>
+          <span class="nav-title">Lịch sử sự cố</span>
+        </div>
+        <div id="incidentHistoryList">
+          <!-- Populated from state -->
+          <div class="card-box selectable" onclick="App.navigateTo('screen-report-detail')">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="font-weight: 700; font-size: 14px;">INC-2026-089 · XE-024</span>
+              <span style="font-size: 11.5px; color: #d97706; font-weight: 600;">Đang xử lý</span>
+            </div>
+            <div style="font-size: 12.5px; color: var(--text-muted);">Không mở được khóa · 18/10/2026</div>
+          </div>
+          <div class="card-box">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="font-weight: 700; font-size: 14px;">INC-2026-042 · Trụ S02</span>
+              <span style="font-size: 11.5px; color: #10b981; font-weight: 600;">Đã giải quyết</span>
+            </div>
+            <div style="font-size: 12.5px; color: var(--text-muted);">Không vào điện · 12/10/2026</div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- End of view-viewport -->
+
+    <!-- Global App Bottom Navigation Bar -->
+    <nav class="bottom-nav" id="globalBottomNav">
+      <button class="nav-item active" id="navItemMap" onclick="App.navigateTo('screen-map-home')">
+        <i class="fa-solid fa-map-location-dot"></i>
+        <span>Trang chủ</span>
+      </button>
+      <button class="nav-item" id="navItemBookings" onclick="App.navigateTo('screen-my-bookings')">
+        <i class="fa-regular fa-calendar-check"></i>
+        <span>Lịch đặt</span>
+      </button>
+      <button class="nav-item" id="navItemActive" onclick="App.navigateTo('screen-active-services')">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>Đang dùng</span>
+      </button>
+      <button class="nav-item" id="navItemReport" onclick="App.navigateTo('screen-report-incident')">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>Sự cố</span>
+      </button>
+    </nav>
+
+  </div><!-- End of app-container -->
+
+  <!-- MapLibre GL JS -->
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <!-- DHQG Named Places Data -->
+  <script src="js/places-data.js"></script>
+  <!-- App Core Logic Scripts -->
+  <script src="js/state.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
