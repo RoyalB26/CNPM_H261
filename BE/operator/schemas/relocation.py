@@ -5,7 +5,7 @@ Smart E-Mobility Hub - ĐHQG-HCM
 
 from typing import List, Optional
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
 class RelocationStatus(str, Enum):

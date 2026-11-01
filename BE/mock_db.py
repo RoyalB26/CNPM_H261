@@ -11,6 +11,18 @@ are reflected across all three systems in real time.
 from datetime import datetime, timedelta
 import copy
 
+
+
+from uuid import uuid4
+from datetime import timezone
+
+
+class RelocationError(Exception):
+    def __init__(self, status_code, message):
+        super().__init__(message)
+        self.status_code = status_code
+
+
 class MockDatabaseStore:
     def __init__(self):
         self.reset()
@@ -296,6 +308,19 @@ class MockDatabaseStore:
                 "price": 5000,
                 "services": [{"service_type": "parking", "detail": "Chỗ đỗ P08 · Xe máy điện 59-X1 123.45", "price_est": 5000}]
             }
+        ]
+
+        self.staff = [
+            {
+                "id": "STF-01",
+                "full_name": "Nhân viên điều chuyển 1",
+                "role": "RELOCATION",
+            },
+            {
+                "id": "STF-02",
+                "full_name": "Nguyen Van B",
+                "role": "MAINTENANCE",
+            },
         ]
 
         # 4. RELOCATION TASKS (Operator & Staff shared)
@@ -620,37 +645,168 @@ class MockDatabaseStore:
         }
 
     def create_relocation_command(self, payload: dict):
-        new_task_id = f"#{100 + len(self.relocations) + 1}"
-        source_hub = self.get_hub(payload.get("source_hub_id")) or self.hubs[2]
-        target_hub = self.get_hub(payload.get("target_hub_id")) or self.hubs[0]
-        bike_count = payload.get("bike_count", 5)
+        source = self.get_hub(payload["source_hub_id"])
+        target = self.get_hub(payload["target_hub_id"])
+
+        if source is None or target is None:
+            raise RelocationError(404, "Không tìm thấy Hub nguồn hoặc Hub đích")
+
+        if source["id"] == target["id"]:
+            raise RelocationError(422, "Hub nguồn và Hub đích phải khác nhau")
+
+        if source["status"] != "ACTIVE" or target["status"] != "ACTIVE":
+            raise RelocationError(409, "Hub nguồn hoặc Hub đích không hoạt động")
+
+        count = payload["bike_count"]
+        if type(count) is not int or not 1 <= count <= 50:
+            raise RelocationError(422, "Số xe phải là số nguyên từ 1 đến 50")
+
+        staff = next(
+            (
+                person
+                for person in self.staff
+                if person["id"] == payload["assigned_staff_id"]
+            ),
+            None,
+        )
+        if staff is None:
+            raise RelocationError(404, "Không tìm thấy nhân viên được giao")
+        if staff["role"] != "RELOCATION":
+            raise RelocationError(422, "Nhân viên không có vai trò điều chuyển")
+
+        active_tasks = [
+            task
+            for task in self.relocations
+            if task["status"] in ("PENDING", "IN_PROGRESS", "IN_TRANSIT")
+        ]
+
+        blocked_bike_ids = {
+            entry["bike_id"]
+            for task in active_tasks
+            for entry in task["bikes"]
+        }
+
+        ride = self.user.get("active_services", {}).get("ride")
+        if ride:
+            blocked_bike_ids.add(ride["vehicle_id"])
+
+        for booking in self.bookings:
+            if (
+                booking.get("plan_type") == "rental"
+                and booking.get("status") in ("Đã xác nhận", "Đang sử dụng")
+            ):
+                bike_id = booking.get("resource_id")
+                if not bike_id:
+                    bike_id = booking.get("resource_name", "").split(" · ")[0]
+                blocked_bike_ids.add(bike_id)
+
+        blocked_bike_ids.update(
+            ticket["device_code"]
+            for ticket in self.maintenance_tickets
+            if ticket["status"] in ("PENDING", "ASSIGNED", "IN_PROGRESS")
+        )
+
+        available_bikes = [
+            bike
+            for bike in source["bikes"]
+            if bike["status"] == "Sẵn sàng"
+            and bike["id"] not in blocked_bike_ids
+        ]
+
+        if len(available_bikes) < count:
+            raise RelocationError(409, "Hub nguồn không đủ xe khả dụng")
+
+        occupied_slot_ids = {
+            record["slot_id"]
+            for record in self.parking_records
+            if record["hub_id"] == target["id"]
+            and record.get("checkout_time") is None
+        }
+
+        for booking in self.bookings:
+            if (
+                booking.get("hub_id") == target["id"]
+                and booking.get("plan_type") == "parking"
+                and booking.get("status") in ("Đã xác nhận", "Đang sử dụng")
+            ):
+                occupied_slot_ids.add(
+                    booking.get("resource_id")
+                    or booking.get("resource_name", "").split(" · ")[0]
+                )
+
+        incoming_tasks = [
+            task
+            for task in active_tasks
+            if task["target_hub_id"] == target["id"]
+        ]
+        held_slot_ids = {
+            slot_id
+            for task in incoming_tasks
+            for slot_id in task.get("reserved_slot_ids", [])
+        }
+
+        free_slots = [
+            slot
+            for slot in target["slots"]
+            if slot["is_available"]
+            and slot["id"] not in occupied_slot_ids
+            and slot["id"] not in held_slot_ids
+        ]
+
+        # Lệnh seed cũ chưa lưu ID chỗ giữ: dành đủ số chỗ cho chúng.
+        legacy_reserved_count = sum(
+            task["total_bikes"]
+            for task in incoming_tasks
+            if not task.get("reserved_slot_ids")
+        )
+        free_slots = free_slots[legacy_reserved_count:]
+
+        if len(free_slots) < count:
+            raise RelocationError(409, "Hub đích không đủ chỗ trống")
+
+        selected_bikes = available_bikes[:count]
+        selected_slots = free_slots[:count]
+        timestamp = datetime.now(timezone.utc).isoformat()
+        priority = payload.get("priority", "Bình thường")
+        if hasattr(priority, "value"):
+            priority = priority.value
 
         task = {
-            "task_id": new_task_id,
-            "title": f"Lệnh điều phối {bike_count} xe: {source_hub['name']} → {target_hub['name']}",
-            "source_hub_id": source_hub["id"],
-            "source_hub_name": source_hub["name"],
-            "target_hub_id": target_hub["id"],
-            "target_hub_name": target_hub["name"],
+            "task_id": f"CMD-{uuid4().hex}",
+            "title": f"Điều chuyển {count} xe",
+            "source_hub_id": source["id"],
+            "source_hub_name": source["name"],
+            "target_hub_id": target["id"],
+            "target_hub_name": target["name"],
             "vehicle_type": "Xe đạp điện",
-            "total_bikes": bike_count,
+            "total_bikes": count,
             "in_transit_bikes": 0,
-            "remaining_at_source": bike_count,
-            "estimated_distance_km": 2.5,
-            "source_contact": "0901-234-567",
-            "target_contact": "0908-765-432",
-            "status": "IN_PROGRESS",
-            "priority": payload.get("priority", "HIGH"),
-            "assigned_to": "STF-02 (Nguyen Van B)",
-            "created_at": datetime.now().isoformat(),
+            "remaining_at_source": count,
+            "status": "PENDING",
+            "priority": priority,
+            "notes": payload.get("notes"),
+            "assigned_staff_id": staff["id"],
+            "assigned_staff_name": staff["full_name"],
+            "assigned_to": staff["id"],
+            "created_at": timestamp,
+            "updated_at": timestamp,
+            "reserved_slot_ids": [slot["id"] for slot in selected_slots],
             "bikes": [
-                {"bike_id": f"BK-{1000+i}", "battery_pct": 85 + (i * 2), "status": "PENDING"}
-                for i in range(bike_count)
-            ]
+                {
+                    "bike_id": bike["id"],
+                    "battery_pct": bike["battery_level"],
+                    "status": "PENDING",
+                }
+                for bike in selected_bikes
+            ],
         }
+
+        # Đây là chỗ duy nhất ghi vào store, sau toàn bộ kiểm tra.
         self.relocations.insert(0, task)
         return task
 
+
+    
     def scan_bike_relocation(self, task_id: str, bike_id: str):
         task = next((t for t in self.relocations if t["task_id"] == task_id or task_id in t["task_id"]), self.relocations[0])
         for b in task.get("bikes", []):

@@ -6,6 +6,12 @@ Smart E-Mobility Hub - ĐHQG-HCM
 import os
 import sys
 import json
+
+
+
+
+
+
 from datetime import datetime
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
@@ -18,7 +24,10 @@ PARENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PARENT_DIR not in sys.path:
     sys.path.insert(0, PARENT_DIR)
 
-from mock_db import db
+from mock_db import db, RelocationError
+from pydantic import ValidationError
+
+
 
 from schemas import (
     OperatorLoginRequest,
@@ -462,142 +471,371 @@ async def emergency_halt(request):
     )
 
 
-async def list_relocations(request):
-    items = []
-    for r in db.relocations:
-        status_enum = RelocationStatus.IN_TRANSIT if r["status"] in ["IN_PROGRESS", "IN_TRANSIT"] else (RelocationStatus.COMPLETED if r["status"] == "COMPLETED" else RelocationStatus.PENDING)
-        items.append(RelocationCommandItem(
-            id=r["task_id"],
-            source_hub_name=r["source_hub_name"],
-            target_hub_name=r["target_hub_name"],
-            bike_count=r["total_bikes"],
-            assigned_staff_name=r.get("assigned_to", "Nguyen Van B"),
-            status=status_enum,
-            progress_current=r.get("in_transit_bikes", 0),
-            progress_total=r.get("total_bikes", 5),
-            created_at=r.get("created_at", "2026-10-18 08:30"),
-            updated_at=datetime.utcnow().strftime("%Y-%m-%d %H:%M")
-        ).dict())
-    return JSONResponse(
-        RelocationCommandList(total=len(items), items=items).dict()
-    )
+def relocation_response(task):
+    status_map = {
+        "PENDING": RelocationStatus.PENDING,
+        "IN_PROGRESS": RelocationStatus.IN_TRANSIT,
+        "IN_TRANSIT": RelocationStatus.IN_TRANSIT,
+        "COMPLETED": RelocationStatus.COMPLETED,
+        "CANCELLED": RelocationStatus.CANCELLED,
+    }
 
-
-async def create_relocation(request):
-    try:
-        body = await request.json()
-        req = RelocationCommandCreate(**body)
-    except Exception:
-        req = RelocationCommandCreate(
-            source_hub_id="hub-03",
-            target_hub_id="hub-01",
-            bike_count=5,
-            assigned_staff_id="STF-02",
-            priority=RelocationPriority.NORMAL,
-            notes="Điều chuyển xe thử nghiệm",
-        )
-
-    task = db.create_relocation_command(req.dict())
     item = RelocationCommandItem(
         id=task["task_id"],
         source_hub_name=task["source_hub_name"],
         target_hub_name=task["target_hub_name"],
         bike_count=task["total_bikes"],
-        assigned_staff_name=task.get("assigned_to", "Nguyen Van B"),
-        status=RelocationStatus.IN_TRANSIT,
-        progress_current=0,
+        assigned_staff_name=task.get(
+            "assigned_staff_name",
+            task.get("assigned_to", "Chưa phân công"),
+        ),
+        status=status_map[task["status"]],
+        progress_current=task["in_transit_bikes"],
         progress_total=task["total_bikes"],
-        created_at=datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
-        updated_at=datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
+        created_at=task["created_at"],
+        updated_at=task.get("updated_at", task["created_at"]),
+    ).model_dump(mode="json")
+
+    item.update(
+        source_hub_id=task["source_hub_id"],
+        target_hub_id=task["target_hub_id"],
+        assigned_staff_id=task.get("assigned_staff_id"),
+        bike_ids=[entry["bike_id"] for entry in task["bikes"]],
+        reserved_slot_ids=task.get("reserved_slot_ids", []),
+        priority=task["priority"],
+        notes=task.get("notes"),
     )
-    return JSONResponse(item.dict(), status_code=201)
+    return item
+
+
+async def list_relocations(request):
+    items = [relocation_response(task) for task in db.relocations]
+    return JSONResponse({"total": len(items), "items": items})
+
+
+async def create_relocation(request):
+    try:
+        body = await request.json()
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JSONResponse(
+            {"error": "JSON không hợp lệ"},
+            status_code=400,
+        )
+
+    if not isinstance(body, dict):
+        return JSONResponse(
+            {"error": "Body phải là một JSON object"},
+            status_code=422,
+        )
+
+    try:
+        req = RelocationCommandCreate(**body)
+    except ValidationError as exc:
+        return JSONResponse(
+            {"error": "Dữ liệu không hợp lệ", "details": str(exc)},
+            status_code=422,
+        )
+
+    try:
+        task = db.create_relocation_command(req.model_dump())
+    except RelocationError as exc:
+        return JSONResponse(
+            {"error": str(exc)},
+            status_code=exc.status_code,
+        )
+
+    return JSONResponse(relocation_response(task), status_code=201)
 
 
 async def list_maintenance(request):
+    severity_map = {
+        "LOW": FaultSeverity.LOW,
+        "MEDIUM": FaultSeverity.WARNING,
+        "HIGH": FaultSeverity.URGENT,
+        "URGENT": FaultSeverity.URGENT,
+        "Thường": FaultSeverity.LOW,
+        "Cảnh báo": FaultSeverity.WARNING,
+        "Khẩn cấp": FaultSeverity.URGENT,
+    }
+    status_map = {
+        "PENDING": MaintenanceStatus.PENDING,
+        "ASSIGNED": MaintenanceStatus.ASSIGNED,
+        "IN_PROGRESS": MaintenanceStatus.IN_PROGRESS,
+        "RESOLVED": MaintenanceStatus.RESOLVED,
+        "CLOSED": MaintenanceStatus.CLOSED,
+    }
+
     items = []
-    sev_map = {"LOW": FaultSeverity.LOW, "MEDIUM": FaultSeverity.MEDIUM, "HIGH": FaultSeverity.HIGH, "URGENT": FaultSeverity.URGENT}
-    st_map = {"PENDING": MaintenanceStatus.PENDING, "ASSIGNED": MaintenanceStatus.ASSIGNED, "IN_PROGRESS": MaintenanceStatus.IN_PROGRESS, "RESOLVED": MaintenanceStatus.RESOLVED}
-    for t in db.maintenance_tickets:
-        items.append(MaintenanceTicketItem(
-            ticket_code=t["code"],
-            hub_name=t["hub_name"],
-            device_type=t["device_type"],
-            device_id=t.get("device_code", "DEV-01"),
-            severity=sev_map.get(t.get("severity", "MEDIUM"), FaultSeverity.MEDIUM),
-            status=st_map.get(t.get("status", "PENDING"), MaintenanceStatus.PENDING),
-            reported_time=t.get("reported_time", "18/10/2026 · 09:15"),
-            assigned_staff_id="STF-02",
-            assigned_staff_name=t.get("assigned_to", "Nguyen Van B")
-        ).dict())
-    return JSONResponse(
-        MaintenanceTicketList(total=len(items), items=items).dict()
-    )
+
+    for ticket in db.maintenance_tickets:
+        staff_id = ticket.get("assigned_staff_id")
+
+        # Đọc ID trong phiếu seed cũ, ví dụ STF-02 (Nguyen Van B).
+        if not staff_id:
+            old_assignment = ticket.get("assigned_to", "")
+            candidate = old_assignment.split()[0] if old_assignment else ""
+            if candidate.startswith("STF-"):
+                staff_id = candidate
+
+        staff = next(
+            (person for person in db.staff if person["id"] == staff_id),
+            None,
+        )
+
+        if staff:
+            staff_name = staff["full_name"]
+        elif staff_id:
+            staff_name = ticket.get("assigned_to", staff_id)
+        else:
+            staff_name = "Chưa gán"
+
+        item = MaintenanceTicketItem(
+            id=ticket["code"],
+            ticket_code=ticket["code"],
+            device_code=ticket["device_code"],
+            hub_name=ticket["hub_name"],
+            source=ticket.get("source", "Store dùng chung"),
+            fault_category=ticket["title"],
+            severity=severity_map[ticket["severity"]],
+            assigned_staff_id=staff_id,
+            assigned_staff_name=staff_name,
+            status=status_map[ticket["status"]],
+            reported_at=ticket.get(
+                "reported_time", ticket["created_at"]
+            ),
+            description=ticket.get("description"),
+            photo_url=ticket.get("photo_url"),
+        )
+        items.append(item.model_dump(mode="json"))
+
+    return JSONResponse({"total": len(items), "items": items})
 
 
 async def assign_maintenance(request):
     try:
         body = await request.json()
-        req = MaintenanceAssignRequest(**body)
-    except Exception:
-        req = MaintenanceAssignRequest(
-            ticket_code="TICK-802",
-            technician_id="STF-02",
-            technician_name="Nguyen Van B",
-            priority=FaultSeverity.URGENT,
-            operator_notes="Ưu tiên xử lý trước giờ cao điểm",
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JSONResponse(
+            {"error": "JSON không hợp lệ"},
+            status_code=400,
         )
 
-    for item in db.maintenance_tickets:
-        if item["code"] == req.ticket_code:
-            item["assigned_to"] = req.technician_name
-            item["severity"] = req.priority.value if hasattr(req.priority, "value") else str(req.priority)
-            item["status"] = "ASSIGNED"
-            return JSONResponse({
-                "success": True,
-                "message": f"Đã phân công {req.technician_name} xử lý phiếu {req.ticket_code}",
-                "ticket": item,
-            })
+    if not isinstance(body, dict):
+        return JSONResponse(
+            {"error": "Body phải là một JSON object"},
+            status_code=422,
+        )
 
-    return JSONResponse({"error": "Không tìm thấy mã phiếu bảo trì"}, status_code=404)
+    try:
+        req = MaintenanceAssignRequest(**body)
+    except ValidationError as exc:
+        return JSONResponse(
+            {"error": "Dữ liệu không hợp lệ", "details": str(exc)},
+            status_code=422,
+        )
 
+    ticket = next(
+        (
+            item for item in db.maintenance_tickets
+            if item["code"] == req.ticket_code
+        ),
+        None,
+    )
+    if ticket is None:
+        return JSONResponse(
+            {"error": "Không tìm thấy mã phiếu bảo trì"},
+            status_code=404,
+        )
+
+    technician = next(
+        (
+            person for person in db.staff
+            if person["id"] == req.technician_id
+        ),
+        None,
+    )
+    if technician is None:
+        return JSONResponse(
+            {"error": "Không tìm thấy nhân viên"},
+            status_code=404,
+        )
+
+    if technician["role"] != "MAINTENANCE":
+        return JSONResponse(
+            {"error": "Nhân viên không có vai trò bảo trì"},
+            status_code=422,
+        )
+
+    if ticket["status"] not in ("PENDING", "ASSIGNED"):
+        return JSONResponse(
+            {"error": "Chỉ được giao phiếu đang chờ hoặc đã phân công"},
+            status_code=409,
+        )
+
+    severity_map = {
+        FaultSeverity.LOW: "LOW",
+        FaultSeverity.WARNING: "MEDIUM",
+        FaultSeverity.URGENT: "URGENT",
+    }
+
+    # Chỉ cập nhật sau khi toàn bộ kiểm tra đã thành công.
+    # Tên nhân viên lấy từ store, không tin tên client gửi lên.
+    ticket.update({
+        "assigned_staff_id": technician["id"],
+        "assigned_staff_name": technician["full_name"],
+        "assigned_to": technician["full_name"],
+        "severity": severity_map[req.priority],
+        "priority": (
+            "URGENT"
+            if req.priority == FaultSeverity.URGENT
+            else "NORMAL"
+        ),
+        "operator_notes": req.operator_notes,
+        "status": "ASSIGNED",
+        "updated_at": datetime.now().isoformat(),
+    })
+
+    return JSONResponse({
+        "success": True,
+        "message": (
+            f"Đã phân công {technician['full_name']} "
+            f"xử lý phiếu {ticket['code']}"
+        ),
+        "ticket": ticket,
+    })
 
 async def list_hubs_config(request):
+    status_map = {
+        "ACTIVE": HubOperationalStatus.ACTIVE,
+        "WARNING": HubOperationalStatus.WARNING,
+        "MAINTENANCE": HubOperationalStatus.MAINTENANCE,
+        "DEACTIVATED": HubOperationalStatus.DEACTIVATED,
+    }
+
     items = []
-    for h in db.get_hubs():
-        items.append(HubConfig(
-            id=h["id"].upper(),
-            hub_code=h.get("hub_code", h["id"].upper()),
-            name=h["name"],
-            parking_capacity=h.get("parking_capacity", 20),
-            charger_capacity=h.get("charger_capacity", 4),
-            max_power_kw=h.get("max_power_kw", 100.0),
-            load_warning_threshold_pct=h.get("load_warning_threshold_pct", 85),
-            status=HubOperationalStatus.ACTIVE if h.get("status") == "ACTIVE" else HubOperationalStatus.DEACTIVATED
-        ).dict())
-    return JSONResponse(
-        HubManageList(total=len(items), items=items).dict()
+
+    for hub in db.get_hubs():
+        item = HubConfig(
+            id=hub["id"],
+            hub_code=hub["hub_code"],
+            name=hub["name"],
+            address=hub["address"],
+            parking_capacity=hub["parking_capacity"],
+            charger_capacity=hub["charger_capacity"],
+            max_power_kw=hub["max_power_kw"],
+            load_warning_threshold_pct=hub["load_warning_threshold_pct"],
+            lat=hub["lat"],
+            lng=hub["lng"],
+            status=status_map[hub["status"]],
+            availability_rate_pct=hub.get("availability_rate_pct", 85),
+        )
+
+        items.append(item)
+
+    response = HubManageList(
+        total=len(items),
+        items=items,
     )
+
+    return JSONResponse(response.model_dump(mode="json"))
+
+
 
 
 async def update_hub_config(request):
-    hub_id = request.path_params.get("hub_id", "HUB-01").lower()
+    hub_id = request.path_params["hub_id"].lower()
+
     try:
         body = await request.json()
-        req = HubConfigUpdate(hub_id=hub_id, **body)
-    except Exception:
-        req = HubConfigUpdate(hub_id=hub_id)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JSONResponse(
+            {"error": "JSON không hợp lệ"},
+            status_code=400,
+        )
 
-    h = db.get_hub(hub_id) or db.get_hub(f"hub-{hub_id.split('-')[-1]}")
-    if h:
-        if req.name: h["name"] = req.name
-        if req.parking_capacity: h["parking_capacity"] = req.parking_capacity
-        if req.charger_capacity: h["charger_capacity"] = req.charger_capacity
-        if req.max_power_kw: h["max_power_kw"] = req.max_power_kw
-        if req.load_warning_threshold_pct: h["load_warning_threshold_pct"] = req.load_warning_threshold_pct
-        if req.status: h["status"] = req.status.value if hasattr(req.status, "value") else req.status
-        return JSONResponse({"success": True, "hub": h})
+    if not isinstance(body, dict):
+        return JSONResponse(
+            {"error": "Body phải là một JSON object"},
+            status_code=422,
+        )
 
-    return JSONResponse({"error": "Hub không tồn tại"}, status_code=404)
+    if "hub_id" in body:
+        body_hub_id = body["hub_id"]
+
+        if (
+            not isinstance(body_hub_id, str)
+            or body_hub_id.lower() != hub_id
+        ):
+            return JSONResponse(
+                {"error": "hub_id trong body phải khớp với đường dẫn"},
+                status_code=422,
+            )
+
+    hub = db.get_hub(hub_id)
+
+    if hub is None:
+        return JSONResponse(
+            {"error": "Hub không tồn tại"},
+            status_code=404,
+        )
+
+    try:
+        req = HubConfigUpdate(
+            **{**body, "hub_id": hub_id}
+        )
+    except ValidationError as exc:
+        return JSONResponse(
+            {
+                "error": "Dữ liệu cập nhật không hợp lệ",
+                "details": str(exc),
+            },
+            status_code=422,
+        )
+
+    changes = req.model_dump(
+        exclude_unset=True,
+        exclude={"hub_id"},
+    )
+
+    if not changes:
+        return JSONResponse(
+            {"error": "Chưa gửi trường cấu hình cần cập nhật"},
+            status_code=422,
+        )
+
+    if any(value is None for value in changes.values()):
+        return JSONResponse(
+            {"error": "Các trường cập nhật không được nhận null"},
+            status_code=422,
+        )
+
+    if "status" in changes:
+        changes["status"] = req.status.name
+
+    candidate = {**hub, **changes}
+
+    try:
+        HubConfig(
+            **{
+                **candidate,
+                "status": HubOperationalStatus[candidate["status"]],
+            }
+        )
+    except ValidationError as exc:
+        return JSONResponse(
+            {
+                "error": "Cấu hình mới vượt giới hạn cho phép",
+                "details": str(exc),
+            },
+            status_code=422,
+        )
+
+    hub.update(changes)
+
+    return JSONResponse({
+        "success": True,
+        "hub": hub,
+    })
 
 
 async def deactivate_hub(request):
@@ -615,58 +853,238 @@ async def deactivate_hub(request):
 
 # ================= WHAT-IF SIMULATION ROUTES =================
 
-async def get_simulation_source_state(request):
-    snapshots = [
-        HubStateSnapshot(
-            hub_id=f"HUB-0{i}",
-            hub_code=f"HUB-0{i}",
-            name=f"Hub 0{i} - {['Ga Metro A', 'ĐH Bách Khoa', 'KTX Khu B', 'ĐH Quốc Tế', 'KTX Khu A', 'ĐH KHTN', 'ĐH KHXH&NV', 'Thư viện Trung tâm'][i-1]}",
-            total_parking_capacity=100,
-            current_bikes=65 - i * 3,
-            free_parking_slots=35 + i * 3,
-            total_chargers=20,
-            active_chargers=18 - (i % 3),
-            base_power_kw=200.0,
-            max_power_kw=1000.0,
+def build_simulation_source():
+    import copy
+    from datetime import timezone
+
+    hubs = copy.deepcopy(db.get_hubs())
+    snapshots = []
+
+    for hub in hubs:
+        # Bản cơ bản dùng danh sách thiết bị trong store.
+        # Hub ngừng hoạt động không có cổng phục vụ mô phỏng.
+        available_ports = [
+            port
+            for port in hub.get("ports", [])
+            if hub["status"] == "ACTIVE"
+            and port.get("is_available", False)
+        ]
+
+        # Store chưa có số đo công suất thực:
+        # giả định tải nền = 50% tổng công suất cổng sẵn sàng.
+        base_power_kw = sum(
+            port["power_kw"] for port in available_ports
+        ) * 0.5
+
+        snapshot = HubStateSnapshot(
+            hub_id=hub["id"],
+            hub_code=hub["hub_code"],
+            name=hub["name"],
+            total_parking_capacity=hub["parking_capacity"],
+            current_bikes=len(hub.get("bikes", [])),
+            free_parking_slots=sum(
+                1
+                for slot in hub.get("slots", [])
+                if slot.get("is_available", False)
+            ),
+            total_chargers=hub["charger_capacity"],
+            active_chargers=len(available_ports),
+            base_power_kw=base_power_kw,
+            max_power_kw=hub["max_power_kw"],
         )
-        for i in range(1, 9)
-    ]
-    resp = SimulationSourceState(
+        snapshots.append(snapshot)
+
+    result = SimulationSourceState(
         source_type=SourceStateType.LIVE_STATE_A,
-        source_label="Trạng thái mạng lưới hiện tại (A)",
+        source_label="Snapshot từ store; công suất nền ước tính",
         hub_snapshots=snapshots,
+    ).model_dump(mode="json")
+
+    result["captured_at"] = datetime.now(timezone.utc).isoformat()
+    result["power_basis"] = (
+        "Ước tính 50% tổng công suất cổng sẵn sàng; "
+        "không phải số đo IoT"
     )
-    return JSONResponse(resp.dict())
+    return result
+
+
+def prepare_simulation_input(body):
+    import copy
+    import math
+    from datetime import timezone
+
+    if not isinstance(body, dict):
+        raise ValueError("Body phải là JSON object")
+
+    source_type = SourceStateType(
+        body.get("source_type", "LIVE_A")
+    )
+
+    if source_type == SourceStateType.LIVE_STATE_A:
+        # LIVE_A luôn đọc từ store, không tin snapshot client gửi.
+        source = build_simulation_source()
+    else:
+        raw_snapshots = body.get("hub_snapshots")
+
+        if not isinstance(raw_snapshots, list) or not raw_snapshots:
+            raise ValueError("Bản manual phải có hub_snapshots không rỗng")
+
+        integer_fields = (
+            "total_parking_capacity",
+            "current_bikes",
+            "free_parking_slots",
+            "total_chargers",
+            "active_chargers",
+        )
+        power_fields = ("base_power_kw", "max_power_kw")
+
+        for item in raw_snapshots:
+            if not isinstance(item, dict):
+                raise ValueError("Mỗi snapshot phải là JSON object")
+
+            for field in integer_fields:
+                if type(item.get(field)) is not int:
+                    raise ValueError(f"{field} phải là số nguyên")
+
+            for field in power_fields:
+                value = item.get(field)
+                if (
+                    type(value) not in (int, float)
+                    or not math.isfinite(value)
+                ):
+                    raise ValueError(f"{field} phải là số hữu hạn")
+
+        source = SimulationSourceState(
+            source_type=source_type,
+            source_label="Bản sao chỉnh tay",
+            hub_snapshots=raw_snapshots,
+        ).model_dump(mode="json")
+        source["captured_at"] = datetime.now(timezone.utc).isoformat()
+        source["power_basis"] = "Dữ liệu manual do người chạy nhập"
+
+    snapshots = source["hub_snapshots"]
+    if not snapshots:
+        raise ValueError("Không có Hub để mô phỏng")
+
+    seen = set()
+    known_ids = {hub["id"] for hub in db.get_hubs()}
+
+    for hub in snapshots:
+        hub_id = hub["hub_id"]
+
+        if hub_id not in known_ids:
+            raise ValueError(f"Hub không tồn tại: {hub_id}")
+        if hub_id in seen:
+            raise ValueError(f"Trùng hub_id: {hub_id}")
+        seen.add(hub_id)
+
+        capacity = hub["total_parking_capacity"]
+        bikes = hub["current_bikes"]
+        free_slots = hub["free_parking_slots"]
+        chargers = hub["total_chargers"]
+        active = hub["active_chargers"]
+        base_power = hub["base_power_kw"]
+        max_power = hub["max_power_kw"]
+
+        if capacity <= 0:
+            raise ValueError(f"{hub_id}: sức chứa phải lớn hơn 0")
+
+        if not 0 <= bikes <= capacity:
+            raise ValueError(f"{hub_id}: số xe ngoài sức chứa")
+
+        if not 0 <= free_slots <= capacity:
+            raise ValueError(f"{hub_id}: số chỗ trống ngoài sức chứa")
+
+        if chargers < 0 or not 0 <= active <= chargers:
+            raise ValueError(f"{hub_id}: số cổng sạc không hợp lệ")
+
+        if (
+            not math.isfinite(base_power)
+            or not math.isfinite(max_power)
+            or base_power < 0
+            or max_power <= 0
+            or base_power > max_power
+        ):
+            raise ValueError(f"{hub_id}: công suất nền/giới hạn không hợp lệ")
+
+        if active == 0 and base_power != 0:
+            raise ValueError(f"{hub_id}: không có cổng hoạt động nhưng có tải sạc")
+
+    raw_config = body.get("config")
+    if not isinstance(raw_config, dict):
+        raise ValueError("Thiếu config dạng JSON object")
+
+    config = SimulationScenarioConfig(**raw_config)
+
+    if config.scenario_type.name != "DEMAND_SURGE":
+        raise ValueError("Bản cơ bản hiện chỉ hỗ trợ tăng nhu cầu sạc")
+
+    if config.demand_increase_pct < 0:
+        raise ValueError("Tình huống tăng nhu cầu yêu cầu mức tăng từ 0 đến 300%")
+
+    if not config.scenario_name.strip():
+        raise ValueError("Tên tình huống không được để trống")
+
+    try:
+        start = datetime.strptime(config.start_time, "%H:%M")
+    except ValueError:
+        raise ValueError("start_time phải có dạng HH:MM")
+
+    if start.strftime("%H:%M") != config.start_time:
+        raise ValueError("start_time phải có dạng HH:MM")
+
+    # Các cờ is_input_valid/is_grid_state_loaded không quyết định hợp lệ.
+    # Những tham số của tình huống khác không được âm thầm bỏ qua.
+    if (
+        config.affected_chargers_count != 0
+        or config.lost_power_kw != 0
+        or config.additional_bikes_count != 0
+    ):
+        raise ValueError(
+            "Tăng nhu cầu thuần túy cần affected_chargers_count, "
+            "lost_power_kw, additional_bikes_count bằng 0"
+        )
+
+    return (
+        copy.deepcopy(source),
+        config.model_dump(mode="json"),
+    )
+
+
+async def get_simulation_source_state(request):
+    return JSONResponse(build_simulation_source())
 
 
 async def validate_simulation_parameters(request):
     try:
         body = await request.json()
-    except Exception:
-        body = {}
-
-    # Check if manual data exceeds threshold to simulate EX-10-01
-    hub_code = body.get("check_hub_code")
-    if hub_code == "HUB-04" or body.get("trigger_invalid_error"):
+    except (json.JSONDecodeError, UnicodeDecodeError):
         return JSONResponse(
-            SimulationValidationResult(
-                is_valid=False,
-                error_code="EX-10-01",
-                error_type="INVALID_INPUT",
-                message="THAM SỐ KHÔNG HỢP LỆ",
-                details="Hub 04 có số lượng xe vượt quá sức chứa tối đa của trạm (120/100 chỗ). Vui lòng điều chỉnh lại dữ liệu trước khi mô phỏng.",
-            ).dict(),
+            {"is_valid": False, "error": "JSON không hợp lệ"},
+            status_code=400,
+        )
+
+    try:
+        source, config = prepare_simulation_input(body)
+    except (ValidationError, ValueError) as exc:
+        return JSONResponse(
+            {
+                "is_valid": False,
+                "error_code": "EX-10-01",
+                "error_type": "INVALID_INPUT",
+                "message": str(exc),
+            },
             status_code=422,
         )
 
-    return JSONResponse(
-        SimulationValidationResult(
-            is_valid=True,
-            error_code=None,
-            error_type=None,
-            message="Dữ liệu đầu vào hợp lệ. Trạng thái mạng lưới sẵn sàng để chạy mô phỏng.",
-        ).dict()
-    )
+    return JSONResponse({
+        "is_valid": True,
+        "message": "Dữ liệu hợp lệ",
+        "source": source,
+        "config": config,
+    })
+
+
 
 
 async def run_simulation(request):
