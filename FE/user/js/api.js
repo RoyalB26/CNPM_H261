@@ -157,6 +157,25 @@ const ApiService = {
     };
   },
 
+  async startRide(bookingId) {
+    if (!this.isBackendAvailable) {
+      throw new Error("Backend chưa kết nối");
+    }
+
+    const res = await fetch(
+      `${API_BASE_URL}/bookings/${encodeURIComponent(bookingId)}/start`,
+      { method: "POST" }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || "Không thể bắt đầu chuyến đi");
+    }
+
+    return data;
+  },
+
   async cancelBooking(bookingId) {
     if (this.isBackendAvailable) {
       try {

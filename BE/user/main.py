@@ -32,7 +32,29 @@ async def api_login(request):
     try:
         data = await request.json()
     except Exception:
-        data = {}
+        return JSONResponse(
+            {"success": False, "message": "Dữ liệu không hợp lệ"},
+            status_code=400
+        )
+
+    phone = data.get("phone")
+    email = data.get("email")
+    password = data.get("password")
+
+    valid_user = (
+        phone == db.user["phone"]
+        or email == db.user["email"]
+    )
+
+    if not valid_user or password != "123456":
+        return JSONResponse(
+            {
+                "success": False,
+                "message": "Sai tài khoản hoặc mật khẩu"
+            },
+            status_code=401
+        )
+
     return JSONResponse({
         "success": True,
         "token": "jwt-token-sample-mock-123456",
@@ -136,17 +158,52 @@ async def api_create_booking(request):
     except Exception:
         data = {}
     bk = db.create_booking(data)
+
+    if "error" in bk:
+        return JSONResponse(
+            {"success": False, "error": bk["error"]},
+            status_code=409
+        )
+
     return JSONResponse(bk)
 
 async def api_cancel_booking(request):
     booking_id = request.path_params.get("booking_id")
     bk = db.cancel_booking(booking_id)
-    if bk:
-        return JSONResponse({"success": True, "booking": bk})
-    return JSONResponse({"error": "Booking not found"}, status_code=404)
+
+    if bk is None:
+        return JSONResponse(
+            {"error": "Booking không tồn tại"},
+            status_code=404
+        )
+
+    if "error" in bk:
+        return JSONResponse(
+            {"success": False, "error": bk["error"]},
+            status_code=409
+        )
+
+    return JSONResponse({
+        "success": True,
+        "booking": bk
+    })
 
 async def api_active_services(request):
     return JSONResponse(db.user.get("active_services", {}))
+
+async def api_start_ride(request):
+    booking_id = request.path_params["booking_id"]
+
+    result = db.start_ride(booking_id)
+
+    if not result["success"]:
+        status_code = (
+            404 if result["error"] == "Booking không tồn tại"
+            else 409
+        )
+        return JSONResponse(result, status_code=status_code)
+
+    return JSONResponse(result)
 
 async def api_return_vehicle(request):
     try:
@@ -162,6 +219,10 @@ async def api_return_vehicle(request):
     trip_id = data.get("trip_id", "TRIP-8821")
     hub_name = data.get("hub_name", "Hub Đại học Bách khoa")
     res = db.return_vehicle(trip_id, hub_name)
+
+    if not res["success"]:
+        return JSONResponse(res, status_code=409)
+
     return JSONResponse(res)
 
 async def api_list_incidents(request):
@@ -289,6 +350,7 @@ routes = [
     Route("/api/incidents", api_create_incident, methods=["POST"]),
     Route("/api/invoices/current", api_get_invoice, methods=["GET"]),
     Route("/api/invoices/pay", api_pay_invoice, methods=["POST"]),
+    Route("/api/bookings/{booking_id}/start", api_start_ride, methods=["POST"]),
 
     # Prefixed aliases for api gateway
     Route("/api/v1/user/health", api_health, methods=["GET"]),
@@ -309,6 +371,7 @@ routes = [
     Route("/api/v1/user/incidents", api_create_incident, methods=["POST"]),
     Route("/api/v1/user/invoices/current", api_get_invoice, methods=["GET"]),
     Route("/api/v1/user/invoices/pay", api_pay_invoice, methods=["POST"]),
+Route("/api/v1/user/bookings/{booking_id}/start", api_start_ride, methods=["POST"]),
 ]
 
 middleware = [
