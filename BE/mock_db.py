@@ -13,7 +13,6 @@ import copy
 
 
 
-from uuid import uuid4
 from datetime import timezone
 
 
@@ -374,6 +373,8 @@ class MockDatabaseStore:
                 ]
             }
         ]
+
+        self.next_relocation_number = 103
 
         # 5. MAINTENANCE TICKETS (Operator, Staff, User Incident shared)
         self.maintenance_tickets = [
@@ -772,7 +773,7 @@ class MockDatabaseStore:
             priority = priority.value
 
         task = {
-            "task_id": f"CMD-{uuid4().hex}",
+            "task_id": f"CMD-{self.next_relocation_number}",
             "title": f"Điều chuyển {count} xe",
             "source_hub_id": source["id"],
             "source_hub_name": source["name"],
@@ -803,6 +804,7 @@ class MockDatabaseStore:
 
         # Đây là chỗ duy nhất ghi vào store, sau toàn bộ kiểm tra.
         self.relocations.insert(0, task)
+        self.next_relocation_number += 1
         return task
 
 
