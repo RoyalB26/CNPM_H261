@@ -52,10 +52,42 @@ class HubLiveStatus(BaseModel):
     available_bikes: Optional[int] = 0
 
 
+# class EmergencyHaltRequest(BaseModel):
+#     reason: str = Field(..., example="Sự cố lưới điện diện rộng ĐHQG")
+#     operator_id: str = Field(..., example="OP-001")
+#     confirmation_token: str = Field(..., example="HALT_ALL_CONFIRM")
+
 class EmergencyHaltRequest(BaseModel):
-    reason: str = Field(..., example="Sự cố lưới điện diện rộng ĐHQG")
-    operator_id: str = Field(..., example="OP-001")
-    confirmation_token: str = Field(..., example="HALT_ALL_CONFIRM")
+    """Dữ liệu yêu cầu dừng khẩn cấp
+     - các trường không được để trống."""
+
+    reason: str = Field(
+        ...,
+        min_length=1,
+        pattern=r"\S",
+        examples=["Sự cố lưới điện diện rộng ĐHQG"],
+    )
+    operator_id: str = Field(
+        ...,
+        min_length=1,
+        pattern=r"\S",
+        examples=["OP-001"],
+    )
+    confirmation_token: str = Field(
+        ...,
+        min_length=1,
+        pattern=r"\S",
+        examples=["HALT_ALL_CONFIRM"],
+    )
+
+
+class EmergencyHaltErrorResponse(BaseModel):
+    """Thông báo lỗi đầu vào của API dừng khẩn cấp."""
+
+    status_code: str = Field(..., examples=["400"])
+    error: int = Field(..., examples=[1])
+    detail: str = Field(..., examples=["JSON không hợp lệ"])
+
 
 
 class EmergencyHaltResponse(BaseModel):

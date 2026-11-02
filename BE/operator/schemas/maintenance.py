@@ -59,3 +59,26 @@ class MaintenanceCreateRequest(BaseModel):
 class MaintenanceTicketList(BaseModel):
     total: int
     items: List[MaintenanceTicketItem]
+
+
+
+class MaintenanceAssignResponse(BaseModel):
+    """Kết quả phân công + thông tin phiếu bảo trì sau update."""
+
+    success: bool = Field(..., examples=[True])
+    message: str = Field(
+        ...,
+        examples=["Đã phân công Nguyen Van B xử lý phiếu TICK-802"],
+    )
+    ticket: MaintenanceTicketItem
+
+
+class MaintenanceErrorResponse(BaseModel):
+    """Thông báo lỗi của API bảo trì."""
+
+    status_code: str = Field(..., examples=["422"])
+    error: int = Field(..., examples=[1])
+    detail: str = Field(
+        ...,
+        examples=["Dữ liệu phân công bảo trì không hợp lệ"],
+    )

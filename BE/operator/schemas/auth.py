@@ -11,6 +11,30 @@ class OperatorLoginRequest(BaseModel):
     email: str = Field(..., example="admin@e-mobility.com")
     password: str = Field(..., min_length=6, example="operator123")
 
+class OperatorLoginResponse(BaseModel):
+    """Kết quả tiếp nhận đăng nhập và yêu cầu xác thực hai bước."""
+
+    success: bool = Field(..., examples=[True])
+    requires_2fa: bool = Field(..., examples=[True])
+    email: str = Field(
+        ...,
+        examples=["admin@e-mobility.com"],
+    )
+    message: str = Field(
+        ...,
+        examples=["Vui lòng nhập mã xác thực 6 chữ số."],
+    )
+
+
+class OperatorAuthErrorResponse(BaseModel):
+    """Thông báo lỗi của API đăng nhập và xác thực hai bước."""
+
+    status_code: str = Field(..., examples=["400"])
+    error: int = Field(..., examples=[1])
+    detail: str = Field(
+        ...,
+        examples=["JSON không hợp lệ"],
+    )
 
 class Operator2FARequest(BaseModel):
     email: str = Field(..., example="admin@e-mobility.com")
