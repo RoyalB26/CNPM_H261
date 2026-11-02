@@ -540,6 +540,34 @@ class MockDatabaseStore:
         hub_name = hub["name"] if hub else "Hub Ga Metro ĐHQG"
         plan_type = payload.get("plan_type", "rental")
 
+        if plan_type == "rental":
+            if not hub:
+                return {"error": "Hub không tồn tại"}
+
+            resource_name = payload.get("resource_name", "")
+            bike_id = resource_name.split(" · ")[0].strip()
+
+            bike = next(
+                (b for b in hub.get("bikes", []) if b["id"] == bike_id),
+                None
+            )
+
+            already_booked = any(
+                b.get("hub_id") == hub["id"]
+                and b.get("plan_type") == "rental"
+                and b.get("resource_name", "").split(" · ")[0].strip() == bike_id
+                and b.get("status") == "Đã xác nhận"
+                for b in self.bookings
+            )
+
+            if (
+                not bike
+                or bike.get("status") != "Sẵn sàng"
+                or already_booked
+                or hub.get("available_bikes", 0) <= 0
+            ):
+                return {"error": "Xe không khả dụng hoặc đã được đặt"}
+
         # Reserve bike if rental
         if plan_type == "rental" and hub:
             dest_hub = payload.get("destination_hub_name", "Hub Đại học Bách khoa")
@@ -597,6 +625,10 @@ class MockDatabaseStore:
         bk = next((b for b in self.bookings if b["id"] == booking_id), None)
         if not bk:
             return None
+        if bk.get("status") != "Đã xác nhận":
+            return {
+                "error": "Booking đã hủy hoặc không còn hiệu lực"
+            }
         bk["status"] = "Đã hủy"
 
         # Restore resources if rental
@@ -611,22 +643,141 @@ class MockDatabaseStore:
                         break
         return bk
 
+    def start_ride(self, booking_id: str):
+        booking = next(
+            (b for b in self.bookings if b["id"] == booking_id),
+            None
+        )
+
+        if not booking:
+            return {"success": False, "error": "Booking không tồn tại"}
+
+        if booking.get("plan_type") != "rental":
+            return {"success": False, "error": "Không phải booking thuê xe"}
+
+        if booking.get("status") != "Đã xác nhận":
+            return {"success": False, "error": "Booking không còn hiệu lực"}
+
+        if self.user["active_services"].get("ride"):
+            return {"success": False, "error": "Bạn đang có chuyến đi khác"}
+
+        hub = self.get_hub(booking["hub_id"])
+        if not hub:
+            return {"success": False, "error": "Hub không tồn tại"}
+
+        vehicle_id = booking["resource_name"].split(" · ")[0].strip()
+
+        bike = next(
+            (b for b in hub["bikes"] if b["id"] == vehicle_id),
+            None
+        )
+
+        if not bike or bike["status"] != "Đã đặt chỗ":
+            return {"success": False, "error": "Xe không khả dụng"}
+
+        # Xe rời Hub nguồn
+        hub["bikes"].remove(bike)
+        hub["available_parking"] = min(
+            hub["parking_capacity"],
+            hub["available_parking"] + 1
+        )
+
+        booking["status"] = "Đang sử dụng"
+
+        trip = {
+            "trip_id": f"TRIP-{datetime.now().strftime('%H%M%S')}",
+            "vehicle_id": vehicle_id,
+            "origin_hub": hub["name"],
+            "destination_hub": booking.get("destination_hub_name"),
+            "elapsed_minutes": 0,
+            "battery_level": bike["battery_level"],
+            "status": "Đang sử dụng"
+        }
+
+        self.user["active_services"]["ride"] = trip
+
+        return {
+            "success": True,
+            "ride": trip
+        }
+
     def return_vehicle(self, trip_id: str, return_hub_name: str):
         # Clear active ride
         active_ride = self.user["active_services"].get("ride")
-        vehicle_id = active_ride["vehicle_id"] if active_ride else "XE-024"
-        self.user["active_services"]["ride"] = None
 
-        # Add bike to return hub
-        dest_hub = next((h for h in self.hubs if h["name"] == return_hub_name), self.hubs[1])
+        if not active_ride:
+            return {
+                "success": False,
+                "error": "Không có chuyến đi đang hoạt động"
+            }
+
+        if active_ride["trip_id"] != trip_id:
+            return {
+                "success": False,
+                "error": "Mã chuyến đi không khớp"
+            }
+
+        vehicle_id = active_ride["vehicle_id"]
+
+        dest_hub = next(
+            (h for h in self.hubs if h["name"] == return_hub_name),
+            None
+        )
+
+        if dest_hub is None:
+            return {
+                "success": False,
+                "error": "Hub đích không tồn tại"
+            }
+
+        if dest_hub.get("status") != "ACTIVE":
+            return {
+                "success": False,
+                "error": "Hub đích không hoạt động"
+            }
+
+        if dest_hub.get("available_parking", 0) <= 0:
+            return {
+                "success": False,
+                "error": "Hub đích không còn chỗ đỗ"
+            }
+
+        # Tìm và xóa xe khỏi Hub cũ, tránh trùng xe
+        returned_bike = None
+
+        for hub in self.hubs:
+            for bike in hub.get("bikes", [])[:]:
+                if bike["id"] == vehicle_id:
+                    if returned_bike is None:
+                        returned_bike = bike
+
+                    hub["bikes"].remove(bike)
+
+                    if bike["status"] == "Sẵn sàng":
+                        hub["available_bikes"] = max(
+                            0, hub["available_bikes"] - 1
+                        )
+
+        # Nếu xe không có trong danh sách Hub, tạo từ dữ liệu chuyến đi
+        if returned_bike is None:
+            returned_bike = {
+                "id": vehicle_id,
+                "name": "Xe đạp điện",
+                "hourly_rate": 10000
+            }
+
+        # Cập nhật xe tại Hub đích
+        returned_bike["status"] = "Sẵn sàng"
+        returned_bike["battery_level"] = active_ride.get(
+            "battery_level", returned_bike.get("battery_level", 75)
+        )
+
+        dest_hub["bikes"].append(returned_bike)
         dest_hub["available_bikes"] += 1
-        dest_hub["bikes"].append({
-            "id": vehicle_id,
-            "name": "Xe đạp điện",
-            "battery_level": 75,
-            "status": "Sẵn sàng",
-            "hourly_rate": 10000
-        })
+        dest_hub["available_parking"] -= 1
+
+        # Chỉ kết thúc chuyến đi sau khi cập nhật thành công
+        self.user["active_services"]["ride"] = None
 
         self.telemetry_events.insert(0, {
             "id": f"TLM-{len(self.telemetry_events) + 100}",

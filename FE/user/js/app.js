@@ -1244,9 +1244,48 @@ const App = {
     if (rFee) rFee.innerText = `${(25000 * (parseInt(qty) || 1)).toLocaleString()}đ / lần`;
   },
 
-  startRide() {
-    this.showToast("Bắt đầu tính thời gian di chuyển!");
-    this.navigateTo("screen-ride-active");
+  async startRide() {
+    const bookingId = AppState.selectedBookingId;
+
+    if (!bookingId) {
+      this.showToast("Không tìm thấy mã đặt xe!");
+      return;
+    }
+
+    try {
+      // Gọi API Backend
+      const result = await ApiService.startRide(bookingId);
+
+      // Cập nhật dữ liệu chuyến đi trên Frontend
+      AppState.activeServices = {
+        ...AppState.activeServices,
+        has_active: true,
+        ride: result.ride
+      };
+
+      AppState.activeRide = {
+        vehicleId: result.ride.vehicle_id,
+        elapsedMinutes: result.ride.elapsed_minutes,
+        status: result.ride.status
+      };
+
+      // Cập nhật trạng thái Booking
+      const booking = AppState.bookings.find(
+        b => b.id === bookingId
+      );
+
+      if (booking) {
+        booking.status = "Đang sử dụng";
+      }
+
+      // Chỉ chuyển màn hình khi Backend thành công
+      this.showToast("Bắt đầu tính thời gian di chuyển!");
+      this.navigateTo("screen-ride-active");
+
+    } catch (error) {
+      console.error("Start ride error:", error);
+      this.showToast(error.message || "Không thể bắt đầu chuyến đi!");
+    }
   },
 
   startRideTicker() {
@@ -1449,7 +1488,6 @@ const App = {
   handlePaymentSuccessNext() {
     if (AppState.currentInvoice.startRideOnSuccess) {
       this.startRide();
-      this.showToast("Chuyến đi đã bắt đầu! Chúc bạn di chuyển an toàn.");
     } else {
       this.navigateTo("screen-map-home");
       this.showToast("Đã hoàn tất thanh toán và trở về màn hình chính.");
