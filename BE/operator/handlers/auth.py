@@ -1,6 +1,8 @@
 """Các API đăng nhập và xác thực hai bước của Operator."""
 
 import json
+import copy
+
 
 from pydantic import ValidationError
 from starlette import status
@@ -8,6 +10,8 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
+
+from ..store import db
 from ..schemas.auth import (
     OperatorLoginRequest,
     OperatorLoginResponse,
@@ -88,20 +92,19 @@ async def verify_2fa(request: Request) -> JSONResponse:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         )
 
-    profile = OperatorProfile(
-        id="OP-001",
-        full_name="Nhân viên 1",
-        role="Nhân viên giám sát",
-        email=req.email,
-        shift="Ca chiều · 13:00 - 17:00",
-        avatar_initials="OP",
-    )
-    token_resp = OperatorTokenResponse(
-        access_token="mock-jwt-operator-session-token-99882",
-        token_type="bearer",
-        expires_in=28800,
-        operator=profile,
-    )
+    # Sao chép mẫu để bổ sung dữ liệu request mà không sửa seed trong db.
+    auth_data = copy.deepcopy(db.operator_mock["auth"])
+
+    profile_data = auth_data["profile"]
+    profile_data["email"] = req.email
+    profile = OperatorProfile.model_validate(profile_data)
+
+    token_data = auth_data["token"]
+    token_data["operator"] = profile
+    token_resp = OperatorTokenResponse.model_validate(token_data)
+
+
+    
     return JSONResponse(
         content=token_resp.model_dump(mode="json"),
         status_code=status.HTTP_200_OK,

@@ -24,7 +24,6 @@ from ..schemas.simulation import (
     SimulationResultResponse,
     HubLoadPoint,
     PowerLoadPoint,
-    DispatchRecommendationItem,
     SimulationSaveRuleRequest,
     SimulationHistoryItem,
     SimulationHistoryList,
@@ -290,64 +289,45 @@ def build_demo_simulation_result(
     config: SimulationScenarioConfig,
     executed_at: str,
 ) -> SimulationResultResponse:
-    """Đóng gói biểu đồ mẫu; chưa phải thuật toán tính theo đầu vào."""
-    load_rows = [
-        ("17:00", 48, 42),
-        ("17:20", 56, 47),
-        ("17:40", 67, 44),
-        ("18:00", 81, 51),
-        ("18:20", 92, 55),
-        ("18:40", 88, 53),
-        ("19:00", 94, 56),
+    """Dựng kết quả từ mẫu trong db, bổ sung thông tin của lần chạy."""
+    template = copy.deepcopy(
+        db.operator_mock["simulation_result_template"]
+    )
+
+    load_points = [
+        HubLoadPoint.model_validate(row)
+        for row in template["load_chart_data"]
     ]
-    power_rows = [
-        ("17:00", 70.0),
-        ("17:20", 90.0),
-        ("17:40", 115.0),
-        ("18:00", 160.0),
-        ("18:20", 185.0),
-        ("18:40", 150.0),
-        ("19:00", 120.0),
+    power_points = [
+        PowerLoadPoint.model_validate(row)
+        for row in template["power_chart_data"]
     ]
+
+    if not load_points or not power_points:
+        raise ValueError("Biểu đồ mô phỏng mẫu không được rỗng")
 
     return SimulationResultResponse(
         simulation_id=simulation_id,
         scenario_name=config.scenario_name,
-        status="Hoàn thành (dữ liệu mẫu)",
+        status=template["status"],
         executed_at=executed_at,
-        is_mock=True,
-        result_basis="Biểu đồ mẫu, chưa tính theo snapshot/config",
-        load_chart_data=[
-            HubLoadPoint(
-                time_label=time_label,
-                metro_hub_load_pct=metro,
-                bachkhoa_hub_load_pct=bachkhoa,
-            )
-            for time_label, metro, bachkhoa in load_rows
-        ],
-        power_chart_data=[
-            PowerLoadPoint(time_label=time_label, power_kw=power)
-            for time_label, power in power_rows
-        ],
-        peak_power_kw=max(power for _, power in power_rows),
-        peak_metro_load_pct=max(metro for _, metro, _ in load_rows),
-        overloaded_hubs="2 / 12",
-        overloaded_chargers="15 / 60",
-        metro_deficit_bikes=35,
-        recommendations=[
-            DispatchRecommendationItem(
-                title="Đề xuất mẫu: điều chuyển xe khẩn cấp",
-                source_hub="Hub KTX Khu A",
-                target_hub="Hub Ga Metro A",
-                bike_count=20,
-                vehicle_type="Xe đạp điện",
-                details=[
-                    "Đây là đề xuất mẫu, chưa tính từ nguồn dữ liệu.",
-                    "Chưa tạo lệnh điều chuyển trong store.",
-                ],
-            )
-        ],
+        is_mock=template["is_mock"],
+        result_basis=template["result_basis"],
+        load_chart_data=load_points,
+        power_chart_data=power_points,
+        peak_power_kw=max(
+            point.power_kw for point in power_points
+        ),
+        peak_metro_load_pct=max(
+            point.metro_hub_load_pct for point in load_points
+        ),
+        overloaded_hubs=template["overloaded_hubs"],
+        overloaded_chargers=template["overloaded_chargers"],
+        metro_deficit_bikes=template["metro_deficit_bikes"],
+        recommendations=template["recommendations"],
     )
+
+
 
 
 def simulation_history_response(
