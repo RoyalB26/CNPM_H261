@@ -11,7 +11,10 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from ..store import db
+from ..store import db, persist_change
+
+
+
 from ..schemas.hub_manage import (
     HubConfig,
     HubConfigUpdate,
@@ -167,12 +170,17 @@ async def update_hub_config(request: Request) -> JSONResponse:
 
     # Chỉ ghi sau khi cấu hình và response đều hợp lệ.
     content = response_data.model_dump(mode="json")
-    hub.update(changes)
 
-    return JSONResponse(
-        content=content,
-        status_code=status.HTTP_200_OK,
-    )
+    def change(candidate):
+        candidate_hub = candidate.get_hub(hub_id)
+        candidate_hub.update(changes)
+
+        return JSONResponse(
+            content=content,
+            status_code=status.HTTP_200_OK,
+        )
+
+    return persist_change(change)
 
 
 async def deactivate_hub(request: Request) -> JSONResponse:
@@ -258,13 +266,17 @@ async def deactivate_hub(request: Request) -> JSONResponse:
     )
 
     content = response_data.model_dump(mode="json")
-    hub.update(changes)
 
-    return JSONResponse(
-        content=content,
-        status_code=status.HTTP_200_OK,
-    )
+    def change(candidate):
+        candidate_hub = candidate.get_hub(hub_id)
+        candidate_hub.update(changes)
 
+        return JSONResponse(
+            content=content,
+            status_code=status.HTTP_200_OK,
+        )
+
+    return persist_change(change)
 
 
 

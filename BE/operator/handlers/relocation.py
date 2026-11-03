@@ -9,7 +9,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from ..store import db, RelocationError
+from ..store import db, RelocationError, persist_change
 from ..schemas.relocation import (
     RelocationCommandCreate,
     RelocationCommandItem,
@@ -122,26 +122,32 @@ async def create_relocation(request: Request) -> JSONResponse:
         )
 
     # Store kiểm tra Hub, nhân viên, xe và chỗ đỗ trước khi tạo lệnh.
-    try:
-        task = db.create_relocation_command(
+    
+
+
+    def change(candidate):
+        task = candidate.create_relocation_command(
             req.model_dump(mode="json"),
         )
+
+        return JSONResponse(
+            content=relocation_response(task).model_dump(mode="json"),
+            status_code=status.HTTP_201_CREATED,
+        )
+
+    try:
+        return persist_change(change)
     except RelocationError as exc:
         err_data = RelocationResponse(
             status_code=str(exc.status_code),
             error=1,
             detail=str(exc),
         )
+
         return JSONResponse(
             content=err_data.model_dump(mode="json"),
             status_code=exc.status_code,
         )
-
-    return JSONResponse(
-        content=relocation_response(task).model_dump(mode="json"),
-        status_code=status.HTTP_201_CREATED,
-    )
-
 
 
 

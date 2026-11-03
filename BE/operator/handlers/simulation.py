@@ -14,7 +14,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from ..store import db
+from ..store import db, persist_change
 from ..schemas.simulation import (
     SimulationSourceState,
     HubStateSnapshot,
@@ -440,9 +440,17 @@ async def run_simulation(request: Request) -> JSONResponse:
     # Serialize và kiểm tra model trước khi thay đổi store.
     content = result.model_dump(mode="json")
     history_data = history.model_dump(mode="json")
-    db.simulation_history.insert(0, history_data)
 
-    return JSONResponse(content=content, status_code=200)
+
+    def change(candidate):
+        candidate.simulation_history.insert(0, history_data)
+
+        return JSONResponse(
+            content=content,
+            status_code=200,
+        )
+
+    return persist_change(change)
 
 
 async def save_simulation_rule(request: Request) -> JSONResponse:
@@ -509,10 +517,22 @@ async def save_simulation_rule(request: Request) -> JSONResponse:
     SimulationHistoryItem.model_validate(updated_history)
     content = response.model_dump(mode="json")
 
-    db.simulation_rules.insert(0, rule)
-    history_row.update(updated_history)
+    def change(candidate):
+        candidate.simulation_rules.insert(0, rule)
 
-    return JSONResponse(content=content, status_code=200)
+        candidate_history = next(
+            row
+            for row in candidate.simulation_history
+            if row.get("id", row.get("run_id")) == req.simulation_id
+        )
+        candidate_history.update(updated_history)
+
+        return JSONResponse(
+            content=content,
+            status_code=200,
+        )
+
+    return persist_change(change)
 
 
 async def get_simulation_history(request: Request) -> JSONResponse:

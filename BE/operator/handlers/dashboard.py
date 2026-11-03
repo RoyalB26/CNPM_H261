@@ -9,7 +9,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from ..store import db
+from ..store import db, persist_change
 from ..schemas.dashboard import (
     KPISummary,
     TelemetryEvent,
@@ -156,24 +156,27 @@ async def emergency_halt(request: Request) -> JSONResponse:
     )
 
     # Chỉ ghi sự kiện sau khi yêu cầu đã vượt qua kiểm tra.
-    db.telemetry_events.insert(
-        0,
-        {
-            "id": f"TLM-{len(db.telemetry_events) + 100}",
-            "timestamp": datetime.now().strftime("%H:%M:%S"),
-            "hub_name": "Toàn hệ thống",
-            "event_type": "EMERGENCY_HALT",
-            "message": f"DỪNG KHẨN CẤP: {req.reason}",
-            "level": "ALERT",
-        },
-    )
+    content = response_data.model_dump(mode="json")
 
-    return JSONResponse(
-        content=response_data.model_dump(mode="json"),
-        status_code=status.HTTP_200_OK,
-    )
+    def change(candidate):
+        candidate.telemetry_events.insert(
+            0,
+            {
+                "id": f"TLM-{len(candidate.telemetry_events) + 100}",
+                "timestamp": datetime.now().strftime("%H:%M:%S"),
+                "hub_name": "Toàn hệ thống",
+                "event_type": "EMERGENCY_HALT",
+                "message": f"DỪNG KHẨN CẤP: {req.reason}",
+                "level": "ALERT",
+            },
+        )
 
+        return JSONResponse(
+            content=content,
+            status_code=status.HTTP_200_OK,
+        )
 
+    return persist_change(change)
 
 routes = [
     Route("/api/v1/operator/dashboard/kpis", get_kpis, methods=["GET"]),

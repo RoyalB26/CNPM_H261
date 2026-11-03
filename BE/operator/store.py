@@ -1,5 +1,12 @@
-"""Đầu mối truy cập store dùng chung của backend Operator."""
+"""Operator sử dụng db và bộ lưu chung của backend."""
 
-from mock_db import db, RelocationError
+from database import db, storage, persist_change
+from mock_db import RelocationError
 
-__all__ = ["db", "RelocationError"]
+
+__all__ = [
+    "db",
+    "RelocationError",
+    "storage",
+    "persist_change",
+]

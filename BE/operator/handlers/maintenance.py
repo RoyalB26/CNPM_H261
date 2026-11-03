@@ -10,7 +10,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from ..store import db
+from ..store import db, persist_change
 from ..schemas.maintenance import (
     MaintenanceTicketItem,
     MaintenanceAssignRequest,
@@ -215,13 +215,20 @@ async def assign_maintenance(request: Request) -> JSONResponse:
     )
     content = response_data.model_dump(mode="json")
 
-    ticket.update(updated_ticket)
+    def change(candidate):
+        candidate_ticket = next(
+            item
+            for item in candidate.maintenance_tickets
+            if item["code"] == req.ticket_code
+        )
+        candidate_ticket.update(updated_ticket)
 
-    return JSONResponse(
-        content=content,
-        status_code=status.HTTP_200_OK,
-    )
+        return JSONResponse(
+            content=content,
+            status_code=status.HTTP_200_OK,
+        )
 
+    return persist_change(change)
 
 routes = [
 
