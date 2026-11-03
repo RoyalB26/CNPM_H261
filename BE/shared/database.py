@@ -6,14 +6,14 @@ from pathlib import Path
 
 from starlette.responses import JSONResponse
 
-from mock_db import MockDatabaseStore, db
-from persistence import JsonStateStore, PersistenceError
+from .memory_store import MockDatabaseStore, db
+from .json_store import JsonStateStore, PersistenceError
 
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_RUNTIME_PATH = (
-    Path(__file__).resolve().parent
+    Path(__file__).resolve().parent.parent
     / "data"
     / "runtime_db.json"
 )

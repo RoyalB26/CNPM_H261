@@ -1,54 +1,68 @@
-# Backend — Cấu trúc thư mục và luồng xử lý
+# Backend — Hướng dẫn làm việc chung
 
-## 1. Cấu trúc thư mục (Project Structure)
+Backend dùng Starlette, Pydantic và store RAM có lưu JSON. User, Operator và Staff dùng chung dữ liệu khi chạy trong cùng gateway; chưa dùng database thật.
+
+## 1. Chạy hệ thống
+
+Mở terminal tại `CNPM_H261/` (thư mục chứa `requirements.txt`):
+
+```powershell
+pip install -r requirements.txt
+python -B BE/run_all.py
+```
+
+Gateway: `http://127.0.0.1:8000`. API chính có tiền tố `/api/v1/user`, `/api/v1/operator`, `/api/v1/staff`. Xem endpoint cụ thể trong README và biến `routes` ở `main.py` của từng phần.
+
+**Dùng gateway để test liên thông.** Chạy riêng từng backend tạo store RAM độc lập; User/Staff chạy riêng không có middleware lưu JSON của gateway. Cơ chế hiện tại dành cho một tiến trình phục vụ API, không chạy nhiều worker cùng ghi runtime.
+
+## 2. Cấu trúc và nơi sửa
 
 ```text
 BE/
-├── run_all.py                 # Gateway tập hợp API User, Operator và Staff
-├── mock_db.py                 # Store chung trong RAM, khởi tạo dữ liệu và xử lý CRUD
-├── database.py                # Đầu mối db và bộ lưu JSON chung
-├── persistence.py             # Ghi file tạm, kiểm tra rồi thay thế runtime
-├── shared_persistence.py      # Lưu thay đổi User/Staff tại gateway
-├── seed_loader.py             # Đọc JSON, kiểm tra cấu trúc và kiểu dữ liệu seed
+├── run_all.py              # Ghép route và middleware của ba backend
+├── mock_db.py              # Export lại store, giữ import cũ của User/Staff
+├── shared/
+│   ├── __init__.py
+│   ├── database.py         # Đầu mối db, storage, persist_change
+│   ├── memory_store.py     # Store RAM, singleton db và CRUD chung
+│   ├── json_store.py       # Commit, reload, ghi file an toàn
+│   ├── seed_loader.py      # Đọc và kiểm tra cấu trúc JSON
+│   └── middleware.py       # Lưu thay đổi User/Staff tại gateway
 ├── data/
-│   ├── mock_seed.json          # Dữ liệu mẫu chung và mẫu riêng của Operator
-│   └── runtime_db.json         # Trạng thái đã lưu; không đưa vào Git
-├── operator/                  # Backend Operator; main.py, schemas và README riêng
-├── user/                      # Backend User; main.py, schemas và README riêng
-├── staff/                     # Backend Staff; main.py, schemas và README riêng
-└── README.md                  # Cấu trúc BE và luồng xử lý tổng quan
+│   ├── mock_seed.json      # Dữ liệu mẫu, quản lý bằng Git
+│   └── runtime_db.json     # Trạng thái phát sinh, không đưa vào Git
+├── operator/              # main.py, handlers/, schemas/, store.py
+├── user/                  # Hiện handler nằm trong main.py; schemas/ riêng
+├── staff/                 # Hiện handler nằm trong main.py; schemas/ riêng
+└── README.md
 ```
 
-## 2. Luồng xử lý (Request Flow)
+User/Staff có thể tách handler theo cách tổ chức của Operator. Giữ biến `routes` ở `main.py` để gateway ghép API, giữ hợp đồng request/response với FE. Thay đổi `shared/` và cấu trúc dữ liệu cần thống nhất với cả nhóm.
 
-**Khởi tạo dữ liệu:**
+## 3. Quy tắc đọc và lưu dữ liệu
 
 ```text
-database.py → storage.reload() → runtime_db.json nếu có; nếu chưa có dùng mock_seed.json → db
+Khởi động → shared/database.py → nạp runtime nếu có, nếu chưa có thì nạp seed → db
+
+Request → route/handler → kiểm tra schema và nghiệp vụ → đọc/cập nhật store → response
 ```
 
-**Xử lý API Operator:**
+- **User/Staff hiện tại:** `from mock_db import db` vẫn dùng store chung. Qua gateway, middleware lưu thay đổi trong `db` của request POST/PUT/PATCH/DELETE có HTTP 2xx trước khi gửi response. Request lỗi được phục hồi RAM; ghi file thất bại trả HTTP 503.
+- **Operator:** handler dùng `operator/store.py`, ghi qua `persist_change(change)`. Hàm `change(candidate)` phải đồng bộ, chỉ sửa `candidate`; ghi JSON thành công rồi mới cập nhật `db`. Nếu áp dụng mẫu này cho luồng mới, phải trả nguyên response lỗi từ `persist_change` khi lưu thất bại.
+- Chỉ tạo singleton `db` tại `shared/memory_store.py`. Không tạo store riêng hoặc gán lại `db`. Import bên ngoài package dùng `shared.*`, bên trong dùng import tương đối; không trộn với `BE.shared.*`.
+- GET chỉ đọc. Lỗi nghiệp vụ phải trả HTTP 4xx/5xx; middleware xét HTTP status, không xét cờ lỗi trong body. Không giữ lâu tham chiếu list/dict bên trong `db`, vì commit/reload có thể thay chúng.
 
-```text
-Frontend gửi request → route → handler → schema kiểm tra đầu vào
-→ kiểm tra nghiệp vụ → đọc db hoặc persist_change() để lưu cập nhật
-→ JSONResponse (chỉ báo cập nhật thành công sau khi ghi JSON)
-```
+Runtime mặc định: `BE/data/runtime_db.json`, đổi được qua biến môi trường `BE_RUNTIME_PATH`. File được tạo ở lần ghi thành công đầu tiên; restart nạp lại runtime. Runtime hỏng sẽ báo lỗi, không tự quay về seed. Không ghi dữ liệu phát sinh vào seed.
 
-`main.py` tập hợp route; `handlers/` xử lý yêu cầu; `schemas/` định nghĩa và kiểm tra dữ liệu. Handler truy cập `db` qua `operator/store.py`; thao tác dữ liệu có thể nằm trong handler hoặc hàm của `mock_db.py`.
+`storage.reload()` đọc lại từ đĩa. `storage.reset_to_seed()` ghi đè runtime bằng seed và cập nhật RAM, chỉ dùng khi chủ động reset demo. `db.reset()` chỉ reset RAM.
 
-**Ví dụ chạy What-if:**
 
-```text
-POST /simulation/run → kiểm tra nguồn và cấu hình → lấy mẫu từ db.operator_mock
-→ tính giá trị đỉnh, sinh ID/thời gian → persist_change() thêm lịch sử trên bản sao
-→ ghi runtime_db.json thành công → cập nhật db → trả kết quả
-```
+## 4. Kiểm tra trước khi bàn giao
 
-Hiện kết quả biểu đồ What-if vẫn là dữ liệu mẫu. Khi chạy chung bằng `python -B BE/run_all.py` với một tiến trình phục vụ API, ba backend dùng chung `db` và lưu trạng thái vào `BE/data/runtime_db.json`. Có thể đổi đường dẫn bằng biến môi trường `BE_RUNTIME_PATH`. Khởi động lại sẽ nạp runtime; runtime hỏng sẽ báo lỗi thay vì âm thầm nạp seed.
+- Chạy gateway, gọi API cả ba vai trò; kiểm tra ca hợp lệ và ca lỗi, đúng HTTP status.
+- Operator tạo điều chuyển → Staff đọc đúng ID và xử lý → Operator đọc lại đúng tiến độ/trạng thái.
+- User báo sự cố → Operator thấy phiếu và phân công → Staff xử lý → Operator đọc lại kết quả.
+- Kiểm tra đặt/trả xe và bãi đỗ có cập nhật tài nguyên chung đúng nghiệp vụ.
+- Restart gateway rồi đọc lại dữ liệu vừa thay đổi; request lỗi không để lại thay đổi dở dang. Test lỗi lưu bằng runtime thử qua `BE_RUNTIME_PATH`.
 
-Runtime được tạo ở lần ghi thành công đầu tiên; các lần sau cập nhật cùng file. Lịch sử What-if nằm trong `simulation_history`, lệnh điều chuyển trong `relocations`; không ghi đè `mock_seed.json`. Để kiểm tra lưu dài hạn: tạo phiên/lệnh qua API, restart gateway rồi đọc lại bằng `GET /api/v1/operator/simulation/history` và `GET /api/v1/operator/relocation/commands`.
-
-Operator ghi qua `persist_change()` trong handler. Middleware tại gateway lưu các thay đổi trong `db` của request User/Staff dùng POST, PUT, PATCH hoặc DELETE trước khi gửi response thành công; nếu ghi thất bại thì trả 503 và phục hồi RAM. Dữ liệu nằm trong biến riêng ngoài `db`, như `staff.DB`, không được lưu bởi cơ chế này. Chạy riêng User/Staff sẽ không có middleware lưu của gateway.
-
-`storage.reload()` nạp lại trạng thái đã lưu; `storage.reset_to_seed()` chủ động ghi seed vào runtime và cập nhật RAM. `db.reset()` cũ chỉ nạp seed vào RAM, nên không dùng để khởi động lại hệ thống trong luồng bình thường. File seed được quản lý bằng Git; runtime và file tạm được bỏ qua.
+Đây là tiêu chí kiểm chứng tích hợp, không phải cam kết mọi luồng hiện tại đã hoàn thiện. Xem thêm README của [Operator](operator/README.md), [User](user/README.md) và [Staff](staff/README.md).

@@ -6,7 +6,7 @@ from typing import Any
 
 
 DEFAULT_SEED_PATH = (
-    Path(__file__).resolve().parent / "data" / "mock_seed.json"
+    Path(__file__).resolve().parent.parent / "data" / "mock_seed.json"
 )
 
 

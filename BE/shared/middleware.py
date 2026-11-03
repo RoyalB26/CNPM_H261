@@ -6,7 +6,7 @@ Các thay đổi Operator đã dùng persist_change trong handler.
 
 import asyncio
 
-from database import db, storage, persist_change
+from .database import db, storage, persist_change
 
 
 class SharedPersistenceMiddleware:

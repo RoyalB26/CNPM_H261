@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 from threading import RLock
 
-from seed_loader import DEFAULT_SEED_PATH, SEED_TYPES, load_seed
+from .seed_loader import DEFAULT_SEED_PATH, SEED_TYPES, load_seed
 
 
 class PersistenceError(RuntimeError):

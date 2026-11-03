@@ -1,7 +1,7 @@
 """Operator sử dụng db và bộ lưu chung của backend."""
 
-from database import db, storage, persist_change
-from mock_db import RelocationError
+from shared.database import db, storage, persist_change
+from shared.memory_store import RelocationError
 
 
 __all__ = [
