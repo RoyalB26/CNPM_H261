@@ -11,7 +11,9 @@ import sys
 import json
 import math
 from datetime import datetime, timedelta
+from pydantic import ValidationError
 from starlette.applications import Starlette
+from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 from starlette.middleware import Middleware
@@ -23,43 +25,60 @@ if PARENT_DIR not in sys.path:
     sys.path.insert(0, PARENT_DIR)
 
 from mock_db import db
+from user.schemas import (
+    UserLoginRequest, UserLoginResponse, UserLoginErrorResponse, UserProfileResponse, UserVehicleItem,
+    UpdateProfileRequest, UpdateProfileResponse, UpdateProfileErrorResponse,
+    CreateBookingRequest, BookingResponse, BookingErrorResponse,
+    CancelBookingRequest, CancelBookingResponse, CancelBookingNotFoundResponse,
+    StartRideRequest, StartRideResponse, ActiveServicesResponse,
+    ReturnVehicleRequest, ReturnVehicleResponse, ReturnVehicleErrorResponse
+)
 
 # API Route Handlers
 async def api_health(request):
     return JSONResponse({"status": "ok", "app": "Smart E-Mobility Hub Backend"})
 
-async def api_login(request):
+async def api_login(request: Request) -> JSONResponse:
+    """Kiểm tra dữ liệu đăng nhập và xác thực tài khoản mock, không đổi store.
+
+    Trả 400 nếu JSON lỗi, 422 nếu sai schema, 401 nếu sai tài khoản hoặc
+    mật khẩu; trả 200 kèm token và hồ sơ khi đăng nhập thành công.
+    """
     try:
         data = await request.json()
-    except Exception:
+    except (json.JSONDecodeError, UnicodeDecodeError):
         return JSONResponse(
-            {"success": False, "message": "Dữ liệu không hợp lệ"},
+            UserLoginErrorResponse(message="Dữ liệu JSON không hợp lệ").model_dump(mode="json"),
             status_code=400
         )
 
-    phone = data.get("phone")
-    email = data.get("email")
-    password = data.get("password")
+    try:
+        credentials = UserLoginRequest.model_validate(data)
+    except ValidationError:
+        # Không đính kèm dữ liệu lỗi vì có thể chứa mật khẩu người dùng.
+        return JSONResponse(
+            UserLoginErrorResponse(
+                message="Cần cung cấp số điện thoại hoặc email và mật khẩu không rỗng, đúng kiểu dữ liệu"
+            ).model_dump(mode="json"),
+            status_code=422
+        )
 
     valid_user = (
-        phone == db.user["phone"]
-        or email == db.user["email"]
+        (credentials.phone is not None and credentials.phone == db.user["phone"])
+        or (credentials.email is not None and credentials.email == db.user["email"])
     )
 
-    if not valid_user or password != "123456":
+    if not valid_user or credentials.password != "123456":
         return JSONResponse(
-            {
-                "success": False,
-                "message": "Sai tài khoản hoặc mật khẩu"
-            },
+            UserLoginErrorResponse(message="Sai tài khoản hoặc mật khẩu").model_dump(mode="json"),
             status_code=401
         )
 
-    return JSONResponse({
-        "success": True,
-        "token": "jwt-token-sample-mock-123456",
-        "user": db.user
-    })
+    response = UserLoginResponse(
+        token="jwt-token-sample-mock-123456",
+        user=UserProfileResponse.model_validate(db.user)
+    )
+    return JSONResponse(response.model_dump(mode="json"))
 
 async def api_register(request):
     try:
@@ -78,21 +97,57 @@ async def api_register(request):
         }
     })
 
-async def api_get_profile(request):
-    return JSONResponse(db.user)
+async def api_get_profile(request: Request) -> JSONResponse:
+    """Trả hồ sơ người dùng mock sau khi kiểm tra qua schema.
 
-async def api_update_profile(request):
+    Giữ phương tiện cá nhân, dịch vụ hiện tại và trường null; không thêm
+    giá trị mặc định cho trường vắng mặt và không thay đổi store.
+    """
+    response = UserProfileResponse.model_validate(db.get_user_profile())
+    return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
+
+async def api_update_profile(request: Request) -> JSONResponse:
+    """Kiểm tra toàn bộ dữ liệu trước khi cập nhật các trường hồ sơ cho phép.
+
+    Trả 400 nếu JSON lỗi, 422 nếu thiếu hoặc sai dữ liệu; trả 200 kèm hồ
+    sơ khi thành công. Trường không được gửi giữ nguyên giá trị hiện tại.
+    """
     try:
         data = await request.json()
-    except Exception:
-        data = {}
-    for k in ["full_name", "email", "phone", "default_payment_method"]:
-        if k in data:
-            db.user[k] = data[k]
-    return JSONResponse({"success": True, "user": db.user})
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JSONResponse(
+            UpdateProfileErrorResponse(message="Dữ liệu JSON không hợp lệ").model_dump(mode="json"),
+            status_code=400
+        )
 
-async def api_get_user_vehicles(request):
-    return JSONResponse(db.get_user_vehicles())
+    try:
+        profile_request = UpdateProfileRequest.model_validate(data)
+    except ValidationError:
+        return JSONResponse(
+            UpdateProfileErrorResponse(message="Dữ liệu cập nhật hồ sơ không hợp lệ").model_dump(mode="json"),
+            status_code=422
+        )
+
+    changes = profile_request.model_dump(exclude_unset=True)
+    # Kiểm tra và tạo phản hồi trước khi ghi để tránh cập nhật dở dang.
+    updated_user = UserProfileResponse.model_validate({**db.user, **changes})
+    response = UpdateProfileResponse(success=True, user=updated_user)
+    result = JSONResponse(response.model_dump(mode="json", exclude_unset=True))
+    db.user.update(changes)
+    return result
+
+async def api_get_user_vehicles(request: Request) -> JSONResponse:
+    """Trả danh sách phương tiện cá nhân sau khi kiểm tra từng xe qua schema.
+
+    Giữ thứ tự và các trường đang có; trả mảng rỗng khi chưa có xe, không
+    thêm giá trị mẫu cho trường vắng mặt và không thay đổi store.
+    """
+    vehicles: list[UserVehicleItem] = [
+        UserVehicleItem.model_validate(vehicle) for vehicle in db.get_user_vehicles()
+    ]
+    return JSONResponse([
+        vehicle.model_dump(mode="json", exclude_unset=True) for vehicle in vehicles
+    ])
 
 async def api_list_hubs(request):
     return JSONResponse(db.get_hubs())
@@ -149,81 +204,214 @@ async def api_suggest_route(request):
         "message": f"Gợi ý tuyến đường từ {nearest_origin['name']} đến {nearest_dest['name']}."
     })
 
-async def api_list_bookings(request):
-    return JSONResponse(db.get_bookings())
+async def api_list_bookings(request: Request) -> JSONResponse:
+    """Trả danh sách booking mock sau khi kiểm tra từng bản ghi qua schema.
 
-async def api_create_booking(request):
+    Giữ thứ tự, trường null và các trường vắng mặt của dữ liệu hiện tại;
+    trả mảng rỗng khi chưa có booking và không thay đổi store.
+    """
+    bookings: list[BookingResponse] = [
+        BookingResponse.model_validate(booking) for booking in db.get_bookings()
+    ]
+    return JSONResponse([
+        booking.model_dump(mode="json", exclude_unset=True) for booking in bookings
+    ])
+
+async def api_create_booking(request: Request) -> JSONResponse:
+    """Kiểm tra request rồi tạo booking thông qua store dùng chung.
+
+    Trả 400 nếu JSON lỗi, 422 nếu sai schema, 409 nếu tài nguyên không
+    khả dụng; giữ mã 200 và cấu trúc bản ghi khi tạo thành công.
+    """
     try:
         data = await request.json()
-    except Exception:
-        data = {}
-    bk = db.create_booking(data)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JSONResponse(
+            BookingErrorResponse(error="Dữ liệu JSON không hợp lệ").model_dump(mode="json"),
+            status_code=400
+        )
+
+    try:
+        booking_request = CreateBookingRequest.model_validate(data)
+    except ValidationError:
+        return JSONResponse(
+            BookingErrorResponse(error="Dữ liệu đặt trước không hợp lệ").model_dump(mode="json"),
+            status_code=422
+        )
+
+    # Chỉ truyền trường client đã gửi để giữ các giá trị mặc định của store.
+    bk = db.create_booking(booking_request.model_dump(mode="json", exclude_unset=True))
 
     if "error" in bk:
         return JSONResponse(
-            {"success": False, "error": bk["error"]},
+            BookingErrorResponse(error=bk["error"]).model_dump(mode="json"),
             status_code=409
         )
 
-    return JSONResponse(bk)
+    response = BookingResponse.model_validate(bk)
+    return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
 
-async def api_cancel_booking(request):
-    booking_id = request.path_params.get("booking_id")
-    bk = db.cancel_booking(booking_id)
+async def api_cancel_booking(request: Request) -> JSONResponse:
+    """Kiểm tra mã trên URL rồi hủy booking qua store, không yêu cầu body.
+
+    Trả 422 nếu mã rỗng hoặc sai kiểu, 404 nếu không tìm thấy, 409 nếu
+    booking không còn hiệu lực; trả 200 kèm booking khi hủy thành công.
+    """
+    try:
+        cancel_request = CancelBookingRequest.model_validate(request.path_params)
+    except ValidationError:
+        return JSONResponse(
+            BookingErrorResponse(error="Mã booking không hợp lệ").model_dump(mode="json"),
+            status_code=422
+        )
+
+    bk = db.cancel_booking(cancel_request.booking_id)
 
     if bk is None:
         return JSONResponse(
-            {"error": "Booking không tồn tại"},
+            CancelBookingNotFoundResponse(error="Booking không tồn tại").model_dump(mode="json"),
             status_code=404
         )
 
     if "error" in bk:
         return JSONResponse(
-            {"success": False, "error": bk["error"]},
+            BookingErrorResponse(error=bk["error"]).model_dump(mode="json"),
             status_code=409
         )
 
-    return JSONResponse({
-        "success": True,
-        "booking": bk
-    })
+    response = CancelBookingResponse(success=True, booking=BookingResponse.model_validate(bk))
+    return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
 
-async def api_active_services(request):
-    return JSONResponse(db.user.get("active_services", {}))
+async def api_active_services(request: Request) -> JSONResponse:
+    """Trả trạng thái dịch vụ qua schema, không thay đổi dữ liệu trong store.
 
-async def api_start_ride(request):
-    booking_id = request.path_params["booking_id"]
+    Giữ trường null và các trường chưa có như response hiện tại; không
+    tự tạo phiên dịch vụ hoặc bổ sung dữ liệu mẫu khi không sử dụng.
+    """
+    response = ActiveServicesResponse.model_validate(db.user.get("active_services", {}))
+    return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
 
-    result = db.start_ride(booking_id)
+async def api_start_ride(request: Request) -> JSONResponse:
+    """Kiểm tra mã trên URL rồi bắt đầu chuyến đi qua store dùng chung.
+
+    Không yêu cầu body. Trả 422 nếu mã không hợp lệ, 404 nếu booking không
+    tồn tại, 409 nếu chưa đủ điều kiện nhận xe; trả 200 kèm chuyến đi nếu
+    thành công. Store chịu trách nhiệm cập nhật booking, xe và Hub nguồn.
+    """
+    try:
+        start_request = StartRideRequest.model_validate(request.path_params)
+    except ValidationError:
+        return JSONResponse(
+            BookingErrorResponse(error="Mã booking không hợp lệ").model_dump(mode="json"),
+            status_code=422
+        )
+
+    result = db.start_ride(start_request.booking_id)
 
     if not result["success"]:
         status_code = (
             404 if result["error"] == "Booking không tồn tại"
             else 409
         )
-        return JSONResponse(result, status_code=status_code)
+        return JSONResponse(
+            BookingErrorResponse(error=result["error"]).model_dump(mode="json"),
+            status_code=status_code
+        )
 
-    return JSONResponse(result)
+    response = StartRideResponse.model_validate(result)
+    return JSONResponse(response.model_dump(mode="json"))
 
-async def api_return_vehicle(request):
+async def api_return_vehicle(request: Request) -> JSONResponse:
+    """Kiểm tra định danh rồi trả xe qua store, hỗ trợ cả request FE và cũ.
+
+    Trả 400 nếu JSON lỗi hoặc mô phỏng lỗi; 422 nếu sai schema hoặc các
+    định danh mâu thuẫn; 409 nếu không đủ điều kiện trả xe; 200 nếu thành
+    công. Chỉ gọi hàm cập nhật store sau khi xe, chuyến và Hub đã khớp.
+    """
     try:
         data = await request.json()
-    except Exception:
-        data = {}
-    if data.get("force_error") or data.get("simulate_error"):
-        return JSONResponse({
-            "success": False,
-            "error": "Không thể hoàn tất trả xe: Vị trí xe ngoài bán kính Hub hoặc khóa chốt chưa đóng."
-        }, status_code=400)
-    
-    trip_id = data.get("trip_id", "TRIP-8821")
-    hub_name = data.get("hub_name", "Hub Đại học Bách khoa")
-    res = db.return_vehicle(trip_id, hub_name)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JSONResponse(
+            ReturnVehicleErrorResponse(error="Dữ liệu JSON không hợp lệ").model_dump(mode="json"),
+            status_code=400
+        )
+
+    try:
+        return_request = ReturnVehicleRequest.model_validate(data)
+    except ValidationError:
+        return JSONResponse(
+            ReturnVehicleErrorResponse(error="Dữ liệu trả xe không hợp lệ").model_dump(mode="json"),
+            status_code=422
+        )
+
+    if return_request.force_error or return_request.simulate_error:
+        return JSONResponse(
+            ReturnVehicleErrorResponse(
+                error="Không thể hoàn tất trả xe: Vị trí xe ngoài bán kính Hub hoặc khóa chốt chưa đóng."
+            ).model_dump(mode="json"),
+            status_code=400
+        )
+
+    active_ride = db.user.get("active_services", {}).get("ride")
+    if not active_ride:
+        return JSONResponse(
+            ReturnVehicleErrorResponse(error="Không có chuyến đi đang hoạt động").model_dump(mode="json"),
+            status_code=409
+        )
+
+    trip_matches = return_request.trip_id == active_ride["trip_id"]
+    vehicle_matches = return_request.vehicle_id == active_ride["vehicle_id"]
+    if return_request.trip_id is not None and return_request.vehicle_id is not None:
+        # Một định danh khớp chuyến hiện tại nhưng định danh còn lại sai.
+        if trip_matches != vehicle_matches:
+            return JSONResponse(
+                ReturnVehicleErrorResponse(error="Mã chuyến đi và mã xe không khớp nhau").model_dump(mode="json"),
+                status_code=422
+            )
+
+    if return_request.trip_id is not None and not trip_matches:
+        return JSONResponse(
+            ReturnVehicleErrorResponse(error="Mã chuyến đi không khớp").model_dump(mode="json"),
+            status_code=409
+        )
+    if return_request.vehicle_id is not None and not vehicle_matches:
+        return JSONResponse(
+            ReturnVehicleErrorResponse(error="Mã xe không khớp chuyến đi đang hoạt động").model_dump(mode="json"),
+            status_code=409
+        )
+
+    hub_by_id = db.get_hub(return_request.hub_id) if return_request.hub_id is not None else None
+    hub_by_name = next(
+        (hub for hub in db.get_hubs() if hub["name"] == return_request.hub_name),
+        None
+    ) if return_request.hub_name is not None else None
+
+    if (
+        (return_request.hub_id is not None and hub_by_id is None)
+        or (return_request.hub_name is not None and hub_by_name is None)
+    ):
+        return JSONResponse(
+            ReturnVehicleErrorResponse(error="Hub đích không tồn tại").model_dump(mode="json"),
+            status_code=409
+        )
+    if hub_by_id is not None and hub_by_name is not None and hub_by_id["id"] != hub_by_name["id"]:
+        return JSONResponse(
+            ReturnVehicleErrorResponse(error="hub_id và hub_name không khớp nhau").model_dump(mode="json"),
+            status_code=422
+        )
+
+    # Dùng đúng chuyến đã đối chiếu và đúng Hub client yêu cầu, không fallback.
+    return_hub = hub_by_id if hub_by_id is not None else hub_by_name
+    res = db.return_vehicle(active_ride["trip_id"], return_hub["name"])
 
     if not res["success"]:
-        return JSONResponse(res, status_code=409)
+        return JSONResponse(
+            ReturnVehicleErrorResponse(error=res["error"]).model_dump(mode="json"),
+            status_code=409
+        )
 
-    return JSONResponse(res)
+    response = ReturnVehicleResponse.model_validate(res)
+    return JSONResponse(response.model_dump(mode="json"))
 
 async def api_list_incidents(request):
     return JSONResponse(db.incidents)
