@@ -33,6 +33,8 @@ class RelocationCommandItem(BaseModel):
     id: str = Field(..., example="CMD-1023")
     source_hub_name: str = Field(..., example="Hub A (KTX Khu A)")
     target_hub_name: str = Field(..., example="Hub B (Ga Metro A)")
+    source_hub_id: str = Field(..., examples=["hub-01"])
+    target_hub_id: str = Field(..., examples=["hub-02"])
     bike_count: int = Field(..., example=5)
     assigned_staff_name: str = Field(..., example="Nguyen Van B")
     status: RelocationStatus = Field(default=RelocationStatus.IN_TRANSIT)
@@ -42,6 +44,30 @@ class RelocationCommandItem(BaseModel):
     updated_at: str = Field(..., example="2026-10-22 14:28")
 
 
+    assigned_staff_id: Optional[str] = Field(
+        default=None,
+        examples=["STF-01"],
+    )
+    bike_ids: List[str] = Field(
+        default_factory=list,
+        examples=[["XE-031"]],
+    )
+    reserved_slot_ids: List[str] = Field(
+        default_factory=list,
+        examples=[["P11"]],
+    )
+    priority: str = Field(default="NORMAL", examples=["Bình thường"])
+    notes: Optional[str] = Field(default=None)
+
+
 class RelocationCommandList(BaseModel):
     total: int
     items: List[RelocationCommandItem]
+
+
+class RelocationResponse(BaseModel):
+    """struct thông báo lỗi khi tạo lệnh điều chuyển."""
+
+    status_code: str
+    error: int
+    detail: str
