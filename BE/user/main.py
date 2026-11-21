@@ -9,7 +9,6 @@ Synchronized with Central Mock Database (BE/mock_db.py).
 import os
 import sys
 import json
-import math
 from datetime import datetime, timedelta
 from pydantic import ValidationError
 from starlette.applications import Starlette
@@ -25,13 +24,18 @@ if PARENT_DIR not in sys.path:
     sys.path.insert(0, PARENT_DIR)
 
 from mock_db import db
+from user.payments import PaymentError, pay_rental_invoice
+from user.incidents import create_report, report_view
+from user.hubs import search_hubs, suggest_route
 from user.schemas import (
     UserLoginRequest, UserLoginResponse, UserLoginErrorResponse, UserProfileResponse, UserVehicleItem,
     UpdateProfileRequest, UpdateProfileResponse, UpdateProfileErrorResponse,
     CreateBookingRequest, BookingResponse, BookingErrorResponse,
     CancelBookingRequest, CancelBookingResponse, CancelBookingNotFoundResponse,
     StartRideRequest, StartRideResponse, ActiveServicesResponse,
-    ReturnVehicleRequest, ReturnVehicleResponse, ReturnVehicleErrorResponse
+    ReturnVehicleRequest, ReturnVehicleResponse, ReturnVehicleErrorResponse, InvoiceResponse,
+    PaymentSubmitRequest, PaymentErrorResponse, CreateIncidentReportRequest, IncidentErrorResponse,
+    SearchHubQuery, RouteSuggestionRequest, HubDetailResponse
 )
 
 # API Route Handlers
@@ -149,60 +153,38 @@ async def api_get_user_vehicles(request: Request) -> JSONResponse:
         vehicle.model_dump(mode="json", exclude_unset=True) for vehicle in vehicles
     ])
 
-async def api_list_hubs(request):
-    return JSONResponse(db.get_hubs())
+async def api_list_hubs(request: Request) -> JSONResponse:
+    """Tìm Hub theo keyword, status, vehicle_type; giữ response dạng mảng."""
+    try:
+        query = SearchHubQuery.model_validate(dict(request.query_params))
+    except ValidationError:
+        return JSONResponse({"success": False, "error": "Bộ lọc Hub không hợp lệ"}, status_code=422)
+    hubs = [HubDetailResponse.model_validate(hub) for hub in search_hubs(db, query)]
+    return JSONResponse([hub.model_dump(mode="json", exclude_unset=True) for hub in hubs])
 
-async def api_get_hub(request):
-    hub_id = request.path_params.get("hub_id")
-    hub = db.get_hub(hub_id)
-    if hub:
-        return JSONResponse(hub)
-    return JSONResponse({"error": "Hub not found"}, status_code=404)
+async def api_get_hub(request: Request) -> JSONResponse:
+    """Đọc chi tiết Hub theo mã, bao gồm trạng thái và tài nguyên hiện tại."""
+    hub = db.get_hub(request.path_params["hub_id"])
+    if hub is None:
+        return JSONResponse({"error": "Hub không tồn tại"}, status_code=404)
+    response = HubDetailResponse.model_validate(hub)
+    return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
 
-def calculate_distance(lat1, lon1, lat2, lon2):
-    R = 6371.0
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
-
-async def api_suggest_route(request):
+async def api_suggest_route(request: Request) -> JSONResponse:
+    """Gợi ý Hub có xe/chỗ trả; từ chối tọa độ lỗi và thiếu tài nguyên."""
     try:
         data = await request.json()
-    except Exception:
-        data = {}
-    
-    o_lat = float(data.get("origin_lat", 10.8753))
-    o_lng = float(data.get("origin_lng", 106.8005))
-    d_lat = float(data.get("dest_lat", 10.8805))
-    d_lng = float(data.get("dest_lng", 106.8055))
-
-    hubs = db.get_hubs()
-    nearest_origin = min(
-        hubs,
-        key=lambda h: calculate_distance(o_lat, o_lng, h["lat"], h["lng"])
-    )
-    nearest_dest = min(
-        [h for h in hubs if h["id"] != nearest_origin["id"]],
-        key=lambda h: calculate_distance(d_lat, d_lng, h["lat"], h["lng"]),
-        default=hubs[1] if len(hubs) > 1 else hubs[0]
-    )
-
-    dist = calculate_distance(nearest_origin["lat"], nearest_origin["lng"], nearest_dest["lat"], nearest_dest["lng"])
-    dist_km = round(max(0.5, dist), 1)
-    est_mins = max(5, int(dist_km / 15 * 60))
-
-    bike = nearest_origin["bikes"][0] if nearest_origin.get("bikes") else None
-
-    return JSONResponse({
-        "origin_hub": nearest_origin,
-        "destination_hub": nearest_dest,
-        "distance_km": dist_km,
-        "estimated_minutes": est_mins,
-        "recommended_bike": bike,
-        "message": f"Gợi ý tuyến đường từ {nearest_origin['name']} đến {nearest_dest['name']}."
-    })
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JSONResponse({"success": False, "error": "Dữ liệu JSON không hợp lệ"}, status_code=400)
+    try:
+        query = RouteSuggestionRequest.model_validate(data)
+    except ValidationError:
+        return JSONResponse({"success": False, "error": "Dữ liệu lộ trình không hợp lệ"}, status_code=422)
+    try:
+        response = suggest_route(db, query)
+    except ValueError:
+        return JSONResponse({"success": False, "error": "Không có Hub lấy/trả xe khả dụng"}, status_code=409)
+    return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
 
 async def api_list_bookings(request: Request) -> JSONResponse:
     """Trả danh sách booking mock sau khi kiểm tra từng bản ghi qua schema.
@@ -319,7 +301,7 @@ async def api_start_ride(request: Request) -> JSONResponse:
         )
 
     response = StartRideResponse.model_validate(result)
-    return JSONResponse(response.model_dump(mode="json"))
+    return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
 
 async def api_return_vehicle(request: Request) -> JSONResponse:
     """Kiểm tra định danh rồi trả xe qua store, hỗ trợ cả request FE và cũ.
@@ -413,55 +395,47 @@ async def api_return_vehicle(request: Request) -> JSONResponse:
     response = ReturnVehicleResponse.model_validate(res)
     return JSONResponse(response.model_dump(mode="json"))
 
-async def api_list_incidents(request):
-    return JSONResponse(db.incidents)
+async def api_list_incidents(request: Request) -> JSONResponse:
+    """Trả lịch sử báo cáo cùng trạng thái phiếu mới nhất, không ghi store."""
+    return JSONResponse([
+        report_view(db, report).model_dump(mode="json", exclude_unset=True)
+        for report in db.incidents
+    ])
 
-async def api_create_incident(request):
+async def api_create_incident(request: Request) -> JSONResponse:
+    """Kiểm tra báo cáo rồi tạo phiếu đúng Hub; Gateway lưu hai bản ghi cùng nhau."""
     try:
         data = await request.json()
-    except Exception:
-        data = {}
-    new_inc = {
-        "id": f"INC-2026-0{len(db.incidents) + 90}",
-        "resource_type": data.get("resource_type", "Phương tiện"),
-        "resource_code": data.get("resource_code", "XE-024"),
-        "hub_name": data.get("hub_name", "Hub Ga Metro ĐHQG"),
-        "incident_type": data.get("incident_type", "Không mở được khóa"),
-        "description": data.get("description", ""),
-        "created_at": "Vừa xong",
-        "status": "Đang xử lý",
-        "operator_note": "Hệ thống đã nhận được báo cáo sự cố và chuyển đến điều hành viên."
-    }
-    db.incidents.insert(0, new_inc)
-    # Auto create maintenance ticket for operator and staff
-    db.create_maintenance_ticket({
-        "title": f"Sự cố báo cáo từ người dùng: {new_inc['incident_type']} ({new_inc['resource_code']})",
-        "hub_name": new_inc["hub_name"],
-        "device_type": new_inc["resource_type"],
-        "device_code": new_inc["resource_code"],
-        "description": new_inc["description"] or "Báo cáo sự cố cần kiểm tra hiện trường.",
-        "severity": "MEDIUM",
-        "priority": "HIGH"
-    })
-    return JSONResponse(new_inc)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JSONResponse(IncidentErrorResponse(error="Dữ liệu JSON không hợp lệ").model_dump(mode="json"), status_code=400)
+    try:
+        report_request = CreateIncidentReportRequest.model_validate(data)
+    except ValidationError:
+        return JSONResponse(IncidentErrorResponse(error="Dữ liệu báo cáo không hợp lệ").model_dump(mode="json"), status_code=422)
+    try:
+        response = create_report(db, report_request)
+    except ValueError:
+        return JSONResponse(IncidentErrorResponse(error="Hub báo cáo không tồn tại").model_dump(mode="json"), status_code=404)
+    return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
 
-async def api_get_invoice(request):
+async def api_get_invoice(request: Request) -> JSONResponse:
+    """Lấy hóa đơn thuê xe đã chốt; có thể chọn chuyến qua query trip_id.
+
+    GET chỉ đọc. Các dịch vụ khác vẫn dùng dữ liệu mock hiện có.
+    """
     inv_type = request.query_params.get("type", "rental")
     if inv_type == "rental":
-        return JSONResponse({
-            "id": "INV-2026-901",
-            "service_type": "rental",
-            "title": "Hóa đơn thuê xe điện",
-            "reference_id": "XE-031",
-            "items": [
-                {"label": "Thời gian sử dụng: 45 phút", "description": "Thời gian sử dụng: 45 phút", "amount": 10000},
-                {"label": "Phụ phí trễ (nếu có)", "description": "Phụ phí trễ (nếu có)", "amount": 0}
-            ],
-            "total_amount": 10000,
-            "payment_channel": "online",
-            "status": "unpaid",
-            "created_at": datetime.now().strftime("%d/%m/%Y %H:%M")
-        })
+        trip_id = request.query_params.get("trip_id")
+        invoices = [
+            booking["rental_invoice"] for booking in db.get_bookings()
+            if booking.get("rental_invoice") is not None
+            and (trip_id is None or booking.get("rental_trip", {}).get("trip_id") == trip_id)
+        ]
+        if not invoices:
+            return JSONResponse({"success": False, "error": "Chưa có hóa đơn thuê xe đã hoàn tất"}, status_code=404)
+        invoice = max(invoices, key=lambda item: datetime.fromisoformat(item["created_at"]))
+        response = InvoiceResponse.model_validate(invoice)
+        return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
     elif inv_type == "charging":
         return JSONResponse({
             "id": "INV-2026-902",
@@ -506,17 +480,25 @@ async def api_get_invoice(request):
             "created_at": datetime.now().strftime("%d/%m/%Y %H:%M")
         })
 
-async def api_pay_invoice(request):
+async def api_pay_invoice(request: Request) -> JSONResponse:
+    """Ghi nhận thanh toán thuê xe; Gateway lưu JSON trước khi trả thành công.
+
+    Trả 400 khi JSON lỗi, 422 khi sai schema, 404 khi không có hóa đơn,
+    409 khi xung đột nghiệp vụ. Thanh toán lặp không tạo giao dịch mới.
+    """
     try:
         data = await request.json()
-    except Exception:
-        data = {}
-    return JSONResponse({
-        "success": True,
-        "transaction_id": f"TXN-{int(datetime.now().timestamp())}",
-        "status": "completed",
-        "message": "Thanh toán thành công qua " + data.get("method", "Ví điện tử")
-    })
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JSONResponse(PaymentErrorResponse(error="Dữ liệu JSON không hợp lệ").model_dump(mode="json"), status_code=400)
+    try:
+        payment = PaymentSubmitRequest.model_validate(data)
+    except ValidationError:
+        return JSONResponse(PaymentErrorResponse(error="Dữ liệu thanh toán không hợp lệ").model_dump(mode="json"), status_code=422)
+    try:
+        response = pay_rental_invoice(db, payment)
+    except PaymentError as exc:
+        return JSONResponse(PaymentErrorResponse(error=str(exc)).model_dump(mode="json"), status_code=exc.status_code)
+    return JSONResponse(response.model_dump(mode="json"))
 
 # Routes support both /api/... and /api/v1/user/...
 routes = [

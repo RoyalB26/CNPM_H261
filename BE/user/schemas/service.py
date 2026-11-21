@@ -26,6 +26,9 @@ class ActiveRideResponse(BaseModel):
     elapsed_minutes: int = Field(..., ge=0)
     battery_level: int = Field(..., ge=0, le=100, description="Mức pin hiện tại, đơn vị %")
     status: Literal["Đang sử dụng"]
+    booking_id: Optional[str] = None
+    started_at: Optional[str] = None
+    hourly_rate: Optional[int] = Field(None, ge=0)
 
 class StartRideResponse(BaseModel):
     """Kết quả nhận xe thành công kèm chuyến đi vừa được tạo."""

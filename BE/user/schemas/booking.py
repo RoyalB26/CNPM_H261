@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 from typing import Annotated, List, Literal, Optional
+from .payment import InvoiceResponse
 
 
 BookingPlanType = Literal["rental", "personal", "swap", "parking", "charging", "battery_swap"]
@@ -44,6 +45,25 @@ class CreateBookingRequest(BaseModel):
             raise ValueError("Đặt thuê xe cần cung cấp resource_name")
         return self
 
+class RentalTripHistory(BaseModel):
+    """Thông tin chuyến đi lưu trong booking, tương thích phiên seed thiếu mốc bắt đầu."""
+
+    trip_id: str
+    booking_id: str
+    vehicle_id: str
+    origin_hub: str
+    destination_hub: Optional[str]
+    elapsed_minutes: int = Field(..., ge=0)
+    battery_level: int = Field(..., ge=0, le=100)
+    status: Literal["Đang sử dụng", "Hoàn thành"]
+    started_at: Optional[str] = None
+    ended_at: Optional[str] = None
+    return_hub_id: Optional[str] = None
+    return_hub_name: Optional[str] = None
+    hourly_rate: Optional[int] = Field(None, ge=0)
+    total_fee: Optional[int] = Field(None, ge=0)
+    billing_source: Optional[Literal["started_at", "legacy_elapsed_minutes"]] = None
+
 class BookingResponse(BaseModel):
     """Bản ghi đặt trước theo cấu trúc hiện tại của store dùng chung."""
 
@@ -59,6 +79,8 @@ class BookingResponse(BaseModel):
     hold_until: str = Field(..., examples=["08:10"])
     created_at: str
     price: int = Field(..., ge=0, description="Giá do Backend xác định, đơn vị VNĐ")
+    rental_trip: Optional[RentalTripHistory] = None
+    rental_invoice: Optional[InvoiceResponse] = None
 
 class BookingErrorResponse(BaseModel):
     """Lỗi dữ liệu đầu vào hoặc xung đột trạng thái khi xử lý đặt trước."""

@@ -10,8 +10,10 @@ are reflected across all three systems in real time.
 
 from datetime import datetime, timedelta
 import copy
+from uuid import uuid4
 
 from .seed_loader import load_seed
+from .rental_pricing import rental_charge
 
 
 from datetime import timezone
@@ -65,8 +67,30 @@ class MockDatabaseStore:
     def get_bookings(self):
         return self.bookings
 
-    def create_booking(self, payload: dict):
-        new_id = f"EMH-{1020 + len(self.bookings) + 1}"
+    def _rental_bike_blocked(self, bike_id: str) -> bool:
+        """Kiểm tra xe đang phục vụ chuyến đi, điều chuyển hoặc bảo trì."""
+        ride = self.user.get("active_services", {}).get("ride")
+        return bool(
+            (ride and ride.get("vehicle_id") == bike_id)
+            or any(
+                task.get("status") in ("PENDING", "IN_PROGRESS", "IN_TRANSIT")
+                and any(b.get("bike_id") == bike_id for b in task.get("bikes", []))
+                for task in self.relocations
+            )
+            or any(
+                ticket.get("status") in ("PENDING", "ASSIGNED", "IN_PROGRESS")
+                and ticket.get("device_code") == bike_id
+                for ticket in self.maintenance_tickets
+            )
+        )
+
+    def create_booking(self, payload: dict) -> dict:
+        """Giữ xe sau khi kiểm tra tài nguyên chung; sinh mã không trùng seed/runtime."""
+        numbers = [
+            int(b["id"][4:]) for b in self.bookings
+            if b.get("id", "").startswith("EMH-") and b["id"][4:].isdigit()
+        ]
+        new_id = f"EMH-{max(numbers, default=1020) + 1}"
         hub = self.get_hub(payload.get("hub_id", "hub-01"))
         hub_name = hub["name"] if hub else "Hub Ga Metro ĐHQG"
         plan_type = payload.get("plan_type", "rental")
@@ -74,6 +98,8 @@ class MockDatabaseStore:
         if plan_type == "rental":
             if not hub:
                 return {"error": "Hub không tồn tại"}
+            if hub.get("status") != "ACTIVE":
+                return {"error": "Hub nguồn không hoạt động"}
 
             resource_name = payload.get("resource_name", "")
             bike_id = resource_name.split(" · ")[0].strip()
@@ -95,6 +121,7 @@ class MockDatabaseStore:
                 not bike
                 or bike.get("status") != "Sẵn sàng"
                 or already_booked
+                or self._rental_bike_blocked(bike_id)
                 or hub.get("available_bikes", 0) <= 0
             ):
                 return {"error": "Xe không khả dụng hoặc đã được đặt"}
@@ -103,8 +130,8 @@ class MockDatabaseStore:
         if plan_type == "rental" and hub:
             dest_hub = payload.get("destination_hub_name", "Hub Đại học Bách khoa")
             resource_name = payload.get("resource_name", "XE-031 · Xe đạp điện")
-            # Mark bike as reserved
-            bike_id = resource_name.split(" · ")[0] if " · " in resource_name else "XE-031"
+            # Dùng cùng mã xe đã kiểm tra, kể cả khi client chỉ gửi mã xe.
+            bike_id = resource_name.split(" · ")[0].strip()
             for b in hub.get("bikes", []):
                 if b["id"] == bike_id:
                     b["status"] = "Đã đặt chỗ"
@@ -153,6 +180,7 @@ class MockDatabaseStore:
         return booking_obj
 
     def cancel_booking(self, booking_id: str):
+        """Hủy một lần; chỉ hoàn số xe khi xe thực sự đang được giữ."""
         bk = next((b for b in self.bookings if b["id"] == booking_id), None)
         if not bk:
             return None
@@ -166,15 +194,17 @@ class MockDatabaseStore:
         if bk.get("plan_type") == "rental":
             hub = self.get_hub(bk.get("hub_id", "hub-01"))
             if hub:
-                hub["available_bikes"] = min(len(hub.get("bikes", [])), hub["available_bikes"] + 1)
-                bike_id = bk.get("resource_name", "").split(" · ")[0]
+                bike_id = bk.get("resource_name", "").split(" · ")[0].strip()
                 for b in hub.get("bikes", []):
                     if b["id"] == bike_id:
-                        b["status"] = "Sẵn sàng"
+                        if b.get("status") == "Đã đặt chỗ" and not self._rental_bike_blocked(bike_id):
+                            b["status"] = "Sẵn sàng"
+                            hub["available_bikes"] += 1
                         break
         return bk
 
     def start_ride(self, booking_id: str):
+        """Nhận xe đã đặt khi Hub và tài nguyên vẫn đủ điều kiện phục vụ."""
         booking = next(
             (b for b in self.bookings if b["id"] == booking_id),
             None
@@ -195,6 +225,8 @@ class MockDatabaseStore:
         hub = self.get_hub(booking["hub_id"])
         if not hub:
             return {"success": False, "error": "Hub không tồn tại"}
+        if hub.get("status") != "ACTIVE":
+            return {"success": False, "error": "Hub nguồn không hoạt động"}
 
         vehicle_id = booking["resource_name"].split(" · ")[0].strip()
 
@@ -203,8 +235,12 @@ class MockDatabaseStore:
             None
         )
 
-        if not bike or bike["status"] != "Đã đặt chỗ":
+        if not bike or bike["status"] != "Đã đặt chỗ" or self._rental_bike_blocked(vehicle_id):
             return {"success": False, "error": "Xe không khả dụng"}
+
+        hourly_rate = hub.get("pricing", {}).get("rental_bike_hourly")
+        if type(hourly_rate) is not int or hourly_rate < 0:
+            return {"success": False, "error": "Đơn giá thuê xe không hợp lệ"}
 
         # Xe rời Hub nguồn
         hub["bikes"].remove(bike)
@@ -216,7 +252,10 @@ class MockDatabaseStore:
         booking["status"] = "Đang sử dụng"
 
         trip = {
-            "trip_id": f"TRIP-{datetime.now().strftime('%H%M%S')}",
+            "trip_id": f"TRIP-{uuid4().hex}",
+            "booking_id": booking_id,
+            "started_at": datetime.now(timezone.utc).isoformat(),
+            "hourly_rate": hourly_rate,
             "vehicle_id": vehicle_id,
             "origin_hub": hub["name"],
             "destination_hub": booking.get("destination_hub_name"),
@@ -226,6 +265,7 @@ class MockDatabaseStore:
         }
 
         self.user["active_services"]["ride"] = trip
+        booking["rental_trip"] = copy.deepcopy(trip)
 
         return {
             "success": True,
@@ -233,7 +273,7 @@ class MockDatabaseStore:
         }
 
     def return_vehicle(self, trip_id: str, return_hub_name: str):
-        # Clear active ride
+        """Trả xe và lưu chuyến đi vào đúng booking trước khi xóa phiên hiện tại."""
         active_ride = self.user["active_services"].get("ride")
 
         if not active_ride:
@@ -249,6 +289,23 @@ class MockDatabaseStore:
             }
 
         vehicle_id = active_ride["vehicle_id"]
+
+        # Runtime mới liên kết trực tiếp; seed/runtime cũ chỉ nối khi có đúng
+        # một booking thuê xe cùng mã xe, tránh hoàn thành nhầm bản ghi.
+        booking_id = active_ride.get("booking_id")
+        candidates = [
+            booking for booking in self.bookings
+            if booking.get("plan_type") == "rental"
+            and booking.get("resource_name", "").split(" · ")[0].strip() == vehicle_id
+            and (
+                booking.get("id") == booking_id
+                if booking_id is not None
+                else booking.get("status") in ("Đã xác nhận", "Đang sử dụng")
+            )
+        ]
+        if len(candidates) != 1 or candidates[0].get("status") not in ("Đã xác nhận", "Đang sử dụng"):
+            return {"success": False, "error": "Không xác định được booking của chuyến đi"}
+        booking = candidates[0]
 
         dest_hub = next(
             (h for h in self.hubs if h["name"] == return_hub_name),
@@ -273,6 +330,17 @@ class MockDatabaseStore:
                 "error": "Hub đích không còn chỗ đỗ"
             }
 
+        ended_at = datetime.now(timezone.utc)
+        origin_hub = self.get_hub(booking.get("hub_id"))
+        hourly_rate = active_ride.get("hourly_rate")
+        if hourly_rate is None and origin_hub is not None:
+            # Tương thích seed/runtime cũ chưa chụp lại đơn giá khi nhận xe.
+            hourly_rate = origin_hub.get("pricing", {}).get("rental_bike_hourly")
+        try:
+            charge = rental_charge(active_ride, ended_at, hourly_rate)
+        except (ValueError, TypeError):
+            return {"success": False, "error": "Thời gian hoặc đơn giá thuê xe không hợp lệ"}
+
         # Tìm và xóa xe khỏi Hub cũ, tránh trùng xe
         returned_bike = None
 
@@ -294,7 +362,7 @@ class MockDatabaseStore:
             returned_bike = {
                 "id": vehicle_id,
                 "name": "Xe đạp điện",
-                "hourly_rate": 10000
+                "hourly_rate": hourly_rate
             }
 
         # Cập nhật xe tại Hub đích
@@ -308,6 +376,27 @@ class MockDatabaseStore:
         dest_hub["available_parking"] -= 1
 
         # Chỉ kết thúc chuyến đi sau khi cập nhật thành công
+        booking["status"] = "Hoàn thành"
+        booking["rental_trip"] = {
+            **copy.deepcopy(active_ride),
+            **charge,
+            "booking_id": booking["id"],
+            "status": "Hoàn thành",
+            "ended_at": ended_at.isoformat(),
+            "return_hub_id": dest_hub["id"],
+            "return_hub_name": dest_hub["name"],
+        }
+        description = f"Thời gian sử dụng: {charge['elapsed_minutes']} phút"
+        booking["rental_invoice"] = {
+            "id": f"INV-{trip_id}",
+            "service_type": "rental",
+            "title": "Hóa đơn thuê xe điện",
+            "reference_id": vehicle_id,
+            "items": [{"label": description, "description": description, "amount": charge["total_fee"]}],
+            "total_amount": charge["total_fee"],
+            "payment_channel": "online", "status": "unpaid",
+            "created_at": ended_at.isoformat(),
+        }
         self.user["active_services"]["ride"] = None
 
         self.telemetry_events.insert(0, {
@@ -323,8 +412,8 @@ class MockDatabaseStore:
             "trip_id": trip_id,
             "vehicle_id": vehicle_id,
             "return_hub_name": return_hub_name,
-            "elapsed_minutes": 15,
-            "total_fee": 10000
+            "elapsed_minutes": charge["elapsed_minutes"],
+            "total_fee": charge["total_fee"]
         }
 
     def create_relocation_command(self, payload: dict):

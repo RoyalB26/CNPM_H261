@@ -19,8 +19,8 @@ from .service import (
     ActiveRideResponse, ActiveParkingResponse, ActiveChargingResponse, ActiveServicesResponse, TimeLog,
     ReturnVehicleRequest, ReturnVehicleResponse, ReturnVehicleErrorResponse
 )
-from .incident import CreateIncidentReportRequest, IncidentReportResponse
-from .payment import InvoiceItem, InvoiceResponse, PaymentSubmitRequest, PaymentProcessResult
+from .incident import CreateIncidentReportRequest, IncidentReportResponse, IncidentErrorResponse
+from .payment import InvoiceItem, InvoiceResponse, PaymentSubmitRequest, PaymentProcessResult, PaymentErrorResponse
 
 __all__ = [
     "UserLoginRequest", "UserLoginResponse", "UserLoginErrorResponse",
@@ -36,6 +36,6 @@ __all__ = [
     "StartRideRequest", "StartRideResponse",
     "ActiveRideResponse", "ActiveParkingResponse", "ActiveChargingResponse", "ActiveServicesResponse", "TimeLog",
     "ReturnVehicleRequest", "ReturnVehicleResponse", "ReturnVehicleErrorResponse",
-    "CreateIncidentReportRequest", "IncidentReportResponse",
-    "InvoiceItem", "InvoiceResponse", "PaymentSubmitRequest", "PaymentProcessResult"
+    "CreateIncidentReportRequest", "IncidentReportResponse", "IncidentErrorResponse",
+    "InvoiceItem", "InvoiceResponse", "PaymentSubmitRequest", "PaymentProcessResult", "PaymentErrorResponse"
 ]
