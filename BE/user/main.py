@@ -24,9 +24,13 @@ if PARENT_DIR not in sys.path:
     sys.path.insert(0, PARENT_DIR)
 
 from mock_db import db
-from user.payments import PaymentError, pay_rental_invoice
+from user.payments import PaymentError, pay_invoice
 from user.incidents import create_report, report_view
 from user.hubs import search_hubs, suggest_route
+from user.bookings import expire_rental_bookings
+from user.swaps import SwapError, complete_swap
+from user.charging import ChargingError, start_charging, stop_charging
+from user.invoices import InvoiceNotFound, current_invoice
 from user.schemas import (
     UserLoginRequest, UserLoginResponse, UserLoginErrorResponse, UserProfileResponse, UserVehicleItem,
     UpdateProfileRequest, UpdateProfileResponse, UpdateProfileErrorResponse,
@@ -35,7 +39,8 @@ from user.schemas import (
     StartRideRequest, StartRideResponse, ActiveServicesResponse,
     ReturnVehicleRequest, ReturnVehicleResponse, ReturnVehicleErrorResponse, InvoiceResponse,
     PaymentSubmitRequest, PaymentErrorResponse, CreateIncidentReportRequest, IncidentErrorResponse,
-    SearchHubQuery, RouteSuggestionRequest, HubDetailResponse
+    SearchHubQuery, RouteSuggestionRequest, HubDetailResponse, ExpireBookingsResponse, CompleteSwapRequest,
+    StartChargingRequest, StopChargingRequest, InvoiceQuery
 )
 
 # API Route Handlers
@@ -233,6 +238,58 @@ async def api_create_booking(request: Request) -> JSONResponse:
     response = BookingResponse.model_validate(bk)
     return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
 
+async def api_start_charging(request: Request) -> JSONResponse:
+    """Nhận cổng đã giữ theo booking trên URL, không yêu cầu body."""
+    try:
+        data = StartChargingRequest.model_validate(request.path_params)
+    except ValidationError:
+        return JSONResponse(BookingErrorResponse(error="Mã booking không hợp lệ").model_dump(mode="json"), status_code=422)
+    try:
+        response = start_charging(db, data.booking_id)
+    except ChargingError as exc:
+        return JSONResponse(BookingErrorResponse(error=str(exc)).model_dump(mode="json"), status_code=exc.status_code)
+    return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
+
+async def api_stop_charging(request: Request) -> JSONResponse:
+    """Kết thúc sạc bằng tổng kWh mô phỏng; Backend tính tiền theo đơn giá đã chốt."""
+    try:
+        body = await request.json()
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JSONResponse(BookingErrorResponse(error="Dữ liệu JSON không hợp lệ").model_dump(mode="json"), status_code=400)
+    try:
+        data = StopChargingRequest.model_validate(body)
+    except ValidationError:
+        return JSONResponse(BookingErrorResponse(error="Dữ liệu kết thúc sạc không hợp lệ").model_dump(mode="json"), status_code=422)
+    try:
+        response = stop_charging(db, data)
+    except ChargingError as exc:
+        return JSONResponse(BookingErrorResponse(error=str(exc)).model_dump(mode="json"), status_code=exc.status_code)
+    return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
+
+async def api_complete_swap(request: Request) -> JSONResponse:
+    """Xác nhận đổi pin theo booking trên URL, không yêu cầu body."""
+    try:
+        data = CompleteSwapRequest.model_validate(request.path_params)
+    except ValidationError:
+        return JSONResponse(BookingErrorResponse(error="Mã booking không hợp lệ").model_dump(mode="json"), status_code=422)
+    try:
+        response = complete_swap(db, data.booking_id)
+    except SwapError as exc:
+        return JSONResponse(BookingErrorResponse(error=str(exc)).model_dump(mode="json"), status_code=exc.status_code)
+    return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
+
+async def api_expire_bookings(request: Request) -> JSONResponse:
+    """Xử lý hết hạn bằng POST cho demo; Gateway lưu kết quả xuống runtime."""
+    try:
+        ids = expire_rental_bookings(db)
+    except (ValueError, TypeError):
+        return JSONResponse(
+            BookingErrorResponse(error="Dữ liệu booking cũ chưa đủ điều kiện xử lý hết hạn").model_dump(mode="json"),
+            status_code=409
+        )
+    response = ExpireBookingsResponse(expired_booking_ids=ids, expired_count=len(ids))
+    return JSONResponse(response.model_dump(mode="json"))
+
 async def api_cancel_booking(request: Request) -> JSONResponse:
     """Kiểm tra mã trên URL rồi hủy booking qua store, không yêu cầu body.
 
@@ -419,69 +476,19 @@ async def api_create_incident(request: Request) -> JSONResponse:
     return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
 
 async def api_get_invoice(request: Request) -> JSONResponse:
-    """Lấy hóa đơn thuê xe đã chốt; có thể chọn chuyến qua query trip_id.
-
-    GET chỉ đọc. Các dịch vụ khác vẫn dùng dữ liệu mock hiện có.
-    """
-    inv_type = request.query_params.get("type", "rental")
-    if inv_type == "rental":
-        trip_id = request.query_params.get("trip_id")
-        invoices = [
-            booking["rental_invoice"] for booking in db.get_bookings()
-            if booking.get("rental_invoice") is not None
-            and (trip_id is None or booking.get("rental_trip", {}).get("trip_id") == trip_id)
-        ]
-        if not invoices:
-            return JSONResponse({"success": False, "error": "Chưa có hóa đơn thuê xe đã hoàn tất"}, status_code=404)
-        invoice = max(invoices, key=lambda item: datetime.fromisoformat(item["created_at"]))
-        response = InvoiceResponse.model_validate(invoice)
-        return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
-    elif inv_type == "charging":
-        return JSONResponse({
-            "id": "INV-2026-902",
-            "service_type": "charging",
-            "title": "Hóa đơn dịch vụ sạc pin",
-            "reference_id": "Trụ S03 (2.4 kWh)",
-            "items": [
-                {"label": "Điện năng tiêu thụ (2.4 kWh x 3,500đ)", "description": "Điện năng tiêu thụ (2.4 kWh x 3,500đ)", "amount": 8400},
-                {"label": "Phí chiếm trụ sau đầy", "description": "Phí chiếm trụ sau đầy", "amount": 0}
-            ],
-            "total_amount": 8400,
-            "payment_channel": "online",
-            "status": "unpaid",
-            "created_at": datetime.now().strftime("%d/%m/%Y %H:%M")
-        })
-    elif inv_type in ["swap", "battery_swap"]:
-        return JSONResponse({
-            "id": "INV-2026-903",
-            "service_type": "battery_swap",
-            "title": "Hóa đơn dịch vụ đổi pin",
-            "reference_id": "Pin BAT-48V",
-            "items": [
-                {"label": "Đổi 1 pin tiêu chuẩn 48V-20Ah", "description": "Đổi 1 pin tiêu chuẩn 48V-20Ah", "amount": 25000}
-            ],
-            "total_amount": 25000,
-            "payment_channel": "online",
-            "status": "unpaid",
-            "created_at": datetime.now().strftime("%d/%m/%Y %H:%M")
-        })
-    else: # parking
-        return JSONResponse({
-            "id": "INV-2026-904",
-            "service_type": "parking",
-            "title": "Hóa đơn gửi xe cá nhân",
-            "reference_id": "Biển số: 59-X1 123.45",
-            "items": [
-                {"label": "Thời gian gửi: 2 giờ (Chỗ P-08)", "description": "Thời gian gửi: 2 giờ (Chỗ P-08)", "amount": 5000}
-            ],
-            "total_amount": 5000,
-            "payment_channel": "cash_guard",
-            "status": "unpaid",
-            "created_at": datetime.now().strftime("%d/%m/%Y %H:%M")
-        })
+    """Tra cứu hóa đơn từ dữ liệu đã lưu; sai bộ lọc trả 422, không có trả 404."""
+    try:
+        query = InvoiceQuery.model_validate(dict(request.query_params))
+    except ValidationError:
+        return JSONResponse(PaymentErrorResponse(error="Bộ lọc hóa đơn không hợp lệ").model_dump(mode="json"), status_code=422)
+    try:
+        response = current_invoice(db, query)
+    except InvoiceNotFound as exc:
+        return JSONResponse(PaymentErrorResponse(error=str(exc)).model_dump(mode="json"), status_code=404)
+    return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
 
 async def api_pay_invoice(request: Request) -> JSONResponse:
-    """Ghi nhận thanh toán thuê xe; Gateway lưu JSON trước khi trả thành công.
+    """Ghi nhận thanh toán thuê xe/đổi pin/sạc; Gateway lưu JSON trước khi trả thành công.
 
     Trả 400 khi JSON lỗi, 422 khi sai schema, 404 khi không có hóa đơn,
     409 khi xung đột nghiệp vụ. Thanh toán lặp không tạo giao dịch mới.
@@ -495,7 +502,7 @@ async def api_pay_invoice(request: Request) -> JSONResponse:
     except ValidationError:
         return JSONResponse(PaymentErrorResponse(error="Dữ liệu thanh toán không hợp lệ").model_dump(mode="json"), status_code=422)
     try:
-        response = pay_rental_invoice(db, payment)
+        response = pay_invoice(db, payment)
     except PaymentError as exc:
         return JSONResponse(PaymentErrorResponse(error=str(exc)).model_dump(mode="json"), status_code=exc.status_code)
     return JSONResponse(response.model_dump(mode="json"))
@@ -513,6 +520,10 @@ routes = [
     Route("/api/hubs/suggest-route", api_suggest_route, methods=["POST"]),
     Route("/api/bookings", api_list_bookings, methods=["GET"]),
     Route("/api/bookings", api_create_booking, methods=["POST"]),
+    Route("/api/bookings/expire", api_expire_bookings, methods=["POST"]),
+    Route("/api/bookings/{booking_id}/swap", api_complete_swap, methods=["POST"]),
+    Route("/api/bookings/{booking_id}/charging/start", api_start_charging, methods=["POST"]),
+    Route("/api/services/charging/stop", api_stop_charging, methods=["POST"]),
     Route("/api/bookings/{booking_id}/cancel", api_cancel_booking, methods=["POST"]),
     Route("/api/services/active", api_active_services, methods=["GET"]),
     Route("/api/services/return-vehicle", api_return_vehicle, methods=["POST"]),
@@ -534,6 +545,10 @@ routes = [
     Route("/api/v1/user/hubs/suggest-route", api_suggest_route, methods=["POST"]),
     Route("/api/v1/user/bookings", api_list_bookings, methods=["GET"]),
     Route("/api/v1/user/bookings", api_create_booking, methods=["POST"]),
+    Route("/api/v1/user/bookings/expire", api_expire_bookings, methods=["POST"]),
+    Route("/api/v1/user/bookings/{booking_id}/swap", api_complete_swap, methods=["POST"]),
+    Route("/api/v1/user/bookings/{booking_id}/charging/start", api_start_charging, methods=["POST"]),
+    Route("/api/v1/user/services/charging/stop", api_stop_charging, methods=["POST"]),
     Route("/api/v1/user/bookings/{booking_id}/cancel", api_cancel_booking, methods=["POST"]),
     Route("/api/v1/user/services/active", api_active_services, methods=["GET"]),
     Route("/api/v1/user/services/return-vehicle", api_return_vehicle, methods=["POST"]),

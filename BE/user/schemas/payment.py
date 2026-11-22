@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from typing import List, Literal, Optional
 
 class InvoiceItem(BaseModel):
@@ -6,21 +6,43 @@ class InvoiceItem(BaseModel):
 
     label: Optional[str] = None
     description: str = Field(..., example="Thời gian sử dụng: 45 phút")
-    amount: int = Field(..., example=15000)
+    amount: int = Field(..., ge=0, example=15000)
 
 class InvoiceResponse(BaseModel):
+    """Hóa đơn từ dữ liệu nghiệp vụ; không tự bổ sung mã, giá hoặc thời gian mẫu."""
+
     id: str = Field(..., example="INV-2026-901")
-    service_type: str = Field(..., example="rental", description="'rental' | 'charging' | 'battery_swap' | 'parking'")
+    service_type: Literal["rental", "charging", "battery_swap", "parking"]
     title: str = Field(..., example="Hóa đơn thuê xe điện")
-    reference_id: str = Field("XE-024")
-    items: List[InvoiceItem] = []
-    total_amount: int = Field(15000)
-    payment_channel: str = Field("online", description="'online' (E-Wallet/Banking) hoặc 'cash_guard' (Bảo vệ)")
-    status: str = Field("unpaid", description="'unpaid' | 'pending' | 'paid' | 'failed'")
-    created_at: str = Field("18/10/2026 10:45")
+    reference_id: str
+    items: List[InvoiceItem] = Field(default_factory=list)
+    total_amount: int = Field(..., ge=0)
+    payment_channel: Literal["online", "cash_guard"]
+    status: Literal["unpaid", "pending", "paid", "failed"]
+    created_at: str
     transaction_id: Optional[str] = None
     paid_at: Optional[str] = None
     payment_method: Optional[Literal["wallet", "bank_transfer"]] = None
+
+class InvoiceQuery(BaseModel):
+    """Bộ chọn hóa đơn; từ chối loại dịch vụ hoặc bộ lọc không phù hợp."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    invoice_type: Literal["rental", "charging", "swap", "battery_swap", "parking"] = Field("rental", alias="type")
+    booking_id: Optional[str] = Field(None, min_length=1)
+    trip_id: Optional[str] = Field(None, min_length=1)
+    session_id: Optional[str] = Field(None, min_length=1)
+    invoice_id: Optional[str] = Field(None, min_length=1)
+
+    @model_validator(mode="after")
+    def validate_selectors(self) -> "InvoiceQuery":
+        """Không bỏ qua nhầm trip/session khi client chọn sai loại hóa đơn."""
+        if self.trip_id is not None and self.invoice_type != "rental":
+            raise ValueError("trip_id chỉ dùng cho hóa đơn thuê xe")
+        if self.session_id is not None and self.invoice_type != "charging":
+            raise ValueError("session_id chỉ dùng cho hóa đơn sạc")
+        return self
 
 class PaymentSubmitRequest(BaseModel):
     """Yêu cầu thanh toán; số tiền chính thức luôn lấy từ hóa đơn Backend."""

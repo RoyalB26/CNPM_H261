@@ -2,6 +2,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing import Literal, Optional
 
 from .booking import NonEmptyString
+from .payment import InvoiceResponse
 
 class TimeLog(BaseModel):
     label: str = Field(..., example="Đặt xe")
@@ -23,6 +24,7 @@ class ActiveRideResponse(BaseModel):
     vehicle_id: str = Field(..., min_length=1, examples=["XE-024"])
     origin_hub: str = Field(..., min_length=1, examples=["Hub Ga Metro ĐHQG"])
     destination_hub: Optional[str] = Field(..., examples=["Hub Đại học Bách khoa"])
+    destination_hub_id: Optional[str] = None
     elapsed_minutes: int = Field(..., ge=0)
     battery_level: int = Field(..., ge=0, le=100, description="Mức pin hiện tại, đơn vị %")
     status: Literal["Đang sử dụng"]
@@ -58,6 +60,43 @@ class ActiveChargingResponse(BaseModel):
     power_consumed_kwh: float = Field(..., ge=0, allow_inf_nan=False)
     current_charge: int = Field(..., ge=0, le=100, description="Mức sạc hiện tại, đơn vị %")
     status: str = Field(..., min_length=1, examples=["Đang sạc"])
+    booking_id: Optional[str] = None
+    hub_id: Optional[str] = None
+    hub_name: Optional[str] = None
+    plate_number: Optional[str] = None
+    rate_per_kwh: Optional[int] = Field(None, ge=0)
+    started_at: Optional[str] = None
+    elapsed_minutes: Optional[int] = Field(None, ge=0)
+
+class StartChargingRequest(BaseModel):
+    """Mã booking sạc lấy từ URL; không nhận cước từ client."""
+
+    model_config = ConfigDict(strict=True)
+    booking_id: NonEmptyString
+
+class StartChargingResponse(BaseModel):
+    """Phiên sạc vừa nhận cổng thành công."""
+
+    success: Literal[True] = True
+    charging: ActiveChargingResponse
+
+class StopChargingRequest(BaseModel):
+    """Tổng kWh của phiên nhập cho demo, không phải số tiền do client quyết định."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+    session_id: NonEmptyString
+    power_consumed_kwh: float = Field(..., ge=0, allow_inf_nan=False)
+    final_charge: Optional[int] = Field(None, ge=0, le=100)
+
+class StopChargingResponse(BaseModel):
+    """Kết quả kết thúc sạc và hóa đơn đã chốt theo kWh."""
+
+    success: Literal[True] = True
+    booking_id: str
+    session_id: str
+    power_consumed_kwh: float
+    total_fee: int = Field(..., ge=0)
+    invoice: InvoiceResponse
 
 class ActiveServicesResponse(BaseModel):
     """Các dịch vụ hiện tại; từng dịch vụ có thể vắng mặt hoặc bằng null."""

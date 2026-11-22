@@ -14,6 +14,10 @@ from uuid import uuid4
 
 from .seed_loader import load_seed
 from .rental_pricing import rental_charge
+from .booking_expiry import booking_expired
+from .parking_reservations import choose_parking_slot, release_parking_slot, plate_key
+from .battery_reservations import select_swap_battery, release_swap_battery
+from .charging_reservations import select_charging_port, release_charging_port
 
 
 from datetime import timezone
@@ -67,11 +71,11 @@ class MockDatabaseStore:
     def get_bookings(self):
         return self.bookings
 
-    def _rental_bike_blocked(self, bike_id: str) -> bool:
+    def _rental_bike_blocked(self, bike_id: str, *, ignore_active_ride: bool = False) -> bool:
         """Kiểm tra xe đang phục vụ chuyến đi, điều chuyển hoặc bảo trì."""
         ride = self.user.get("active_services", {}).get("ride")
         return bool(
-            (ride and ride.get("vehicle_id") == bike_id)
+            (not ignore_active_ride and ride and ride.get("vehicle_id") == bike_id)
             or any(
                 task.get("status") in ("PENDING", "IN_PROGRESS", "IN_TRANSIT")
                 and any(b.get("bike_id") == bike_id for b in task.get("bikes", []))
@@ -84,6 +88,19 @@ class MockDatabaseStore:
             )
         )
 
+    def _rental_hold_owned(self, booking: dict, bike: dict | None) -> bool:
+        """Chỉ nhận/hủy xe của một booking giữ chỗ duy nhất, kể cả runtime cũ.
+
+        Booking mới lưu reserved_by trên xe; dữ liệu cũ thiếu trường này chỉ
+        được chấp nhận khi không có booking xác nhận khác giữ cùng mã xe.
+        """
+        bike_id = booking.get("resource_name", "").split(" · ")[0].strip()
+        holds = [b for b in self.bookings if b.get("plan_type") == "rental"
+                 and b.get("status") == "Đã xác nhận"
+                 and b.get("resource_name", "").split(" · ")[0].strip() == bike_id]
+        return (len(holds) == 1 and holds[0]["id"] == booking["id"]
+                and (bike is None or bike.get("reserved_by") in (None, booking["id"])))
+
     def create_booking(self, payload: dict) -> dict:
         """Giữ xe sau khi kiểm tra tài nguyên chung; sinh mã không trùng seed/runtime."""
         numbers = [
@@ -94,12 +111,50 @@ class MockDatabaseStore:
         hub = self.get_hub(payload.get("hub_id", "hub-01"))
         hub_name = hub["name"] if hub else "Hub Ga Metro ĐHQG"
         plan_type = payload.get("plan_type", "rental")
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10 if plan_type == "rental" else 15)
+
+        parking_slot = None
+        swap_battery = None
+        charging_port = None
+        if plan_type == "charging":
+            try:
+                charging_port = select_charging_port(self, hub, payload)
+            except ValueError as exc:
+                return {"error": str(exc)}
+        if plan_type in ("swap", "battery_swap"):
+            try:
+                swap_battery = select_swap_battery(self, hub, payload)
+            except ValueError as exc:
+                return {"error": str(exc)}
+        if plan_type == "parking":
+            try:
+                parking_slot = choose_parking_slot(self, hub, payload)
+            except ValueError as exc:
+                return {"error": str(exc)}
+            rate = hub.get("pricing", {}).get("parking_hourly")
+            if type(rate) is not int or rate < 0:
+                return {"error": "Giá gửi xe không hợp lệ"}
 
         if plan_type == "rental":
             if not hub:
                 return {"error": "Hub không tồn tại"}
             if hub.get("status") != "ACTIVE":
                 return {"error": "Hub nguồn không hoạt động"}
+
+            destination_id = payload.get("destination_hub_id")
+            destination_name = payload.get("destination_hub_name")
+            if destination_id:
+                destination = self.get_hub(destination_id)
+            elif destination_name:
+                destination = next((h for h in self.hubs if h["name"] == destination_name), None)
+            else:
+                destination = self.get_hub("hub-02") or hub
+            if destination is None:
+                return {"error": "Hub đích không tồn tại"}
+            if destination_name and destination["name"] != destination_name:
+                return {"error": "Mã và tên Hub đích không khớp"}
+            if destination.get("status") != "ACTIVE":
+                return {"error": "Hub đích không hoạt động"}
 
             resource_name = payload.get("resource_name", "")
             bike_id = resource_name.split(" · ")[0].strip()
@@ -128,13 +183,14 @@ class MockDatabaseStore:
 
         # Reserve bike if rental
         if plan_type == "rental" and hub:
-            dest_hub = payload.get("destination_hub_name", "Hub Đại học Bách khoa")
+            dest_hub = destination["name"]
             resource_name = payload.get("resource_name", "XE-031 · Xe đạp điện")
             # Dùng cùng mã xe đã kiểm tra, kể cả khi client chỉ gửi mã xe.
             bike_id = resource_name.split(" · ")[0].strip()
             for b in hub.get("bikes", []):
                 if b["id"] == bike_id:
                     b["status"] = "Đã đặt chỗ"
+                    b["reserved_by"] = new_id
                     break
             if hub["available_bikes"] > 0:
                 hub["available_bikes"] -= 1
@@ -146,6 +202,7 @@ class MockDatabaseStore:
                 "plan_type": "rental",
                 "resource_name": resource_name,
                 "destination_hub_name": dest_hub,
+                "destination_hub_id": destination["id"],
                 "hold_until": (datetime.now() + timedelta(minutes=10)).strftime("%H:%M"),
                 "status": "Đã xác nhận",
                 "created_at": datetime.now().strftime("%H:%M"),
@@ -168,6 +225,37 @@ class MockDatabaseStore:
                 "services": payload.get("services", [])
             }
 
+        booking_obj["expires_at"] = expires_at.isoformat()
+        if charging_port is not None:
+            booking_obj.update(
+                charging_port=charging_port["id"], resource_id=charging_port["id"],
+                resource_name=charging_port["name"], price=0,
+                charging_rate_per_kwh=charging_port["rate_per_kwh"],
+            )
+            charging_port["is_available"] = False
+            charging_port["status"] = "Đã đặt chỗ"
+            charging_port["reserved_by"] = new_id
+            hub["available_chargers"] -= 1
+        if swap_battery is not None:
+            quantity = payload.get("battery_quantity", 1)
+            booking_obj.update(
+                battery_type=swap_battery["battery_type"], battery_quantity=quantity,
+                swap_unit_price=swap_battery["swap_fee"], swap_reserved=True,
+                resource_name=f"{quantity} pin {swap_battery['battery_type']}",
+                price=quantity * swap_battery["swap_fee"],
+            )
+            swap_battery["available_count"] -= quantity
+            hub["available_batteries"] -= quantity
+        if parking_slot is not None:
+            booking_obj.update(
+                parking_slot=parking_slot["id"], resource_id=parking_slot["id"],
+                resource_name=f"Chỗ đỗ {parking_slot['id']}",
+                personal_plate=payload["personal_plate"].strip(),
+                price=rate * payload.get("duration_hours", 2),
+            )
+            parking_slot["is_available"] = False
+            parking_slot["reserved_by"] = new_id
+            hub["available_parking"] -= 1
         self.bookings.insert(0, booking_obj)
         self.telemetry_events.insert(0, {
             "id": f"TLM-{len(self.telemetry_events) + 100}",
@@ -181,14 +269,32 @@ class MockDatabaseStore:
 
     def cancel_booking(self, booking_id: str):
         """Hủy một lần; chỉ hoàn số xe khi xe thực sự đang được giữ."""
-        bk = next((b for b in self.bookings if b["id"] == booking_id), None)
-        if not bk:
+        matches = [b for b in self.bookings if b["id"] == booking_id]
+        if not matches:
             return None
+        if len(matches) != 1:
+            return {"error": "Mã booking bị trùng, không thể xác định đặt chỗ"}
+        bk = matches[0]
         if bk.get("status") != "Đã xác nhận":
             return {
                 "error": "Booking đã hủy hoặc không còn hiệu lực"
             }
+        if bk.get("plan_type") == "rental":
+            bike_id = bk.get("resource_name", "").split(" · ")[0].strip()
+            ride = self.user.get("active_services", {}).get("ride")
+            if ride and (ride.get("booking_id") == booking_id or ride.get("vehicle_id") == bike_id):
+                return {"error": "Booking đang phục vụ chuyến đi, không thể hủy"}
+            hub = self.get_hub(bk.get("hub_id"))
+            bike = next((b for b in hub.get("bikes", []) if b["id"] == bike_id), None) if hub else None
+            if not self._rental_hold_owned(bk, bike):
+                return {"error": "Không xác định được booking đang giữ xe"}
         bk["status"] = "Đã hủy"
+        if bk.get("plan_type") == "parking":
+            release_parking_slot(self, bk)
+        if bk.get("plan_type") in ("swap", "battery_swap"):
+            release_swap_battery(self, bk)
+        if bk.get("plan_type") == "charging":
+            release_charging_port(self, bk)
 
         # Restore resources if rental
         if bk.get("plan_type") == "rental":
@@ -197,6 +303,7 @@ class MockDatabaseStore:
                 bike_id = bk.get("resource_name", "").split(" · ")[0].strip()
                 for b in hub.get("bikes", []):
                     if b["id"] == bike_id:
+                        b.pop("reserved_by", None)
                         if b.get("status") == "Đã đặt chỗ" and not self._rental_bike_blocked(bike_id):
                             b["status"] = "Sẵn sàng"
                             hub["available_bikes"] += 1
@@ -205,19 +312,24 @@ class MockDatabaseStore:
 
     def start_ride(self, booking_id: str):
         """Nhận xe đã đặt khi Hub và tài nguyên vẫn đủ điều kiện phục vụ."""
-        booking = next(
-            (b for b in self.bookings if b["id"] == booking_id),
-            None
-        )
-
-        if not booking:
+        matches = [b for b in self.bookings if b["id"] == booking_id]
+        if not matches:
             return {"success": False, "error": "Booking không tồn tại"}
+        if len(matches) != 1:
+            return {"success": False, "error": "Mã booking bị trùng, không thể xác định đặt chỗ"}
+        booking = matches[0]
 
         if booking.get("plan_type") != "rental":
             return {"success": False, "error": "Không phải booking thuê xe"}
 
         if booking.get("status") != "Đã xác nhận":
             return {"success": False, "error": "Booking không còn hiệu lực"}
+
+        try:
+            if booking_expired(booking, datetime.now(timezone.utc)):
+                return {"success": False, "error": "Booking đã quá thời hạn nhận xe"}
+        except (ValueError, TypeError):
+            return {"success": False, "error": "Thời hạn booking không hợp lệ"}
 
         if self.user["active_services"].get("ride"):
             return {"success": False, "error": "Bạn đang có chuyến đi khác"}
@@ -237,6 +349,8 @@ class MockDatabaseStore:
 
         if not bike or bike["status"] != "Đã đặt chỗ" or self._rental_bike_blocked(vehicle_id):
             return {"success": False, "error": "Xe không khả dụng"}
+        if not self._rental_hold_owned(booking, bike):
+            return {"success": False, "error": "Không xác định được booking đang giữ xe"}
 
         hourly_rate = hub.get("pricing", {}).get("rental_bike_hourly")
         if type(hourly_rate) is not int or hourly_rate < 0:
@@ -259,6 +373,7 @@ class MockDatabaseStore:
             "vehicle_id": vehicle_id,
             "origin_hub": hub["name"],
             "destination_hub": booking.get("destination_hub_name"),
+            "destination_hub_id": booking.get("destination_hub_id"),
             "elapsed_minutes": 0,
             "battery_level": bike["battery_level"],
             "status": "Đang sử dụng"
@@ -366,13 +481,24 @@ class MockDatabaseStore:
             }
 
         # Cập nhật xe tại Hub đích
-        returned_bike["status"] = "Sẵn sàng"
+        # Trả xe kết thúc chuyến nhưng không được tự gỡ khóa bảo trì/điều chuyển.
+        blocked = self._rental_bike_blocked(vehicle_id, ignore_active_ride=True)
+        maintenance = any(t.get("device_code") == vehicle_id
+                          and t.get("status") in ("PENDING", "ASSIGNED", "IN_PROGRESS")
+                          for t in self.maintenance_tickets)
+        locked_status = returned_bike.get("status") in ("Đang bảo trì", "Bảo trì", "Không khả dụng")
+        if blocked:
+            returned_bike["status"] = "Đang bảo trì" if maintenance else "Không khả dụng"
+        elif not locked_status:
+            returned_bike["status"] = "Sẵn sàng"
+        returned_bike.pop("reserved_by", None)
         returned_bike["battery_level"] = active_ride.get(
             "battery_level", returned_bike.get("battery_level", 75)
         )
 
         dest_hub["bikes"].append(returned_bike)
-        dest_hub["available_bikes"] += 1
+        if returned_bike["status"] == "Sẵn sàng":
+            dest_hub["available_bikes"] += 1
         dest_hub["available_parking"] -= 1
 
         # Chỉ kết thúc chuyến đi sau khi cập nhật thành công
@@ -646,6 +772,57 @@ class MockDatabaseStore:
         return ticket
 
     def parking_checkin(self, payload: dict):
+        """Dùng chỗ giữ của User khi có booking; giữ nhánh walk-in cũ của Staff."""
+        from starlette.exceptions import HTTPException
+
+        # Nhánh tương thích booking User mới: dùng đúng chỗ đã giữ, không trừ lần hai.
+        hub = next((h for h in self.hubs if h["name"] == payload.get("hub_name") or h["id"] == payload.get("hub_id")), None)
+        held = next((b for b in self.bookings if b.get("plan_type") == "parking"
+                     and b.get("status") == "Đã xác nhận" and hub and b.get("hub_id") == hub["id"]
+                     and plate_key(b.get("personal_plate") or "") == plate_key(payload.get("plate_number", ""))
+                     and b.get("parking_slot")), None)
+        if held is not None:
+            if booking_expired(held, datetime.now(timezone.utc)) or hub.get("status") != "ACTIVE":
+                raise HTTPException(409, "Booking gửi xe hết hạn hoặc Hub không hoạt động")
+            slot = next((s for s in hub["slots"] if s["id"] == held["parking_slot"] and s.get("reserved_by") == held["id"]), None)
+            if slot is None:
+                raise HTTPException(409, "Chỗ giữ không còn khớp booking")
+            if self.user.get("active_services", {}).get("parking"):
+                raise HTTPException(409, "Người dùng đang có phiên gửi xe khác")
+            if slot is not None:
+                numbers = [int(r["ticket_code"][4:]) for r in self.parking_records
+                           if r["ticket_code"].startswith("PRK-") and r["ticket_code"][4:].isdigit()]
+                record = {
+                    "ticket_code": f"PRK-{max(numbers, default=900) + 1}",
+                    "booking_id": held["id"], "plate_number": held["personal_plate"],
+                    "vehicle_type": payload.get("vehicle_type", "Xe máy điện"),
+                    "hub_id": hub["id"], "hub_name": hub["name"], "slot_id": slot["id"],
+                    "checkin_time": datetime.now(timezone.utc).isoformat(), "checkout_time": None,
+                    "duration_display": "0 phút", "parking_fee": held["price"],
+                    "payment_status": "PENDING", "guard_id": payload.get("guard_id", "STF-02"),
+                }
+                self.parking_records.insert(0, record)
+                held["status"] = "Đang sử dụng"
+                slot.pop("reserved_by")
+                slot["occupied_by"] = record["ticket_code"]
+                self.user["active_services"]["parking"] = {
+                    "ticket_id": record["ticket_code"], "plate_number": record["plate_number"],
+                    "hub_name": hub["name"], "slot_id": slot["id"],
+                    "checkin_time": record["checkin_time"], "elapsed_minutes": 0,
+                }
+                return record
+        existing = next((r for r in self.parking_records if r.get("booking_id") and r.get("checkout_time") is None
+                         and hub and r["hub_id"] == hub["id"]
+                         and plate_key(r["plate_number"]) == plate_key(payload.get("plate_number", ""))), None)
+        if existing is not None:
+            return existing
+        if any(b.get("parking_slot") and b.get("status") in ("Đã xác nhận", "Đang sử dụng")
+               and plate_key(b.get("personal_plate") or "") == plate_key(payload.get("plate_number", ""))
+               for b in self.bookings):
+            raise HTTPException(409, "Biển số đang có booking tại Hub khác hoặc đang gửi xe")
+        requested_slot = payload.get("slot_id", "").split(" · ")[-1].strip()
+        if hub and any(s["id"] == requested_slot and (s.get("reserved_by") or s.get("occupied_by")) for s in hub.get("slots", [])):
+            raise HTTPException(409, "Chỗ đỗ đã được giữ hoặc có xe")
         ticket_code = f"PRK-{900 + len(self.parking_records) + 1}"
         hub_name = payload.get("hub_name", "Hub Ga Metro ĐHQG")
         hub = next((h for h in self.hubs if h["name"] == hub_name or h["id"] == payload.get("hub_id")), self.hubs[0])
@@ -673,12 +850,25 @@ class MockDatabaseStore:
     def parking_checkout_confirm(self, ticket_code: str, payment_method: str):
         record = next((r for r in self.parking_records if r["ticket_code"] == ticket_code or r["plate_number"] == ticket_code), None)
         if record:
+            if record.get("booking_id") and record.get("checkout_time") is not None:
+                return record
             record["checkout_time"] = datetime.now().strftime("%d/%m/%Y · %H:%M")
             record["payment_status"] = "PAID"
             record["payment_method"] = payment_method
             hub = self.get_hub(record["hub_id"])
             if hub:
                 hub["available_parking"] += 1
+            if record.get("booking_id"):
+                booking = next((b for b in self.bookings if b["id"] == record["booking_id"]), None)
+                if booking:
+                    booking["status"] = "Hoàn thành"
+                slot = next((s for s in hub.get("slots", []) if s.get("occupied_by") == record["ticket_code"]), None) if hub else None
+                if slot:
+                    slot.pop("occupied_by")
+                    slot["is_available"] = True
+            active = self.user["active_services"].get("parking")
+            if active and active.get("ticket_id") == record["ticket_code"]:
+                self.user["active_services"]["parking"] = None
         return record
 
     def get_kpis(self):

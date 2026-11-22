@@ -28,7 +28,8 @@ class RentalBookingTests(unittest.TestCase):
     def test_ids_are_unique_with_seed_and_nonstandard_ids(self):
         self.db.bookings.append({"id": "legacy"})
         for _ in range(5):
-            self.db.create_booking({"plan_type": "parking", "hub_id": "hub-02"})
+            result = self.db.create_booking({"plan_type": "swap", "hub_id": "hub-02", "battery_type": "B48"})
+            self.assertNotIn("error", result)
         ids = [b["id"] for b in self.db.bookings]
         self.assertEqual(len(ids), len(set(ids)))
 
@@ -68,6 +69,27 @@ class RentalBookingTests(unittest.TestCase):
         self.db.user["active_services"]["ride"] = {"vehicle_id": "XE-052"}
         self.assert_rejected_without_changes()
 
+    def test_invalid_destination_rejected_before_reserving_bike(self):
+        for destination in ({"destination_hub_id": "missing"},
+                            {"destination_hub_name": "Hub không tồn tại"},
+                            {"destination_hub_id": "hub-04", "destination_hub_name": "Tên sai"}):
+            with self.subTest(destination=destination):
+                self.payload = {"plan_type": "rental", "hub_id": "hub-02",
+                                "resource_name": "XE-052", **destination}
+                self.assert_rejected_without_changes()
+
+    def test_closed_destination_rejected_before_reserving_bike(self):
+        self.db.get_hub("hub-04")["status"] = "DEACTIVATED"
+        self.payload["destination_hub_id"] = "hub-04"
+        self.assert_rejected_without_changes()
+
+    def test_destination_id_preserved_in_booking_and_ride(self):
+        self.payload["destination_hub_id"] = "hub-04"
+        booking = self.db.create_booking(self.payload)
+        self.assertEqual(booking["destination_hub_id"], "hub-04")
+        self.assertEqual(booking["destination_hub_name"], self.db.get_hub("hub-04")["name"])
+        self.assertEqual(self.db.start_ride(booking["id"])["ride"]["destination_hub_id"], "hub-04")
+
     def test_cancel_does_not_restore_bike_under_maintenance(self):
         booking = self.db.create_booking(self.payload)
         hub = self.db.get_hub("hub-02")
@@ -83,6 +105,76 @@ class RentalBookingTests(unittest.TestCase):
         before = copy.deepcopy(self.db.__dict__)
         self.assertFalse(self.db.start_ride(booking["id"])["success"])
         self.assertEqual(before, self.db.__dict__)
+
+    def test_seed_active_trip_cannot_cancel_even_if_booking_confirmed(self):
+        self.db.reset()
+        before = copy.deepcopy(self.db.__dict__)
+        self.assertIn("error", self.db.cancel_booking("EMH-1024"))
+        self.assertEqual(before, self.db.__dict__)
+        self.assertTrue(self.db.return_vehicle("TRIP-8821", "Hub Đại học Quốc Tế")["success"])
+
+    def test_duplicate_booking_ids_cannot_start_or_cancel(self):
+        booking = self.db.create_booking(self.payload)
+        self.db.bookings.append(copy.deepcopy(booking))
+        before = copy.deepcopy(self.db.__dict__)
+        self.assertFalse(self.db.start_ride(booking["id"])["success"])
+        self.assertIn("error", self.db.cancel_booking(booking["id"]))
+        self.assertEqual(before, self.db.__dict__)
+
+    def test_two_legacy_bookings_for_same_bike_cannot_release_each_other(self):
+        booking = self.db.create_booking(self.payload)
+        self.db.get_hub("hub-02")["bikes"][0].pop("reserved_by")
+        duplicate = {**copy.deepcopy(booking), "id": "EMH-OTHER"}
+        self.db.bookings.append(duplicate)
+        before = copy.deepcopy(self.db.__dict__)
+        for booking_id in (booking["id"], duplicate["id"]):
+            self.assertFalse(self.db.start_ride(booking_id)["success"])
+            self.assertIn("error", self.db.cancel_booking(booking_id))
+        self.assertEqual(before, self.db.__dict__)
+
+    def test_foreign_reservation_marker_blocks_start_and_cancel(self):
+        booking = self.db.create_booking(self.payload)
+        self.db.get_hub("hub-02")["bikes"][0]["reserved_by"] = "OTHER"
+        before = copy.deepcopy(self.db.__dict__)
+        self.assertFalse(self.db.start_ride(booking["id"])["success"])
+        self.assertIn("error", self.db.cancel_booking(booking["id"]))
+        self.assertEqual(before, self.db.__dict__)
+
+    def test_unique_legacy_hold_without_marker_can_start(self):
+        booking = self.db.create_booking(self.payload)
+        self.db.get_hub("hub-02")["bikes"][0].pop("reserved_by")
+        self.assertTrue(self.db.start_ride(booking["id"])["success"])
+
+    def test_cancel_removes_own_marker_and_bike_can_be_booked_again(self):
+        booking = self.db.create_booking(self.payload)
+        bike = self.db.get_hub("hub-02")["bikes"][0]
+        self.assertEqual(bike["reserved_by"], booking["id"])
+        self.db.cancel_booking(booking["id"])
+        self.assertNotIn("reserved_by", bike)
+        self.assertNotIn("error", self.db.create_booking(self.payload))
+
+    def test_return_does_not_unlock_maintenance_or_relocation(self):
+        for kind in ("maintenance", "relocation"):
+            with self.subTest(kind=kind):
+                self.setUp()
+                booking = self.db.create_booking(self.payload)
+                ride = self.db.start_ride(booking["id"])["ride"]
+                if kind == "maintenance":
+                    self.db.maintenance_tickets.append({"device_code": "XE-052", "status": "PENDING"})
+                else:
+                    self.db.relocations.append({"status": "IN_TRANSIT", "bikes": [{"bike_id": "XE-052"}]})
+                hub = self.db.get_hub("hub-04")
+                count = hub["available_bikes"]
+                parking = hub["available_parking"]
+                self.assertTrue(self.db.return_vehicle(ride["trip_id"], hub["name"])["success"])
+                bike = next(b for b in hub["bikes"] if b["id"] == "XE-052")
+                self.assertNotEqual(bike["status"], "Sẵn sàng")
+                self.assertNotIn("reserved_by", bike)
+                self.assertEqual(hub["available_bikes"], count)
+                self.assertEqual(hub["available_parking"], parking - 1)
+                self.assertEqual(booking["status"], "Hoàn thành")
+                self.assertIn("rental_invoice", booking)
+                self.assertIsNone(self.db.user["active_services"]["ride"])
 
     def test_return_completes_only_linked_booking_and_keeps_history(self):
         booking = self.db.create_booking(self.payload)

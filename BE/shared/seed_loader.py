@@ -82,18 +82,11 @@ def load_seed(
     ) 
 
     try:
-        text = path.read_text(encoding="utf-8-sig")
-    except(OSError, UnicodeError) as exc:
-        raise SeedLoadError(
-            f"không đọc được file seed {path}: {exc}"
-        )
-
-
-    try:
-        seed = json.loads(
-            text,
-            object_pairs_hook=reject_duplicate_keys,
-        )
+        # Dùng json.load theo convention; giữ kiểm tra key trùng và UTF-8 BOM.
+        with path.open(encoding="utf-8-sig") as seed_file:
+            seed = json.load(seed_file, object_pairs_hook=reject_duplicate_keys)
+    except (OSError, UnicodeError) as exc:
+        raise SeedLoadError(f"Không đọc được file seed {path}: {exc}") from exc
     except json.JSONDecodeError as exc:
         raise SeedLoadError(
             f"Json không hợp lệ tại{path}, "
