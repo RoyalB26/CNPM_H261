@@ -1,0 +1,80 @@
+<!-- Partial: staff/partials/screens/guard/checkin.html -->
+<section id="screen-guard-checkin" class="staff-screen">
+  <!-- Guard Profile Header -->
+  <div class="staff-profile-header-card" style="margin-bottom: 16px;">
+    <div class="avatar-black-circle">SG</div>
+    <div style="flex: 1;">
+      <div style="font-size: 15px; font-weight: 800;">Nguyen Van B</div>
+      <div style="font-size: 12px; color: var(--text-muted);">Bảo vệ · Ca chiều</div>
+      <div style="font-size: 11.5px; color: #94a3b8;">Hub KTX Khu A · 13:00 - 17:00</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom: 14px;">
+    <h3 style="font-size: 15px; font-weight: 800; margin-bottom: 2px;">XÁC NHẬN XE CÁ NHÂN VÀO HUB</h3>
+    <p style="font-size: 12px; color: var(--text-muted);">Ghi nhận lượt gửi xe của sinh viên / giảng viên</p>
+  </div>
+
+  <!-- License Plate Input with QUÉT button -->
+  <div style="margin-bottom: 14px;">
+    <label class="input-label-sm">Biển số xe</label>
+    <div style="display: flex; gap: 8px;">
+      <input type="text" id="guardPlateInput" class="form-input-sm" value="59-B2 123.45" style="font-weight: 800; font-size: 16px; letter-spacing: 1px;">
+      <button class="btn-staff-primary" style="width: auto; padding: 0 16px; font-size: 12px;" onclick="StaffApp.simulatePlateScan()">QUÉT</button>
+    </div>
+  </div>
+
+  <!-- Parking Bay & Slot -->
+  <div style="margin-bottom: 14px;">
+    <label class="input-label-sm">Vị trí đỗ xe</label>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <select class="form-select-sm" id="guardBaySelect">
+        <option>Dãy A</option>
+        <option>Dãy B</option>
+        <option>Dãy C</option>
+      </select>
+      <select class="form-select-sm" id="guardSlotSelect">
+        <option>Ô số 018</option>
+        <option>Ô số 019</option>
+        <option>Ô số 020</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Ticket / QR Card matching 11.jpg -->
+  <div style="margin-bottom: 14px;">
+    <label class="input-label-sm">Mã vé / mã QR lượt gửi</label>
+    <div class="staff-card" style="padding: 14px; display: flex; align-items: center; gap: 16px;">
+      <div style="width: 54px; height: 54px; border: 2px solid #0f172a; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+        <i class="fa-solid fa-qrcode" style="font-size: 32px;"></i>
+      </div>
+      <div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Mã lượt gửi được tạo tự động</div>
+        <strong style="font-size: 15px; letter-spacing: 0.5px;" id="guardTicketCode">SG-20261022-018</strong>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Có hiệu lực trong lượt gửi này</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Checkin Time Box -->
+  <div style="margin-bottom: 16px;">
+    <label class="input-label-sm">Giờ vào bãi</label>
+    <div class="staff-card" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+      <strong style="font-size: 13.5px;" id="guardCheckinTime">22/10/2026 · 14:36</strong>
+      <span style="font-size: 11.5px; color: var(--text-muted);">Tự động</span>
+    </div>
+  </div>
+
+  <!-- Status banner -->
+  <div class="dark-notice-banner" style="margin-bottom: 20px;">
+    <div class="notice-icon" style="background: #ffffff; color: #0f172a;"><i class="fa-solid fa-check"></i></div>
+    <div>
+      <div style="font-weight: 800; font-size: 13.5px; margin-bottom: 2px;">Thông tin đã sẵn sàng</div>
+      <div style="font-size: 11.5px; color: #94a3b8;">Kiểm tra lại trước khi xác nhận vào bãi.</div>
+    </div>
+  </div>
+
+  <button class="btn-staff-primary" onclick="StaffApp.confirmVehicleCheckin()">
+    <span>XÁC NHẬN VÀO BÃI</span>
+  </button>
+</section>

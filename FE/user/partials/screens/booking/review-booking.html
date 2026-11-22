@@ -1,0 +1,56 @@
+<!-- Partial: user/partials/screens/booking/review-booking.html -->
+<section id="screen-review-booking" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-select-bike')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Kiểm tra đặt trước</span>
+    <i class="fa-regular fa-calendar-check nav-action"></i>
+  </div>
+
+  <div class="step-indicator">
+    <div class="step-label">Bước 3/3 · Xác nhận</div>
+    <div class="step-bars">
+      <div class="bar active"></div>
+      <div class="bar active"></div>
+      <div class="bar active"></div>
+    </div>
+  </div>
+
+  <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Kiểm tra trước khi giữ tài nguyên</p>
+
+  <!-- Plan summary card -->
+  <div class="card-box">
+    <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">Phương án: xe cá nhân</h3>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+      <span style="color: var(--text-muted);">Hub</span>
+      <span style="font-weight: 600;">Ga Metro ĐHQG</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+      <span style="color: var(--text-muted);">Phương tiện</span>
+      <span style="font-weight: 600;">59-X1 123.45</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px;">
+      <span style="color: var(--text-muted);">Khung giờ</span>
+      <span style="font-weight: 600;">10:00 – 12:00</span>
+    </div>
+  </div>
+
+  <!-- Selected services card -->
+  <div class="card-box">
+    <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">Dịch vụ đã chọn</h3>
+    <div style="font-size: 13.5px; margin-bottom: 6px;">1. Chỗ đỗ · 10:00 – 12:00</div>
+    <div style="font-size: 13.5px; margin-bottom: 12px;">2. Sạc S03 · 10:00 – 11:00</div>
+    <a href="javascript:void(0)" onclick="App.navigateTo('screen-select-parking')" style="font-size: 12.5px; color: var(--text-muted); text-decoration: none;">Sửa / bỏ dịch vụ → quay lại bước 2</a>
+  </div>
+
+  <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; margin-bottom: 16px; font-size: 12.5px; color: var(--text-muted); line-height: 1.4;">
+    Hệ thống kiểm tra lại khả dụng trước khi xác nhận, tránh giữ trùng tài nguyên.
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+    <input type="checkbox" id="checkAgree" checked style="width: 18px; height: 18px; accent-color: var(--text-main);">
+    <label for="checkAgree" style="font-size: 13px; font-weight: 500;">Tôi đã kiểm tra và đồng ý đặt các dịch vụ trên.</label>
+  </div>
+
+  <button class="btn-secondary" style="margin-bottom: 12px;" onclick="App.navigateTo('screen-select-parking')">Chỉnh sửa lựa chọn</button>
+  <button class="btn-primary" onclick="App.confirmBooking('personal')">Xác nhận đặt trước</button>
+</section>

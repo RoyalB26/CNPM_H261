@@ -1,0 +1,19 @@
+<!-- Partial: user/partials/screens/payment/invoice-charging.html -->
+<section id="screen-invoice-charging" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Hóa đơn sạc điện</span>
+  </div>
+  <div class="card-box">
+    <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 12px;" id="invoiceChargingTitle">Hóa đơn sạc pin</h3>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+      <span style="color: var(--text-muted);" id="invoiceChargingItemLabel">Điện tiêu thụ (2.4 kWh x 3,500đ)</span>
+      <span style="font-weight: 600;" id="invoiceChargingItemCost">8,400 đ</span>
+    </div>
+    <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; display: flex; justify-content: space-between; font-size: 16px; font-weight: 800;">
+      <span>Tổng thanh toán</span>
+      <span id="invoiceChargingTotalCost">8,400 đ</span>
+    </div>
+  </div>
+  <button class="btn-primary" id="btnPayCharging" onclick="App.setupInvoiceAndPay('charging', 8400)">Chọn thanh toán</button>
+</section>

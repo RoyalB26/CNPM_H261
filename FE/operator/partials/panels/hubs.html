@@ -1,0 +1,65 @@
+<!-- Partial: operator/partials/panels/hubs.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- ================= PANEL 4: QUẢN LÝ HUB (Operator Wireframe 10.jpg) ================= -->
+<section id="tab-hubs" class="section-panel">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div>
+      <h1 class="page-title">Quản lý Hub</h1>
+      <p class="page-subtitle" style="margin-bottom: 0;">Cấu hình thông số kỹ thuật và trạng thái vận hành Hub</p>
+    </div>
+    <button class="btn-primary-dark" onclick="OperatorApp.openHubConfigModal('Hub Ga Metro ĐHQG', 150, 50, 10.8753, 106.8005)">
+      <i class="fa-solid fa-plus"></i>
+      <span>Cấu hình thông số Hub</span>
+    </button>
+  </div>
+
+  <div class="data-table-container">
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Tên Hub</th>
+          <th>Địa chỉ / Khu vực</th>
+          <th>Sức chứa (Đỗ/Sạc)</th>
+          <th>Tỷ lệ khả dụng</th>
+          <th>Trạng thái Hub</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody id="hubsTableBody">
+        <tr id="hubRow_Metro">
+          <td><strong>Hub Ga Metro ĐHQG</strong></td>
+          <td>Khu đô thị ĐHQG - HCM</td>
+          <td id="hubCap_Metro">150 Đỗ / 50 Sạc</td>
+          <td>85%</td>
+          <td><span class="badge badge-success" id="hubStatus_Metro">Hoạt động</span></td>
+          <td>
+            <button class="btn-secondary-light" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="OperatorApp.openHubConfigModal('Hub Ga Metro ĐHQG', 150, 50, 10.8753, 106.8005)">Chỉnh sửa</button>
+            <button class="btn-secondary-light" style="padding: 4px 8px; font-size: 12px; color: var(--accent-red);" onclick="OperatorApp.openDeactivateModal('Hub Ga Metro ĐHQG')">Tạm ngưng</button>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Hub Đại học Bách khoa</strong></td>
+          <td>Đường D1, Khu ĐHQG</td>
+          <td>120 Đỗ / 40 Sạc</td>
+          <td>92%</td>
+          <td><span class="badge badge-success">Hoạt động</span></td>
+          <td>
+            <button class="btn-secondary-light" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="OperatorApp.openHubConfigModal('Hub Đại học Bách khoa', 120, 40, 10.8805, 106.8055)">Chỉnh sửa</button>
+            <button class="btn-secondary-light" style="padding: 4px 8px; font-size: 12px; color: var(--accent-red);" onclick="OperatorApp.openDeactivateModal('Hub Đại học Bách khoa')">Tạm ngưng</button>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Hub KTX Khu B</strong></td>
+          <td>Ký túc xá Khu B</td>
+          <td>200 Đỗ / 60 Sạc</td>
+          <td>40% (Tải cao)</td>
+          <td><span class="badge badge-warning">Cảnh báo tải</span></td>
+          <td>
+            <button class="btn-secondary-light" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="OperatorApp.openHubConfigModal('Hub KTX Khu B', 200, 60, 10.8835, 106.7820)">Chỉnh sửa</button>
+            <button class="btn-secondary-light" style="padding: 4px 8px; font-size: 12px; color: var(--accent-red);" onclick="OperatorApp.openDeactivateModal('Hub KTX Khu B')">Tạm ngưng</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

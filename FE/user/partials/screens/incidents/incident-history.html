@@ -1,0 +1,24 @@
+<!-- Partial: user/partials/screens/incidents/incident-history.html -->
+<section id="screen-incident-history" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-profile')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Lịch sử sự cố</span>
+  </div>
+  <div id="incidentHistoryList">
+    <!-- Populated from state -->
+    <div class="card-box selectable" onclick="App.navigateTo('screen-report-detail')">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+        <span style="font-weight: 700; font-size: 14px;">INC-2026-089 · XE-024</span>
+        <span style="font-size: 11.5px; color: #d97706; font-weight: 600;">Đang xử lý</span>
+      </div>
+      <div style="font-size: 12.5px; color: var(--text-muted);">Không mở được khóa · 18/10/2026</div>
+    </div>
+    <div class="card-box">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+        <span style="font-weight: 700; font-size: 14px;">INC-2026-042 · Trụ S02</span>
+        <span style="font-size: 11.5px; color: #10b981; font-weight: 600;">Đã giải quyết</span>
+      </div>
+      <div style="font-size: 12.5px; color: var(--text-muted);">Không vào điện · 12/10/2026</div>
+    </div>
+  </div>
+</section>

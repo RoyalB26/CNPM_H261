@@ -1,0 +1,26 @@
+<!-- Partial: user/partials/screens/auth-profile/edit-profile.html -->
+<section id="screen-edit-profile" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-profile')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Chỉnh sửa hồ sơ</span>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Họ và tên</label>
+    <div class="input-box">
+      <input type="text" id="editFullName" value="Nguyễn Văn A">
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Email</label>
+    <div class="input-box">
+      <input type="email" id="editEmail" value="abc123@hcmut.edu.vn">
+    </div>
+  </div>
+  <div class="form-group" style="margin-bottom: 28px;">
+    <label class="form-label">Số điện thoại</label>
+    <div class="input-box">
+      <input type="tel" id="editPhone" value="0123456789">
+    </div>
+  </div>
+  <button class="btn-primary" onclick="App.saveProfile()">Lưu thay đổi</button>
+</section>

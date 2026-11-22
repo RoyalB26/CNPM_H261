@@ -1,0 +1,24 @@
+<!-- Partial: user/partials/screens/booking/review-parking.html -->
+<section id="screen-review-parking" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-select-parking')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Kiểm tra chỗ đỗ</span>
+  </div>
+  <div class="card-box">
+    <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">Thông tin đặt chỗ đỗ xe</h3>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+      <span style="color: var(--text-muted);">Biển số xe</span>
+      <span style="font-weight: 600;" id="reviewParkingPlate">59-X1 123.45</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+      <span style="color: var(--text-muted);">Vị trí</span>
+      <span style="font-weight: 600;" id="reviewParkingSlotHub">Chỗ P-04 (Hub Ga Metro)</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px;">
+      <span style="color: var(--text-muted);">Khung giờ</span>
+      <span style="font-weight: 600;" id="reviewParkingTime">10:00 – 12:00</span>
+    </div>
+  </div>
+  <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">Phí gửi xe thanh toán trực tiếp cho bảo vệ tại cổng.</p>
+  <button class="btn-primary" onclick="App.confirmBooking('parking')">Xác nhận đặt chỗ đỗ</button>
+</section>

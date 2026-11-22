@@ -1,0 +1,22 @@
+<!-- Partial: user/partials/screens/incidents/report-detail.html -->
+<section id="screen-report-detail" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-incident-history')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Chi tiết sự cố</span>
+  </div>
+
+  <div class="card-box" id="reportDetailCard">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <span style="font-size: 15px; font-weight: 800;" id="reportDetailId">INC-2026-089</span>
+      <span style="font-size: 11.5px; background: #fef3c7; color: #d97706; font-weight: 700; padding: 2px 8px; border-radius: 4px;" id="reportDetailStatus">Đang xử lý</span>
+    </div>
+    <div style="font-size: 13px; margin-bottom: 6px;">Thiết bị: <strong id="reportDetailResource">XE-024 (Phương tiện)</strong></div>
+    <div style="font-size: 13px; margin-bottom: 6px;">Hub: <strong id="reportDetailHub">Hub Ga Metro ĐHQG</strong></div>
+    <div style="font-size: 13px; margin-bottom: 12px;">Vấn đề: <span id="reportDetailIssue">Không mở được khóa</span></div>
+    <div style="border-top: 1px solid var(--border-color); padding-top: 10px; font-size: 12.5px; color: var(--text-muted);">
+      <strong>Phản hồi từ Operator:</strong> <span id="reportDetailOperatorNote">Đã tiếp nhận yêu cầu, kỹ thuật viên đang đến kiểm tra thiết bị.</span>
+    </div>
+  </div>
+
+  <button class="btn-secondary" onclick="App.navigateTo('screen-map-home')">Quay lại bản đồ</button>
+</section>

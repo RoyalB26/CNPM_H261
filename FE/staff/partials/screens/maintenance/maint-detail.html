@@ -1,0 +1,78 @@
+<!-- Partial: staff/partials/screens/maintenance/maint-detail.html -->
+<section id="screen-maint-detail" class="staff-screen">
+  <div class="screen-top-bar">
+    <button class="nav-back-btn" onclick="StaffApp.goToScreen('screen-maint-list')"><i class="fa-solid fa-angle-left"></i></button>
+    <div class="top-bar-title-wrap">
+      <div class="sub-label">CHI TIẾT SỰ CỐ</div>
+      <div class="main-label">Nhiệm vụ MT-102</div>
+    </div>
+    <span class="badge-urgent-tag">KHẨN CẤP</span>
+  </div>
+
+  <!-- Black Header Box -->
+  <div class="dark-ticket-card" style="margin-bottom: 14px;">
+    <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">XE ĐẠP ĐIỆN · HƯ HỎNG</div>
+    <div style="font-size: 16px; font-weight: 800; margin-bottom: 6px;">Xe BK-EB-018 không khởi động</div>
+    <div style="font-size: 12px; color: #cbd5e1;">Báo bởi Nhân viên điều chuyển · 14:25 hôm nay</div>
+  </div>
+
+  <!-- Device & Location Boxes -->
+  <div style="font-size: 12px; font-weight: 800; margin-bottom: 6px;">THIẾT BỊ & VỊ TRÍ</div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+    <div class="staff-card" style="padding: 12px;">
+      <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Mã thiết bị</div>
+      <strong style="font-size: 14.5px;">BK-EB-018</strong>
+      <div style="display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 11px; color: var(--text-muted);">
+        <i class="fa-solid fa-qrcode" style="font-size: 16px;"></i>
+        <span>QR / ID đã xác định</span>
+      </div>
+    </div>
+
+    <div class="staff-card" style="padding: 12px;">
+      <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Vị trí chính xác</div>
+      <strong style="font-size: 13.5px;">Hub KTX Khu A</strong>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">
+        Khu đỗ xe · Dãy B<br><strong>Ô số 018</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reporter Description -->
+  <div style="font-size: 12px; font-weight: 800; margin-bottom: 6px;">MÔ TẢ TỪ NGƯỜI BÁO CÁO</div>
+  <div class="staff-card" style="padding: 12px; font-size: 12.5px; line-height: 1.5; margin-bottom: 14px;">
+    Xe không phản hồi khi bật nguồn.<br>
+    Đã thử cắm sạc nhưng đèn báo không sáng.<br>
+    Vui lòng kiểm tra pin và bộ điều khiển.
+  </div>
+
+  <!-- Image Attachment -->
+  <div style="font-size: 12px; font-weight: 800; margin-bottom: 6px;">HÌNH ẢNH ĐÍNH KÈM</div>
+  <div class="staff-card" style="padding: 12px; display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+    <div style="width: 70px; height: 50px; background: #e2e8f0; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #94a3b8;">
+      <i class="fa-regular fa-image" style="font-size: 20px;"></i>
+    </div>
+    <div>
+      <div style="font-size: 13px; font-weight: 700;">anh-hien-trang-01.jpg</div>
+      <div style="font-size: 11.5px; color: var(--text-muted);">Ảnh từ người báo cáo · 1,8 MB</div>
+    </div>
+  </div>
+
+  <!-- Recent Maintenance History -->
+  <div style="font-size: 12px; font-weight: 800; margin-bottom: 6px;">LỊCH SỬ BẢO TRÌ GẦN NHẤT</div>
+  <div class="staff-card" style="padding: 12px; margin-bottom: 20px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 10px; height: 10px; border-radius: 50%; background: #0f172a;"></div>
+      <div>
+        <div style="font-size: 13px; font-weight: 700;">Kiểm tra pin và phanh</div>
+        <div style="font-size: 11px; color: var(--text-muted);">12/10/2026 · NVKT Tran Minh A · Hoàn tất</div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-staff-primary" onclick="StaffApp.goToScreen('screen-maint-scan')">
+    <span>BẮT ĐẦU XỬ LÝ</span>
+  </button>
+  <button class="btn-staff-secondary" onclick="StaffApp.openMaintIncidentReport()">
+    <span>BÁO CÁO SỰ CỐ</span>
+  </button>
+</section>

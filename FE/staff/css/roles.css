@@ -1,0 +1,187 @@
+/* Role-specific flows: Route map, Handover, QR Scanner & Reconcile table */
+/* Staff Card */
+.staff-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+/* Route Map Box */
+.route-map-box {
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  height: 150px;
+  overflow: hidden;
+}
+
+/* Handover Flow Row */
+.handover-flow-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hub-flow-box {
+  flex: 1;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.hub-flow-sub {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.hub-flow-title {
+  font-size: 13.5px;
+  color: var(--text-main);
+}
+
+/* 3-column stats */
+.stats-3col-row {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 10px;
+}
+
+.stat-mini-box {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px 10px;
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.stat-caption {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+/* Progress bar rail */
+.progress-bar-rail {
+  background: #f1f5f9;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  background: #0f172a;
+  height: 100%;
+  border-radius: 999px;
+}
+
+/* Camera Scanner Frame */
+.camera-scanner-frame {
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 24px 20px;
+  text-align: center;
+}
+
+.qr-target-box {
+  width: 170px;
+  height: 120px;
+  margin: 0 auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-crosshair {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+}
+
+.qr-crosshair.top-left { top: 0; left: 0; border-top: 3px solid #0f172a; border-left: 3px solid #0f172a; }
+.qr-crosshair.top-right { top: 0; right: 0; border-top: 3px solid #0f172a; border-right: 3px solid #0f172a; }
+.qr-crosshair.bottom-left { bottom: 0; left: 0; border-bottom: 3px solid #0f172a; border-left: 3px solid #0f172a; }
+.qr-crosshair.bottom-right { bottom: 0; right: 0; border-bottom: 3px solid #0f172a; border-right: 3px solid #0f172a; }
+
+/* Reconcile table list */
+.reconcile-table-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reconcile-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.check-box-square {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 4px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.reconcile-row.done .check-box-square {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+.status-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.status-pill.done { background: #dcfce7; color: #15803d; }
+.status-pill.waiting { background: #f1f5f9; color: #64748b; }
+
+/* Dark Notice Banner */
+.dark-notice-banner {
+  background: #0f172a;
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notice-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+

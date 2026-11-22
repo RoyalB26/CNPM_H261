@@ -1,0 +1,70 @@
+<!-- Partial: operator/partials/modals/hub-config.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- MODAL: CẤU HÌNH THÔNG SỐ HUB (Operator Wireframe 10.jpg) -->
+<div id="modalHubConfig" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header-dark">
+      <span>CẤU HÌNH THÔNG SỐ HUB</span>
+      <i class="fa-solid fa-xmark" style="cursor: pointer;" onclick="OperatorApp.closeModal('modalHubConfig')"></i>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom: 12px;">
+        <label class="form-label">Tên Hub</label>
+        <input type="text" id="configHubName" class="form-input" value="Hub Ga Metro ĐHQG">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label class="form-label">Sức chứa chỗ đỗ</label>
+          <input type="number" id="configParkingCap" class="form-input" value="150">
+        </div>
+        <div>
+          <label class="form-label">Số cổng sạc</label>
+          <input type="number" id="configChargerCap" class="form-input" value="50">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label class="form-label">Tọa độ GPS (Vĩ độ Lat)</label>
+          <input type="text" id="configGpsLat" class="form-input" value="10.8753">
+        </div>
+        <div>
+          <label class="form-label">Tọa độ GPS (Kinh độ Lng)</label>
+          <input type="text" id="configGpsLng" class="form-input" value="106.8005">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label class="form-label">Giới hạn công suất tối đa</label>
+          <input type="text" id="configMaxPower" class="form-input" value="1000 kW">
+        </div>
+        <div>
+          <label class="form-label">Ngưỡng cảnh báo quá tải</label>
+          <input type="text" id="configThreshold" class="form-input" value="85%">
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label">Trạng thái vận hành mặc định</label>
+        <div style="display: flex; gap: 16px; margin-top: 6px;">
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 13.5px; cursor: pointer;">
+            <input type="radio" name="hubDefaultStatus" value="Hoạt động" checked>
+            <span>Hoạt động</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 13.5px; cursor: pointer;">
+            <input type="radio" name="hubDefaultStatus" value="Tạm ngưng">
+            <span>Tạm ngưng</span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary-light" onclick="OperatorApp.closeModal('modalHubConfig')">Hủy</button>
+      <button class="btn-primary-dark" onclick="OperatorApp.saveHubConfig()">
+        <i class="fa-solid fa-floppy-disk" style="margin-right: 4px;"></i> LƯU CẤU HÌNH
+      </button>
+    </div>
+  </div>
+</div>

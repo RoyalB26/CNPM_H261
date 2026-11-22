@@ -1,0 +1,41 @@
+<!-- Partial: operator/partials/panels/overview/relocation-table.html -->
+<!-- Active Relocation Operations Table (Synchronized with GET /api/v1/operator/relocation/commands) -->
+<div class="data-table-container" style="margin-top: 24px;">
+  <div class="card-header-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <i class="fa-solid fa-right-left" style="color: #2563eb; font-size: 16px;"></i>
+      <span style="font-weight: 700; font-size: 14.5px;">Lệnh điều phối phương tiện thời gian thực</span>
+      <span class="badge badge-info" id="overviewRelocBadge">Đang đồng bộ...</span>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button class="btn-secondary-light" style="font-size: 12px; padding: 5px 12px;" onclick="OperatorApp.switchTab('tab-relocation')">
+        Xem toàn bộ <i class="fa-solid fa-arrow-right" style="margin-left: 4px;"></i>
+      </button>
+      <button class="btn-primary-dark" style="font-size: 12px; padding: 5px 12px;" onclick="OperatorApp.openCreateRelocationModal()">
+        <i class="fa-solid fa-plus"></i> Tạo lệnh mới
+      </button>
+    </div>
+  </div>
+  <table class="styled-table">
+    <thead>
+      <tr>
+        <th>Mã lệnh</th>
+        <th>Hub nguồn</th>
+        <th>Hub đích</th>
+        <th>Số xe</th>
+        <th>Tiến độ</th>
+        <th>NV điều chuyển</th>
+        <th>Ưu tiên</th>
+        <th>Trạng thái</th>
+        <th>Thao tác</th>
+      </tr>
+    </thead>
+    <tbody id="overviewRelocationBody">
+      <tr>
+        <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 24px;">
+          Đang đồng bộ dữ liệu điều phối từ hệ thống...
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

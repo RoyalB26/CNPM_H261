@@ -1,0 +1,78 @@
+<!-- Partial: staff/partials/screens/relocation/reloc-incident.html -->
+<section id="screen-reloc-incident" class="staff-screen">
+  <div class="screen-top-bar">
+    <button class="nav-back-btn" onclick="StaffApp.goToScreen('screen-reloc-handover')"><i class="fa-solid fa-angle-left"></i></button>
+    <div class="top-bar-title-wrap">
+      <div class="sub-label">BÁO CÁO TRONG QUÁ TRÌNH ĐIỀU CHUYỂN</div>
+      <div class="main-label">Báo cáo sự cố</div>
+    </div>
+    <span class="tag-badge-pill">Nhiệm vụ #102</span>
+  </div>
+
+  <!-- Dark Alert Banner -->
+  <div class="dark-notice-banner" style="margin-bottom: 16px;">
+    <div class="notice-icon"><i class="fa-solid fa-exclamation"></i></div>
+    <div>
+      <div style="font-weight: 800; font-size: 13.5px; margin-bottom: 2px;">Ghi nhận vấn đề phát sinh</div>
+      <div style="font-size: 11.5px; color: #94a3b8;">Thông tin giúp đội vận hành xử lý nhanh hơn.</div>
+    </div>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 800; margin-bottom: 6px;">
+    <span>THÔNG TIN SỰ CỐ</span>
+    <span style="color: var(--accent-red); font-size: 11px;">* Bắt buộc</span>
+  </div>
+
+  <div style="margin-bottom: 12px;">
+    <label class="input-label-sm">Loại sự cố *</label>
+    <select class="form-select-sm" id="relocIncidentType">
+      <option>Xe bị thủng lốp</option>
+      <option>Va chạm giao thông</option>
+      <option>Bình pin tụt áp đột ngột</option>
+      <option>Hỏng chốt khóa cọc sạc</option>
+    </select>
+  </div>
+
+  <div style="margin-bottom: 12px;">
+    <label class="input-label-sm">Vị trí xảy ra sự cố *</label>
+    <div class="input-with-icon">
+      <i class="fa-solid fa-location-dot"></i>
+      <input type="text" class="form-input-sm" value="Đường nội bộ giữa Hub KTX Khu A và Hub Ga Metro A">
+    </div>
+    <span style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block;">Vị trí hiện tại của bạn sẽ được dùng để hỗ trợ xác minh.</span>
+  </div>
+
+  <div style="margin-bottom: 14px;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+      <label class="input-label-sm">MÔ TẢ CHI TIẾT</label>
+      <span style="font-size: 11px; color: var(--text-muted);">0 / 300</span>
+    </div>
+    <textarea class="form-textarea-sm" rows="3" placeholder="Mô tả điều đã xảy ra, mã xe liên quan và tình trạng hiện tại..."></textarea>
+  </div>
+
+  <div style="margin-bottom: 16px;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+      <label class="input-label-sm">ẢNH THỰC TẾ</label>
+      <span style="font-size: 11px; color: var(--text-muted);">Không bắt buộc</span>
+    </div>
+    <div class="dashed-upload-box" onclick="alert('Đã đính kèm ảnh chụp hiện trường')">
+      <i class="fa-solid fa-camera" style="font-size: 18px; margin-bottom: 6px;"></i>
+      <span style="font-size: 12px; font-weight: 700;">ĐÍNH KÈM ẢNH</span>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px; margin-bottom: 24px;">
+    <div class="info-chip-box">
+      <span style="font-size: 11px; color: var(--text-muted);">Mã nhiệm vụ</span>
+      <strong style="font-size: 13px;">#102</strong>
+    </div>
+    <div class="info-chip-box">
+      <span style="font-size: 11px; color: var(--text-muted);">Tuyến đang thực hiện</span>
+      <strong style="font-size: 12px;">Hub KTX A &rarr; Hub Metro A</strong>
+    </div>
+  </div>
+
+  <button class="btn-staff-primary" onclick="StaffApp.submitRelocIncident()">
+    <span>GỬI BÁO CÁO SỰ CỐ</span>
+  </button>
+</section>

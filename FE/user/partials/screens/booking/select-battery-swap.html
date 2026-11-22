@@ -1,0 +1,75 @@
+<!-- Partial: user/partials/screens/booking/select-battery-swap.html -->
+<section id="screen-select-battery-swap" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-hub-detail')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Chọn tài nguyên</span>
+    <span class="nav-action"><i class="fa-solid fa-arrow-right-arrow-left" style="font-size: 16px;"></i></span>
+  </div>
+
+  <div class="step-indicator">
+    <div class="step-label">Bước 2/3 · Chọn tài nguyên</div>
+    <div class="step-bars">
+      <div class="bar active"></div>
+      <div class="bar active"></div>
+      <div class="bar"></div>
+    </div>
+  </div>
+
+  <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Nếu Hub hỗ trợ dịch vụ đổi pin</div>
+
+  <div class="segmented-tabs">
+    <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-bike')">Thuê xe</button>
+    <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-parking')">Chỗ đỗ</button>
+    <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-charging')">Sạc</button>
+    <button class="segmented-tab active" onclick="App.switchBookingTab('screen-select-battery-swap')">Đổi pin</button>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">Phương tiện cá nhân *</label>
+    <div class="input-box">
+      <select id="swapPersonalVehicle">
+        <option value="Xe máy điện · 59-X1 123.45">Xe máy điện · 59-X1 123.45</option>
+        <option value="Xe máy điện VinFast · 59-V1 456.78">Xe máy điện VinFast · 59-V1 456.78</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">Loại pin tương thích *</label>
+    <div class="input-box">
+      <select id="swapBatteryType">
+        <option value="Pin tương thích: B48">Pin tương thích: B48</option>
+        <option value="Pin tương thích: LFP-72">Pin tương thích: LFP-72</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">Số lượng pin *</label>
+    <div class="input-box">
+      <select id="swapBatteryQuantity">
+        <option value="2 pin">2 pin</option>
+        <option value="1 pin">1 pin</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group" style="margin-bottom: 16px;">
+    <label class="form-label">Ngày / giờ đến *</label>
+    <div class="input-box">
+      <select id="swapArrivalTime">
+        <option value="18/10/2026 · 10:00">18/10/2026 · 10:00</option>
+        <option value="18/10/2026 · 11:30">18/10/2026 · 11:30</option>
+        <option value="18/10/2026 · 14:00">18/10/2026 · 14:00</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="note-box-simple">
+    Chỉ cho đặt khi Hub hỗ trợ và có pin tương thích. Không chọn được pin hết khả dụng.
+  </div>
+
+  <button class="btn-primary" style="width: 100%; font-weight: 700; padding: 13px;" onclick="App.navigateTo('screen-review-swap')">
+    Kiểm tra đặt pin
+  </button>
+</section>

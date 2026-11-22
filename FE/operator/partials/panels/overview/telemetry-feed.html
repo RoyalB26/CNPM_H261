@@ -1,0 +1,33 @@
+<!-- Partial: operator/partials/panels/overview/telemetry-feed.html -->
+<!-- Realtime Telemetry Feed -->
+<div class="feed-container">
+  <div class="card-header-bar">
+    <span>Thông báo kết nối</span>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <button class="btn-secondary-light" style="padding: 3px 8px; font-size: 11px;" onclick="OperatorApp.openTelemetryDrawer()">Xem tất cả nhật ký</button>
+      <span class="badge badge-success" style="font-size: 11px;"><i class="fa-solid fa-circle" style="font-size: 7px;"></i> LIVE</span>
+    </div>
+  </div>
+  <div class="feed-list" id="feedList">
+    <div class="feed-item alert">
+      <div style="font-weight: 700; margin-bottom: 2px;">Mất kết nối IoT Hub B</div>
+      <div style="color: var(--text-muted); font-size: 11.5px;">Cổng sạc C-02 không phản hồi dữ liệu Telemetry quá 60s.</div>
+      <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">Vừa xong</div>
+    </div>
+    <div class="feed-item warning">
+      <div style="font-weight: 700; margin-bottom: 2px;">Nhiệt độ trạm sạc Hub A cao</div>
+      <div style="color: var(--text-muted); font-size: 11.5px;">Trạm sạc số 4 đang ở mức 58°C (Ngưỡng cảnh báo).</div>
+      <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">2 phút trước</div>
+    </div>
+    <div class="feed-item">
+      <div style="font-weight: 700; margin-bottom: 2px;">Điều phối xe tự động</div>
+      <div style="color: var(--text-muted); font-size: 11.5px;">Đã kích hoạt kịch bản điều 5 xe từ Hub A sang Hub B.</div>
+      <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">15 phút trước</div>
+    </div>
+    <div class="feed-item success">
+      <div style="font-weight: 700; margin-bottom: 2px;">Khôi phục Hub C hoàn tất</div>
+      <div style="color: var(--text-muted); font-size: 11.5px;">Bảo trì định kỳ đã xong, tài nguyên sẵn sàng.</div>
+      <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">1 giờ trước</div>
+    </div>
+  </div>
+</div>

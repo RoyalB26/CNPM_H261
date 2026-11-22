@@ -1,0 +1,43 @@
+<!-- Partial: user/partials/screens/my-bookings/booking-detail.html -->
+<section id="screen-booking-detail" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-my-bookings')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Chi tiết đặt trước</span>
+    <span class="nav-action"><i class="fa-regular fa-calendar" style="font-size: 18px;"></i></span>
+  </div>
+
+  <div style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 12px;" id="bookingDetailSubtitle">EMH-1023 · Xe dùng chung</div>
+
+  <div class="status-badge-outline" id="bookingDetailStatus">Đã xác nhận</div>
+
+  <div class="card-box" style="margin-bottom: 16px;">
+    <div style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--text-main);">Thông tin nhận xe</div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Xe</span>
+      <span style="font-weight: 600; color: var(--text-main);" id="bookingDetailResource">XE-024 · Pin 85%</span>
+    </div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Hub lấy xe</span>
+      <span style="font-weight: 600; color: var(--text-main);" id="bookingDetailOriginHub">Ga Metro ĐHQG</span>
+    </div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Hub trả dự kiến</span>
+      <span style="font-weight: 600; color: var(--text-main);" id="bookingDetailDestHub">ĐH Bách khoa</span>
+    </div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Thời điểm đặt</span>
+      <span style="font-weight: 600; color: var(--text-main);" id="bookingDetailTime">08:00</span>
+    </div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Giữ đến</span>
+      <span style="font-weight: 700; color: var(--text-main);" id="bookingDetailHoldUntil">08:10</span>
+    </div>
+  </div>
+
+  <div class="note-box-simple">
+    Đến đúng Hub, kiểm tra mã xe và xác nhận nhận xe. Nếu hết hạn, đặt lại tài nguyên.
+  </div>
+
+  <button class="btn-secondary" style="margin-bottom: 12px; border: 1.5px solid var(--border-color); background: #ffffff; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-cancel-confirm')">Hủy đặt trước</button>
+  <button class="btn-primary" style="width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-pickup')">Nhận phương tiện</button>
+</section>

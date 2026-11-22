@@ -1,0 +1,18 @@
+<!-- Partial: user/partials/screens/active-services/charging-active.html -->
+<section id="screen-charging-active" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-active-services')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Đang sạc điện</span>
+  </div>
+  <div class="card-box">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <span style="font-size: 13px; color: var(--text-muted);" id="chargingActivePort">Trụ sạc S03</span>
+      <span style="font-size: 13px; color: #10b981; font-weight: 700;">Đang cấp điện</span>
+    </div>
+    <div style="font-size: 38px; font-weight: 800; color: #10b981; margin-bottom: 8px;" id="chargingActivePercent">65%</div>
+    <div style="font-size: 13px; margin-bottom: 4px;">Điện năng đã nạp: <strong id="chargingActivePower">2.4 kWh</strong></div>
+    <div style="font-size: 13px;">Thời gian sạc: <strong id="chargingActiveTime">25 phút</strong></div>
+  </div>
+  <button class="btn-secondary" style="margin-bottom: 12px;" onclick="App.prepareReport('Cổng sạc', 'S03')">Báo sự cố trụ sạc</button>
+  <button class="btn-primary" onclick="App.navigateTo('screen-charging-end-confirm')">Dừng sạc pin</button>
+</section>

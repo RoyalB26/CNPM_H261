@@ -1,0 +1,71 @@
+<!-- Partial: staff/partials/screens/maintenance/maint-list.html -->
+<section id="screen-maint-list" class="staff-screen">
+  <!-- Tech Profile Header -->
+  <div class="staff-profile-header-card">
+    <div class="avatar-black-circle">MT</div>
+    <div style="flex: 1;">
+      <div style="font-size: 15px; font-weight: 800;">Nguyen Van B</div>
+      <div style="font-size: 12px; color: var(--text-muted);">Nhân viên bảo trì</div>
+      <div style="font-size: 11.5px; color: #94a3b8;">Ca chiều · 13:00 - 17:00</div>
+    </div>
+    <span class="tag-badge-pill">4 nhiệm vụ</span>
+  </div>
+
+  <!-- Filter Segmented Tabs matching 6.jpg -->
+  <div class="segmented-tabs-line">
+    <button class="tab-line-btn active">Mới tiếp nhận (3)</button>
+    <button class="tab-line-btn">Đang xử lý (1)</button>
+    <button class="tab-line-btn">Hoàn tất</button>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; margin: 14px 0 10px;">
+    <span>DANH SÁCH SỰ CỐ</span>
+    <span style="color: var(--text-muted);" id="maintCountBadge">3 mới</span>
+  </div>
+
+  <div id="maintTasksContainer">
+    <!-- Ticket 1: MT-102 Khẩn cấp -->
+    <div class="staff-card" style="margin-bottom: 12px; padding: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span class="badge-urgent-tag">KHẨN CẤP</span>
+        <strong style="font-size: 13px;">MT-102</strong>
+      </div>
+      <div style="font-size: 11.5px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">XE ĐẠP ĐIỆN · HƯ HỎNG</div>
+      <h4 style="font-size: 15px; font-weight: 800; margin-bottom: 6px;">Xe BK-EB-018 không khởi động</h4>
+      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Hub KTX Khu A</div>
+      <div style="font-size: 11.5px; color: #94a3b8; margin-bottom: 12px;">Tạo lúc: Hôm nay, 14:25</div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 10px;">
+        <span style="font-size: 12px; color: var(--accent-red); font-weight: 700;">Cần xử lý trong 35 phút</span>
+        <button class="btn-staff-primary" style="width: auto; padding: 7px 14px; font-size: 12px;" onclick="StaffApp.openMaintenanceDetail('MT-102')">XEM VÀ TIẾP NHẬN</button>
+      </div>
+    </div>
+
+    <!-- Ticket 2: MT-098 Cảnh báo -->
+    <div class="staff-card" style="margin-bottom: 12px; padding: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span class="badge-warning-tag">CẢNH BÁO</span>
+        <strong style="font-size: 13px;">MT-098</strong>
+      </div>
+      <div style="font-size: 11.5px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">CỔNG SẠC · KHÔNG HOẠT ĐỘNG</div>
+      <h4 style="font-size: 15px; font-weight: 800; margin-bottom: 6px;">Cổng sạc số 05 không nhận điện</h4>
+      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Hub Ga Metro A</div>
+      <div style="font-size: 11.5px; color: #94a3b8; margin-bottom: 12px;">Tạo lúc: Hôm nay, 13:50</div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 10px;">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Cần kiểm tra trong hôm nay</span>
+        <button class="btn-staff-secondary" style="width: auto; padding: 6px 14px; font-size: 12px; margin-top: 0;" onclick="StaffApp.openMaintenanceDetail('MT-098')">XEM CHI TIẾT</button>
+      </div>
+    </div>
+
+    <!-- Ticket 3: MT-091 Thường -->
+    <div class="staff-card" style="margin-bottom: 14px; padding: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span class="badge-neutral-tag">THƯỜNG</span>
+        <strong style="font-size: 13px;">MT-091</strong>
+      </div>
+      <h4 style="font-size: 14px; font-weight: 800; margin-bottom: 4px;">Nguồn điện trạm sạc cần bảo dưỡng</h4>
+      <div style="font-size: 12px; color: var(--text-muted);">Hub Trường BK · Tạo lúc: Hôm nay, 11:20</div>
+    </div>
+  </div>
+</section>

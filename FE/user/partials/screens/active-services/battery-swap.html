@@ -1,0 +1,45 @@
+<!-- Partial: user/partials/screens/active-services/battery-swap.html -->
+<section id="screen-battery-swap" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-personal-booking')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Xác nhận đổi pin</span>
+    <span class="nav-action"><i class="fa-solid fa-arrow-right-arrow-left" style="font-size: 17px;"></i></span>
+  </div>
+
+  <div style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 14px;">Tùy chọn khi Hub có hỗ trợ</div>
+
+  <div class="card-box" style="margin-bottom: 16px;">
+    <div style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--text-main);">Phiên đổi pin đã đặt</div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Hub</span>
+      <span style="font-weight: 600; color: var(--text-main);">Ga Metro ĐHQG</span>
+    </div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Phương tiện</span>
+      <span style="font-weight: 600; color: var(--text-main);">59-X1 123.45</span>
+    </div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Loại pin</span>
+      <span style="font-weight: 600; color: var(--text-main);">B48 · tương thích</span>
+    </div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Số lượng thực tế</span>
+      <span style="font-weight: 600; color: var(--text-main);">2 pin</span>
+    </div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Trạng thái</span>
+      <span style="font-weight: 600; color: var(--text-main);">Chờ xác nhận hoàn tất</span>
+    </div>
+  </div>
+
+  <label class="checkbox-custom-row">
+    <input type="checkbox" id="batteryCheckConfirm" checked />
+    <span>Đã đối chiếu pin và hoàn tất việc đổi pin.</span>
+  </label>
+
+  <div class="note-box-simple" style="margin-top: 18px; margin-bottom: 28px;">
+    Hệ thống kiểm tra quyền, pin tương thích và thứ tự thao tác trước khi ghi nhận kết quả.
+  </div>
+
+  <button class="btn-primary" style="width: 100%; font-weight: 700;" onclick="App.finishBatterySwap()">Xác nhận hoàn tất đổi pin</button>
+</section>

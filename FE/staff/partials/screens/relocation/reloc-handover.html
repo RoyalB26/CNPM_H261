@@ -1,0 +1,76 @@
+<!-- Partial: staff/partials/screens/relocation/reloc-handover.html -->
+<section id="screen-reloc-handover" class="staff-screen">
+  <div class="screen-top-bar">
+    <button class="nav-back-btn" onclick="StaffApp.goToScreen('screen-reloc-route')"><i class="fa-solid fa-angle-left"></i></button>
+    <div class="top-bar-title-wrap">
+      <div class="main-label">XÁC NHẬN BÀN GIAO HẠ TẦNG</div>
+    </div>
+    <span class="tag-badge-pill">Nhiệm vụ #102</span>
+  </div>
+
+  <!-- QR Camera Scanner Viewfinder -->
+  <div class="camera-scanner-frame" style="margin-bottom: 14px;">
+    <div style="font-size: 13px; font-weight: 800; text-align: left; margin-bottom: 24px;">CAMERA QUÉT MÃ QR</div>
+    <div class="qr-target-box">
+      <div class="qr-crosshair top-left"></div>
+      <div class="qr-crosshair top-right"></div>
+      <div class="qr-crosshair bottom-left"></div>
+      <div class="qr-crosshair bottom-right"></div>
+      <span style="font-size: 12px; font-weight: 700; color: #475569;">[ QR FRAME ]</span>
+    </div>
+    <p style="font-size: 11.5px; color: var(--text-muted); margin-top: 20px;">
+      Căn mã QR trên xe hoặc cọc đỗ vào khung quét
+    </p>
+  </div>
+
+  <!-- Reconciliation Table matching 3.jpg -->
+  <div class="staff-card" style="margin-bottom: 20px; padding: 14px;">
+    <div style="font-size: 13.5px; font-weight: 800; margin-bottom: 4px;">BẢNG ĐỐI SOÁT DỮ LIỆU ĐÃ TRẢ</div>
+    <div style="display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 800; margin-bottom: 10px;">
+      <span>TIẾN TRÌNH:</span>
+      <span id="handoverProgressCount">18/20 xe</span>
+    </div>
+
+    <div class="reconcile-table-list" id="reconcileRows">
+      <!-- Row 1 -->
+      <div class="reconcile-row done" onclick="StaffApp.toggleBikeRow(this)">
+        <div class="check-box-square"><i class="fa-solid fa-check"></i></div>
+        <strong style="font-size: 12.5px;">BK-EB-001</strong>
+        <span style="font-size: 12px; color: var(--text-muted);">Pin: 85%</span>
+        <span style="font-size: 12px; color: var(--text-muted);">Cọc sạc: 02</span>
+        <span class="status-pill done">Done</span>
+      </div>
+      <!-- Row 2 -->
+      <div class="reconcile-row done" onclick="StaffApp.toggleBikeRow(this)">
+        <div class="check-box-square"><i class="fa-solid fa-check"></i></div>
+        <strong style="font-size: 12.5px;">BK-EB-002</strong>
+        <span style="font-size: 12px; color: var(--text-muted);">Pin: 85%</span>
+        <span style="font-size: 12px; color: var(--text-muted);">Cọc sạc: 02</span>
+        <span class="status-pill done">Done</span>
+      </div>
+      <!-- Row 3: Waiting -->
+      <div class="reconcile-row waiting" id="bikeRow19" onclick="StaffApp.simulateScanBike(19)">
+        <div class="check-box-square"></div>
+        <strong style="font-size: 12.5px;">BK-EB-019</strong>
+        <span style="font-size: 12px; color: var(--text-muted);">Pin: 85%</span>
+        <span style="font-size: 12px; color: var(--text-muted);">Cọc sạc: 02</span>
+        <span class="status-pill waiting">Waiting</span>
+      </div>
+      <!-- Row 4: Waiting -->
+      <div class="reconcile-row waiting" id="bikeRow20" onclick="StaffApp.simulateScanBike(20)">
+        <div class="check-box-square"></div>
+        <strong style="font-size: 12.5px;">BK-EB-020</strong>
+        <span style="font-size: 12px; color: var(--text-muted);">Pin: 85%</span>
+        <span style="font-size: 12px; color: var(--text-muted);">Cọc sạc: 02</span>
+        <span class="status-pill waiting">Waiting</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-staff-primary" onclick="StaffApp.completeHandover()">
+    <span>HOÀN TẤT BÀN GIAO</span>
+  </button>
+  <button class="btn-staff-secondary" onclick="StaffApp.openRelocIncidentReport()">
+    <span>BÁO CÁO SỰ CỐ</span>
+  </button>
+</section>

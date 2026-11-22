@@ -1,0 +1,92 @@
+<!-- Partial: staff/partials/screens/guard/shift.html -->
+<section id="screen-guard-shift" class="staff-screen">
+  <div class="screen-top-bar">
+    <button class="nav-back-btn" onclick="StaffApp.goToScreen('screen-guard-checkin')"><i class="fa-solid fa-angle-left"></i></button>
+    <div class="top-bar-title-wrap">
+      <div class="sub-label">ĐỐI SOÁT CA TRỰC</div>
+      <div class="main-label">Nhật ký ca trực</div>
+    </div>
+    <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);" id="shiftSubLabel">Ca chiều</span>
+  </div>
+
+  <div style="margin-bottom: 12px;">
+    <div style="font-size: 13px; font-weight: 800;">TỔNG KẾT CA LÀM VIỆC</div>
+    <div style="font-size: 11.5px; color: var(--text-muted);" id="shiftDetailMeta">22/10/2026 · 13:00 - 17:00 · Hub KTX Khu A</div>
+  </div>
+
+  <!-- 2 Big Stat Boxes matching 13.jpg -->
+  <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 10px; margin-bottom: 16px;">
+    <div class="dark-ticket-card" style="padding: 14px;">
+      <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Lượt xe đã phục vụ</div>
+      <div style="display: flex; align-items: baseline; gap: 4px;">
+        <span style="font-size: 26px; font-weight: 900;" id="shiftServedCount">48</span>
+        <span style="font-size: 12px; color: #cbd5e1;">lượt</span>
+      </div>
+    </div>
+
+    <div class="staff-card" style="padding: 14px;">
+      <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Tiền mặt đã thu</div>
+      <div style="font-size: 19px; font-weight: 900; color: var(--text-main);" id="shiftTotalCash">1.200.000</div>
+      <span style="font-size: 11px; color: var(--text-muted);">VNĐ</span>
+    </div>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; margin-bottom: 8px;">
+    <span>CHI TIẾT GIAO DỊCH</span>
+    <span style="color: var(--text-muted);" id="shiftTransCountBadge">48 lượt</span>
+  </div>
+
+  <!-- Transaction list -->
+  <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;" id="shiftTransactionsContainer">
+    <div class="staff-card" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 12px; font-weight: 800; color: var(--text-muted);">01</span>
+        <div>
+          <strong style="font-size: 13.5px;">59-B2 123.45</strong>
+          <div style="font-size: 11px; color: var(--text-muted);">14:36 · 2 giờ 06 phút</div>
+        </div>
+      </div>
+      <strong style="font-size: 13px;">25.000 VNĐ</strong>
+    </div>
+
+    <div class="staff-card" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 12px; font-weight: 800; color: var(--text-muted);">02</span>
+        <div>
+          <strong style="font-size: 13.5px;">51-H1 678.90</strong>
+          <div style="font-size: 11px; color: var(--text-muted);">14:22 · 1 giờ 48 phút</div>
+        </div>
+      </div>
+      <strong style="font-size: 13px;">25.000 VNĐ</strong>
+    </div>
+
+    <div class="staff-card" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 12px; font-weight: 800; color: var(--text-muted);">03</span>
+        <div>
+          <strong style="font-size: 13.5px;">59-C3 246.80</strong>
+          <div style="font-size: 11px; color: var(--text-muted);">13:58 · 3 giờ 12 phút</div>
+        </div>
+      </div>
+      <strong style="font-size: 13px;">25.000 VNĐ</strong>
+    </div>
+
+    <div class="staff-card" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted);">
+      <span>+ 45 giao dịch khác trong ca</span>
+      <a href="javascript:void(0)" onclick="alert('Đang tải danh sách 45 giao dịch...')" style="color: #2563eb; font-weight: 700;">Xem tất cả</a>
+    </div>
+  </div>
+
+  <!-- Cash Reconciliation Black Box -->
+  <div class="dark-ticket-card" style="margin-bottom: 20px; padding: 14px;">
+    <div style="font-size: 12px; font-weight: 800; margin-bottom: 2px;">Đối soát tiền mặt</div>
+    <div style="font-size: 13.5px; color: #cbd5e1;">Số tiền cần nộp về quầy: <strong style="color: #ffffff;">1.200.000 VNĐ</strong></div>
+  </div>
+
+  <button class="btn-staff-primary" onclick="StaffApp.closeShift()">
+    <span>CHỐT CA TRỰC</span>
+  </button>
+  <p style="text-align: center; font-size: 11.5px; color: var(--text-muted); margin-top: 8px;">
+    Sau khi chốt ca, dữ liệu không thể chỉnh sửa
+  </p>
+</section>

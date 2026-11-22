@@ -1,0 +1,27 @@
+<!-- Partial: operator/partials/modals/sim-failed.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- MODAL: MÔ PHỎNG THẤT BẠI (Operator Wireframe 18.jpg) -->
+<div id="modalSimFailed" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header-dark">
+      <span>TẠO LỆNH ĐIỀU PHỐI PHƯƠNG TIỆN</span>
+      <i class="fa-solid fa-xmark" style="cursor: pointer;" onclick="OperatorApp.closeModal('modalSimFailed')"></i>
+    </div>
+    <div class="modal-body" style="text-align: center; padding: 30px 24px;">
+      <div style="width: 56px; height: 56px; border-radius: 50%; border: 2.5px solid #ef4444; color: #ef4444; font-size: 24px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+        <i class="fa-solid fa-exclamation"></i>
+      </div>
+      <h3 style="font-size: 17px; font-weight: 800; margin-bottom: 8px;">MÔ PHỎNG THẤT BẠI</h3>
+      <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;">
+        Mô phỏng thất bại do sự cố gián đoạn dữ liệu giả lập/IoT hoặc mất kết nối.
+      </p>
+      <div style="font-size: 12px; font-family: monospace; color: #b91c1c; font-weight: 700;">
+        Mã lỗi: EX-10-02 (IOT_TIMEOUT)
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content: center;">
+      <button class="btn-secondary-light" style="padding: 9px 24px;" onclick="OperatorApp.closeModal('modalSimFailed')">HỦY</button>
+      <button class="btn-primary-dark" style="padding: 9px 24px;" onclick="OperatorApp.retrySimulation()">THỬ LẠI</button>
+    </div>
+  </div>
+</div>

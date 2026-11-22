@@ -1,0 +1,37 @@
+<!-- Partial: user/partials/screens/auth-profile/login.html -->
+<section id="screen-login" class="screen active">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 24px;">
+    <span style="font-weight: 700; font-size: 16px;">E-Mobility Hub</span>
+    <i class="fa-solid fa-bicycle" style="font-size: 22px;"></i>
+  </div>
+  <h1 style="font-size: 28px; font-weight: 800; margin-bottom: 6px;">Đăng nhập</h1>
+  <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;">Chào mừng bạn trở lại</p>
+
+  <form id="loginForm" onsubmit="App.handleLogin(event)">
+    <div class="form-group">
+      <label class="form-label">Số điện thoại</label>
+      <div class="input-box">
+        <input type="tel" id="loginPhone" placeholder="Nhập số điện thoại" value="0123456789" required>
+        <i class="fa-solid fa-mobile-screen input-icon"></i>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 12px;">
+      <label class="form-label">Mật khẩu</label>
+      <div class="input-box">
+        <input type="password" id="loginPassword" placeholder="Nhập mật khẩu" value="123456" required>
+        <i class="fa-solid fa-lock input-icon"></i>
+      </div>
+    </div>
+
+    <div style="text-align: right; margin-bottom: 28px;">
+      <a href="javascript:void(0)" onclick="App.navigateTo('screen-forgot-password')" style="font-size: 13px; color: var(--text-main); font-weight: 600; text-decoration: none;">Quên mật khẩu?</a>
+    </div>
+
+    <button type="submit" class="btn-primary" style="margin-bottom: 20px;">Đăng nhập</button>
+  </form>
+
+  <p style="text-align: center; font-size: 13.5px; color: var(--text-muted);">
+    Chưa có tài khoản? <a href="javascript:void(0)" onclick="App.navigateTo('screen-register')" style="font-weight: 600; color: var(--text-main); text-decoration: none;">Đăng ký ngay</a>
+  </p>
+</section>

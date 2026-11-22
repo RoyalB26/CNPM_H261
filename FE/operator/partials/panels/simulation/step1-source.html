@@ -1,0 +1,144 @@
+<!-- Partial: operator/partials/panels/simulation/step1-source.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- ================= STEP 1: CHỌN NGUỒN DỮ LIỆU (13.jpg & 14.jpg) ================= -->
+<div id="simStep1View" class="sim-subview active">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+    <div>
+      <h2 style="font-size: 18px; font-weight: 800;">Nguồn dữ liệu What-if</h2>
+      <p style="font-size: 13px; color: var(--text-muted);">Xác định trạng thái mạng lưới ban đầu để làm căn cứ tính toán mô phỏng</p>
+    </div>
+    <button class="btn-secondary-light" onclick="OperatorApp.showSimulationHistory()">
+      <i class="fa-solid fa-clock-rotate-left" style="margin-right: 6px;"></i> Lịch sử mô phỏng
+    </button>
+  </div>
+
+  <!-- Two Source Choices -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+    <!-- Option 1: Live State A -->
+    <div class="source-card selected" id="sourceOption1" onclick="OperatorApp.selectSourceOption(1)">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <label style="font-size: 14.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="radio" name="sourceChoice" checked>
+          <span>Lựa chọn 1: Trạng thái mạng lưới hiện tại (Trạng thái A)</span>
+        </label>
+        <span class="badge badge-info">Khuyên dùng</span>
+      </div>
+      <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.4;">
+        Sử dụng số liệu thời gian thực được cập nhật từ telemetry của toàn bộ các Hub trong ĐHQG.
+      </p>
+    </div>
+
+    <!-- Option 2: Manual / Upload A' -->
+    <div class="source-card" id="sourceOption2" onclick="OperatorApp.selectSourceOption(2)">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <label style="font-size: 14.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="radio" name="sourceChoice">
+          <span>Lựa chọn 2: Nhập thủ công dữ liệu (Trạng thái A')</span>
+        </label>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn-secondary-light" style="padding: 2px 8px; font-size: 11px;" onclick="event.stopPropagation(); alert('Nhập dữ liệu mẫu từ file CSV');">CSV</button>
+          <button class="btn-secondary-light" style="padding: 2px 8px; font-size: 11px;" onclick="event.stopPropagation(); alert('Nhập dữ liệu mẫu từ JSON');">JSON</button>
+        </div>
+      </div>
+      <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.4;">
+        Nhập số liệu giả lập hoặc tải lên file dữ liệu kịch bản để thử nghiệm các tình huống ngoại lệ.
+      </p>
+    </div>
+  </div>
+
+  <!-- Table of Hubs for Step 1 (Wireframe 13.jpg & 14.jpg) -->
+  <div class="data-table-container" style="margin-bottom: 24px;">
+    <div class="table-toolbar">
+      <span style="font-weight: 700; font-size: 13.5px;" id="sourceTableTitle">Bảng dữ liệu trạng thái mạng lưới (Hub 01 - Hub 08)</span>
+      <button class="btn-secondary-light" id="btnValidateParams" style="padding: 6px 14px; font-size: 12.5px;" onclick="OperatorApp.testValidateParams()">
+        <i class="fa-solid fa-vial-circle-check" style="margin-right: 4px;"></i> Kiểm tra tham số
+      </button>
+    </div>
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Mã Hub</th>
+          <th>Tên Hub</th>
+          <th>Tổng xe hiện có</th>
+          <th>Chỗ đỗ rảnh</th>
+          <th>Trụ sạc hoạt động</th>
+          <th>Công suất nền (kW)</th>
+        </tr>
+      </thead>
+      <tbody id="simSourceTableBody">
+        <tr>
+          <td><strong>HUB-01</strong></td>
+          <td>Hub Ga Metro A</td>
+          <td><input type="number" class="manual-input-cell" value="65" readonly></td>
+          <td><input type="number" class="manual-input-cell" value="35" readonly></td>
+          <td><input type="number" class="manual-input-cell" value="18" readonly></td>
+          <td>200 kW</td>
+        </tr>
+        <tr>
+          <td><strong>HUB-02</strong></td>
+          <td>Hub ĐH Bách Khoa</td>
+          <td><input type="number" class="manual-input-cell" value="62" readonly></td>
+          <td><input type="number" class="manual-input-cell" value="38" readonly></td>
+          <td><input type="number" class="manual-input-cell" value="17" readonly></td>
+          <td>180 kW</td>
+        </tr>
+        <tr>
+          <td><strong>HUB-03</strong></td>
+          <td>Hub KTX Khu B</td>
+          <td><input type="number" class="manual-input-cell" value="59" readonly></td>
+          <td><input type="number" class="manual-input-cell" value="41" readonly></td>
+          <td><input type="number" class="manual-input-cell" value="16" readonly></td>
+          <td>210 kW</td>
+        </tr>
+        <tr id="rowHub04">
+          <td><strong>HUB-04</strong></td>
+          <td>Hub ĐH Quốc Tế</td>
+          <td><input type="number" id="hub04Bikes" class="manual-input-cell" value="56" readonly></td>
+          <td><input type="number" id="hub04Free" class="manual-input-cell" value="44" readonly></td>
+          <td><input type="number" class="manual-input-cell" value="15" readonly></td>
+          <td>190 kW</td>
+        </tr>
+        <tr>
+          <td><strong>HUB-05</strong></td>
+          <td>Hub KTX Khu A</td>
+          <td><input type="number" class="manual-input-cell" value="53" readonly></td>
+          <td><input type="number" class="manual-input-cell" value="47" readonly></td>
+          <td><input type="number" class="manual-input-cell" value="18" readonly></td>
+          <td>195 kW</td>
+        </tr>
+        <tr>
+          <td><strong>HUB-06</strong></td>
+          <td>Hub ĐH KHTN</td>
+          <td><input type="number" class="manual-input-cell" value="50" readonly></td>
+          <td><input type="number" class="manual-input-cell" value="50" readonly></td>
+          <td><input type="number" class="manual-input-cell" value="17" readonly></td>
+          <td>175 kW</td>
+        </tr>
+        <tr>
+          <td><strong>HUB-07</strong></td>
+          <td>Hub ĐH KHXH&NV</td>
+          <td><input type="number" class="manual-input-cell" value="47" readonly></td>
+          <td><input type="number" class="manual-input-cell" value="53" readonly></td>
+          <td><input type="number" class="manual-input-cell" value="16" readonly></td>
+          <td>160 kW</td>
+        </tr>
+        <tr>
+          <td><strong>HUB-08</strong></td>
+          <td>Hub Thư viện Trung tâm</td>
+          <td><input type="number" class="manual-input-cell" value="44" readonly></td>
+          <td><input type="number" class="manual-input-cell" value="56" readonly></td>
+          <td><input type="number" class="manual-input-cell" value="18" readonly></td>
+          <td>185 kW</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Footer Action Row -->
+  <div style="display: flex; justify-content: flex-end; gap: 12px;">
+    <button class="btn-primary-dark" onclick="OperatorApp.goToSimStep(2)">
+      <span>Tiếp tục sang Bước 2: Cấu hình kịch bản</span>
+      <i class="fa-solid fa-arrow-right"></i>
+    </button>
+  </div>
+</div>

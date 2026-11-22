@@ -1,0 +1,261 @@
+/**
+ * @fileoverview Module Dịch vụ đang hoạt động & Vận hành (Active Services Module).
+ * @module User/Modules/ActiveServices
+ */
+(function (global) {
+  "use strict";
+  global.UserModules = global.UserModules || {};
+
+  global.UserModules.ActiveServices = {
+  async loadActiveServices() {
+    try {
+      const active = await ApiService.getActiveServices();
+      if (active) {
+        AppState.activeServices = active;
+        this.renderActiveServices(active);
+      }
+    } catch (e) {
+      console.warn("Could not load active services:", e);
+    }
+  },
+
+  renderActiveServices(data) {
+    const container = document.getElementById("activeServicesContainer");
+    if (!container || !data) return;
+
+    // Dynamically update map bottom floating pill
+    const pill = document.getElementById("activeRidePill");
+    if (pill) {
+      if (data.ride) {
+        pill.style.display = "flex";
+        const pillText = document.getElementById("activeRidePillText");
+        if (pillText) {
+          pillText.innerText = `Chuyến đi: ${data.ride.vehicle_id || data.ride.vehicleId} đang hoạt động`;
+        }
+      } else {
+        pill.style.display = "none";
+      }
+    }
+
+    let items = [];
+    if (data.ride) {
+      items.push(`
+        <div class="card-box selectable" onclick="App.navigateTo('screen-ride-active')">
+          <div>
+            <div style="font-weight: 700; font-size: 14px;">Xe đạp điện ${data.ride.vehicle_id || data.ride.vehicleId}</div>
+            <div style="font-size: 12px; color: var(--text-muted);">${data.ride.status || 'Đang sử dụng'} · ${data.ride.elapsed_minutes || data.ride.elapsedMinutes || 13} phút</div>
+          </div>
+          <span style="font-size: 11px; background: #ecfdf5; color: #10b981; font-weight: 700; padding: 2px 8px; border-radius: 4px;">Hoạt động</span>
+        </div>
+      `);
+
+      const rideSub = document.getElementById("rideActiveSubtitle");
+      if (rideSub) rideSub.innerText = `${data.ride.vehicle_id || data.ride.vehicleId} · ${data.ride.origin_hub || data.ride.originHub} → ${data.ride.destination_hub || data.ride.destHub}`;
+      const timerEl = document.getElementById("rideTimer");
+      if (timerEl) timerEl.innerText = `${data.ride.elapsed_minutes || data.ride.elapsedMinutes || 13} phút`;
+      const batEl = document.getElementById("rideBatteryLevel");
+      if (batEl) batEl.innerText = `${data.ride.battery_level || data.ride.batteryLevel || 78}%`;
+      const stEl = document.getElementById("rideStatusBadge");
+      if (stEl) stEl.innerText = data.ride.status || "Đang sử dụng";
+    }
+
+    if (data.parking) {
+      items.push(`
+        <div class="card-box selectable" onclick="App.navigateTo('screen-parking-active')">
+          <div>
+            <div style="font-weight: 700; font-size: 14px;">Gửi xe cá nhân (${data.parking.plate_number || data.parking.plate})</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Chỗ đỗ ${data.parking.slot_id || data.parking.slot} · ${data.parking.elapsed_minutes || data.parking.elapsedMinutes || 45} phút</div>
+          </div>
+          <span style="font-size: 11px; background: #e0f2fe; color: #0284c7; font-weight: 700; padding: 2px 8px; border-radius: 4px;">Đang đỗ</span>
+        </div>
+      `);
+
+      const parkSub = document.getElementById("parkingActiveSubtitle");
+      if (parkSub) parkSub.innerText = `EMH-1024 · ${data.parking.hub_name || data.parking.hubName}`;
+      const parkPlate = document.getElementById("parkingActivePlate");
+      if (parkPlate) parkPlate.innerText = data.parking.plate_number || data.parking.plate;
+      const parkSlot = document.getElementById("parkingActiveSlot");
+      if (parkSlot) parkSlot.innerText = data.parking.slot_id || data.parking.slot;
+      const parkIn = document.getElementById("parkingActiveCheckin");
+      if (parkIn) parkIn.innerText = data.parking.checkin_time || data.parking.checkin || "10:00";
+    }
+
+    if (data.charging) {
+      items.push(`
+        <div class="card-box selectable" onclick="App.navigateTo('screen-charging-active')">
+          <div>
+            <div style="font-weight: 700; font-size: 14px;">Sạc trụ nhanh ${data.charging.port_id || data.charging.port}</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Đã nạp ${data.charging.power_consumed_kwh || data.charging.powerConsumed || 2.4} kWh · ${data.charging.current_charge || data.charging.batteryPercent || 65}%</div>
+          </div>
+          <span style="font-size: 11px; background: #fef3c7; color: #d97706; font-weight: 700; padding: 2px 8px; border-radius: 4px;">Đang sạc</span>
+        </div>
+      `);
+
+      const chgPort = document.getElementById("chargingActivePort");
+      if (chgPort) chgPort.innerText = `Trụ sạc ${data.charging.port_id || data.charging.port}`;
+      const chgPct = document.getElementById("chargingActivePercent");
+      if (chgPct) chgPct.innerText = `${data.charging.current_charge || data.charging.batteryPercent || 65}%`;
+      const chgPwr = document.getElementById("chargingActivePower");
+      if (chgPwr) chgPwr.innerText = `${data.charging.power_consumed_kwh || data.charging.powerConsumed || 2.4} kWh`;
+      const chgTime = document.getElementById("chargingActiveTime");
+      if (chgTime) chgTime.innerText = `${data.charging.elapsed_minutes || data.charging.elapsedMinutes || 25} phút`;
+    }
+
+    if (items.length > 0) {
+      container.innerHTML = items.join("");
+    }
+  },
+
+  updateReviewRentalView() {
+    const bike = AppState.bookingDraft.selectedBike || "XE-024";
+    const batt = AppState.bookingDraft.bikeBattery || 85;
+    const origin = AppState.bookingDraft.hubName || "Hub Ga Metro ĐHQG";
+    const destSelect = document.getElementById("selectDestHub");
+    const dest = destSelect ? destSelect.value : "Hub Đại học Bách khoa";
+
+    const rBike = document.getElementById("reviewRentalBike");
+    if (rBike) rBike.innerText = `${bike} (Pin ${batt}%)`;
+    const rOrig = document.getElementById("reviewRentalOriginHub");
+    if (rOrig) rOrig.innerText = origin;
+    const rDest = document.getElementById("reviewRentalDestHub");
+    if (rDest) rDest.innerText = dest;
+    const rNote = document.getElementById("reviewRentalPolicyNote");
+    if (rNote) rNote.innerText = `Thời gian giữ xe: 10 phút sau khi xác nhận. Cước phí tạm tính: 10,000đ/giờ (thanh toán khi quét mã mở xe tại Hub).`;
+  },
+
+  updateReviewParkingView() {
+    const plateEl = document.getElementById("parkingPersonalVehicle");
+    const plate = plateEl ? plateEl.value : "Xe máy điện · 59-X1 123.45";
+    const timeEl = document.getElementById("parkingArrivalTime");
+    const time = timeEl ? timeEl.value : "18/10/2026 · 10:00";
+    const durEl = document.getElementById("parkingDuration");
+    const dur = durEl ? durEl.value : "2 giờ";
+    const hub = AppState.bookingDraft.hubName || "Hub Ga Metro ĐHQG";
+
+    const rPlate = document.getElementById("reviewParkingPlate");
+    if (rPlate) rPlate.innerText = plate;
+    const rSlot = document.getElementById("reviewParkingSlotHub");
+    if (rSlot) rSlot.innerText = `Chỗ đỗ khả dụng (${hub})`;
+    const rTime = document.getElementById("reviewParkingTime");
+    if (rTime) rTime.innerText = `${time} (${dur})`;
+  },
+
+  updateReviewSwapView() {
+    const typeEl = document.getElementById("swapBatteryType");
+    const bType = typeEl ? typeEl.value : "Pin chuẩn 48V-20Ah";
+    const qtyEl = document.getElementById("swapBatteryQuantity");
+    const qty = qtyEl ? qtyEl.value : "1 pin";
+    const hub = AppState.bookingDraft.hubName || "Hub Ga Metro ĐHQG";
+
+    const rType = document.getElementById("reviewSwapType");
+    if (rType) rType.innerText = `${bType} (${qty})`;
+    const rHub = document.getElementById("reviewSwapHub");
+    if (rHub) rHub.innerText = `Tủ pin ${hub}`;
+    const rFee = document.getElementById("reviewSwapFee");
+    if (rFee) rFee.innerText = `${(25000 * (parseInt(qty) || 1)).toLocaleString()}đ / lần`;
+  },
+
+  async startRide() {
+    const bookingId = AppState.selectedBookingId;
+
+    if (!bookingId) {
+      this.showToast("Không tìm thấy mã đặt xe!");
+      return;
+    }
+
+    try {
+      // Gọi API Backend
+      const result = await ApiService.startRide(bookingId);
+
+      // Cập nhật dữ liệu chuyến đi trên Frontend
+      AppState.activeServices = {
+        ...AppState.activeServices,
+        has_active: true,
+        ride: result.ride
+      };
+
+      AppState.activeRide = {
+        vehicleId: result.ride.vehicle_id,
+        elapsedMinutes: result.ride.elapsed_minutes,
+        status: result.ride.status
+      };
+
+      // Cập nhật trạng thái Booking
+      const booking = AppState.bookings.find(
+        b => b.id === bookingId
+      );
+
+      if (booking) {
+        booking.status = "Đang sử dụng";
+      }
+
+      // Chỉ chuyển màn hình khi Backend thành công
+      this.showToast("Bắt đầu tính thời gian di chuyển!");
+      this.navigateTo("screen-ride-active");
+
+    } catch (error) {
+      console.error("Start ride error:", error);
+      this.showToast(error.message || "Không thể bắt đầu chuyến đi!");
+    }
+  },
+
+  startRideTicker() {
+    let minutes = AppState.activeServices?.ride?.elapsed_minutes || AppState.activeRide?.elapsedMinutes || 0;
+    setInterval(() => {
+      minutes++;
+      const timerEl = document.getElementById("rideTimer");
+      if (timerEl) {
+        timerEl.innerText = `${minutes} phút`;
+      }
+    }, 60000);
+  },
+
+  async finishReturnRental() {
+    try {
+      const activeRide = AppState.activeServices?.ride || AppState.activeRide;
+      const vehId = activeRide?.vehicle_id || activeRide?.vehicleId || "XE-024";
+      const hubId = activeRide?.destination_hub_id || AppState.bookingDraft.hubId || "hub-02";
+
+      const res = await ApiService.returnVehicle({ vehicle_id: vehId, hub_id: hubId });
+      if (res && res.success) {
+        this.showToast(res.message || "Xe đã được khóa chốt tại Hub!");
+        this.navigateTo("screen-invoice-rental");
+      } else {
+        this.navigateTo("screen-service-rejected");
+      }
+    } catch (e) {
+      this.showToast("Xe đã được khóa chốt tại Hub!");
+      this.navigateTo("screen-invoice-rental");
+    }
+  },
+
+  selectChargerSlot(slotText, elementId) {
+    document.querySelectorAll("#screen-select-charging .card-box").forEach(c => c.classList.remove("selected"));
+    document.querySelectorAll("#screen-select-charging .radio-circle").forEach(r => r.classList.remove("checked"));
+    const el = document.getElementById(elementId);
+    if (el) {
+      el.classList.add("selected");
+      const rc = el.querySelector(".radio-circle");
+      if (rc) rc.classList.add("checked");
+      const radio = el.querySelector("input[type='radio']");
+      if (radio) radio.checked = true;
+    }
+  },
+
+  finishParkingExit() {
+    this.showToast("Đã xác nhận xe rời chỗ đỗ P08!");
+    this.navigateTo("screen-map-home");
+  },
+
+  finishChargingSession() {
+    this.showToast("Đã dừng sạc điện an toàn.");
+    this.navigateTo("screen-invoice-charging");
+  },
+
+  finishBatterySwap() {
+    this.showToast("Đã nhận pin 100% thành công.");
+    this.navigateTo("screen-invoice-swap");
+  },
+
+  };
+})(window);

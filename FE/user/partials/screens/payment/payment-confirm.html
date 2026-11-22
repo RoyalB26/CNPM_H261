@@ -1,0 +1,13 @@
+<!-- Partial: user/partials/screens/payment/payment-confirm.html -->
+<section id="screen-payment-confirm" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-payment-method')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Xác nhận thanh toán</span>
+  </div>
+  <div class="card-box">
+    <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;" id="confirmPayTitle">Xác nhận trừ tiền từ ví</div>
+    <div style="font-size: 24px; font-weight: 800; margin-bottom: 12px;" id="confirmPayAmount">15,000 đ</div>
+    <div style="font-size: 13px; color: var(--text-muted);">Phương thức: <strong id="confirmPayMethod">Ví điện tử</strong></div>
+  </div>
+  <button class="btn-primary" onclick="App.executePaymentProcess()">Xác thực & Trừ tiền</button>
+</section>

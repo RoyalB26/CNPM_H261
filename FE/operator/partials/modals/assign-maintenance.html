@@ -1,0 +1,59 @@
+<!-- Partial: operator/partials/modals/assign-maintenance.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- MODAL: PHÂN CÔNG BẢO TRÌ (Operator Wireframe 7.jpg) -->
+<div id="modalAssignMaintenance" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header-dark">
+      <span>TẠO PHIẾU / PHÂN CÔNG BẢO TRÌ</span>
+      <i class="fa-solid fa-xmark" style="cursor: pointer;" onclick="OperatorApp.closeModal('modalAssignMaintenance')"></i>
+    </div>
+    <div class="modal-body">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #f8fafc; padding: 10px 14px; border-radius: 8px;">
+        <div>
+          <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">MÃ SỰ CỐ</div>
+          <strong style="font-size: 15px;" id="assignTicketCode">ERR-8812</strong>
+        </div>
+        <span class="badge badge-danger">Chờ xử lý</span>
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label class="form-label">Mã Thiết bị & Vị trí</label>
+        <input type="text" id="assignDeviceHub" class="form-input" value="CS-02-HUB_A · Hub KTX Khu A (Trạm số 02)" readonly>
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label class="form-label">Phân loại lỗi</label>
+        <input type="text" id="assignFaultCategory" class="form-input" value="Quá nhiệt cổng sạc (58°C - Ngưỡng an toàn 55°C)" readonly>
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label class="form-label">Giao cho Nhân viên Kỹ thuật *</label>
+        <select id="technicianSelect" class="form-input">
+          <option value="STF-02">Nguyen Van B (STF-02 - Bảo trì)</option>
+          <option value="STF-01">Nhân viên điều chuyển 1 (STF-01)</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label class="form-label">Mức độ ưu tiên *</label>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-priority active" data-p="Khẩn cấp" onclick="OperatorApp.selectPriority(this)">Khẩn cấp</button>
+          <button type="button" class="btn-priority" data-p="Cao" onclick="OperatorApp.selectPriority(this)">Cao</button>
+          <button type="button" class="btn-priority" data-p="Trung bình" onclick="OperatorApp.selectPriority(this)">Trung bình</button>
+          <button type="button" class="btn-priority" data-p="Thấp" onclick="OperatorApp.selectPriority(this)">Thấp</button>
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label">Ghi chú điều hành</label>
+        <textarea id="assignNotes" class="form-input" rows="2" placeholder="Ví dụ: Ưu tiên xử lý gấp trước giờ cao điểm 16:30"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary-light" onclick="OperatorApp.closeModal('modalAssignMaintenance')">Hủy</button>
+      <button class="btn-primary-dark" onclick="OperatorApp.submitMaintenanceAssign()">
+        <i class="fa-solid fa-check" style="margin-right: 4px;"></i> XÁC NHẬN PHÂN CÔNG
+      </button>
+    </div>
+  </div>
+</div>

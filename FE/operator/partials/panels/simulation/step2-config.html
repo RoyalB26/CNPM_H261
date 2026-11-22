@@ -1,0 +1,151 @@
+<!-- Partial: operator/partials/panels/simulation/step2-config.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- ================= STEP 2: CẤU HÌNH KỊCH BẢN WHAT-IF (16.jpg) ================= -->
+<div id="simStep2View" class="sim-subview">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+    <div>
+      <h2 style="font-size: 18px; font-weight: 800;">Cấu hình kịch bản What-if</h2>
+      <p style="font-size: 13px; color: var(--text-muted);">Thiết lập các biến cố, hệ số tải gia tăng và thông số mô phỏng giả định</p>
+    </div>
+  </div>
+
+  <!-- 4 Grid Sections matching 16.jpg -->
+  <div class="sim-grid-4boxes">
+
+    <!-- BOX 1: THÔNG TIN KỊCH BẢN -->
+    <div class="sim-card-box">
+      <div class="box-title">1. THÔNG TIN KỊCH BẢN</div>
+      <div style="margin-bottom: 14px;">
+        <label class="form-label">Tên kịch bản</label>
+        <input type="text" id="scenarioNameInput" class="form-input" value="Nhu cầu sạc tăng cao">
+      </div>
+      <div>
+        <label class="form-label">Tình huống (Chọn 1)</label>
+        <div class="radio-checkbox-list">
+          <label class="choice-item">
+            <input type="radio" name="scenarioType" checked>
+            <span>Nhu cầu sạc tăng đột biến</span>
+          </label>
+          <label class="choice-item">
+            <input type="radio" name="scenarioType">
+            <span>Bãi đỗ đầy</span>
+          </label>
+          <label class="choice-item">
+            <input type="radio" name="scenarioType">
+            <span>Trạm sạc gặp sự cố</span>
+          </label>
+          <label class="choice-item">
+            <input type="radio" name="scenarioType">
+            <span>Phương tiện tập trung tại một khu vực</span>
+          </label>
+          <label class="choice-item">
+            <input type="radio" name="scenarioType">
+            <span>Mở rộng Hub</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOX 2: THAM SỐ GIẢ ĐỊNH -->
+    <div class="sim-card-box">
+      <div class="box-title">2. THAM SỐ GIẢ ĐỊNH</div>
+
+      <div style="margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+          <label class="form-label">Mức tăng nhu cầu sạc</label>
+          <span style="font-weight: 700; font-size: 13.5px;" id="sliderValLabel">+50%</span>
+        </div>
+        <input type="range" min="0" max="150" value="50" step="5" class="form-slider" id="demandSlider" oninput="document.getElementById('sliderValLabel').innerText = '+' + this.value + '%'">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+        <div>
+          <label class="form-label">Thời lượng tình huống</label>
+          <input type="text" class="form-input" value="60 phút">
+        </div>
+        <div>
+          <label class="form-label">Thời điểm bắt đầu</label>
+          <select class="form-input">
+            <option>18:00</option>
+            <option>17:00</option>
+            <option>12:00</option>
+            <option>07:30</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+        <div>
+          <label class="form-label">Số trụ sạc bị ảnh hưởng</label>
+          <input type="text" class="form-input" value="2 trụ">
+        </div>
+        <div>
+          <label class="form-label">Công suất bị mất (dự kiến)</label>
+          <input type="text" class="form-input" value="50 kW">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div>
+          <label class="form-label">Tỷ lệ lấp đầy mục tiêu</label>
+          <select class="form-input">
+            <option>95%</option>
+            <option>85%</option>
+            <option>75%</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Số xe đến thêm</label>
+          <input type="text" class="form-input" value="+30 xe">
+        </div>
+      </div>
+    </div>
+
+    <!-- BOX 3: TRẠNG THÁI HUB -->
+    <div class="sim-card-box">
+      <div class="box-title">3. TRẠNG THÁI HUB</div>
+      <div class="metric-line">
+        <span>Chỗ đỗ</span>
+        <strong>65/100</strong>
+      </div>
+      <div class="metric-line">
+        <span>Trụ sạc hoạt động</span>
+        <strong>18/20</strong>
+      </div>
+      <div class="metric-line">
+        <span>Công suất nền</span>
+        <strong>200 kW</strong>
+      </div>
+      <div class="metric-line">
+        <span>Giới hạn Hub</span>
+        <strong>1000 kW</strong>
+      </div>
+    </div>
+
+    <!-- BOX 4: KIỂM TRA ĐIỀU KIỆN -->
+    <div class="sim-card-box">
+      <div class="box-title">4. KIỂM TRA ĐIỀU KIỆN</div>
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 13.5px;">
+          <i class="fa-solid fa-circle-check" style="color: var(--accent-green); font-size: 16px;"></i>
+          <span>Dữ liệu đầu vào hợp lệ</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 13.5px;">
+          <i class="fa-solid fa-circle-check" style="color: var(--accent-green); font-size: 16px;"></i>
+          <span>Trạng thái mạng lưới đã được tải</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Navigation Bar matching 16.jpg -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px;">
+    <button class="btn-secondary-light" onclick="OperatorApp.goToSimStep(1)">
+      <i class="fa-solid fa-arrow-left" style="margin-right: 6px;"></i> Quay lại
+    </button>
+    <button class="btn-primary-dark" onclick="OperatorApp.triggerSimulationCalculation()">
+      <i class="fa-solid fa-play" style="margin-right: 6px;"></i> Chạy mô phỏng
+    </button>
+  </div>
+</div>

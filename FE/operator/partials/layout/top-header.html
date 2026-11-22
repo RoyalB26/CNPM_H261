@@ -1,0 +1,16 @@
+<!-- Partial: operator/partials/layout/top-header.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- Top Bar -->
+<header class="top-header">
+  <div class="header-search">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="text" placeholder="Tìm kiếm Hub, Phương tiện...">
+  </div>
+  <div style="display: flex; align-items: center; gap: 16px;">
+    <i class="fa-regular fa-bell" style="font-size: 18px; color: var(--text-muted); cursor: pointer;" onclick="OperatorApp.openTelemetryDrawer()" title="Xem tất cả nhật ký"></i>
+    <button class="btn-emergency" onclick="OperatorApp.openEmergencyModal()">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <span>Dừng khẩn cấp</span>
+    </button>
+  </div>
+</header>

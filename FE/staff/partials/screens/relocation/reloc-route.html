@@ -1,0 +1,106 @@
+<!-- Partial: staff/partials/screens/relocation/reloc-route.html -->
+<section id="screen-reloc-route" class="staff-screen active">
+  <div class="screen-top-bar">
+    <button class="nav-back-btn" onclick="StaffApp.switchRole('relocation')"><i class="fa-solid fa-angle-left"></i></button>
+    <div class="top-bar-title-wrap">
+      <div class="sub-label">LỘ TRÌNH ĐIỀU CHUYỂN</div>
+      <div class="main-label">Hướng dẫn di chuyển</div>
+    </div>
+    <span class="tag-badge-pill">Nhiệm vụ #102</span>
+  </div>
+
+  <!-- Map Card with Suggested Route -->
+  <div class="staff-card" style="margin-bottom: 12px; padding: 14px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <span style="font-size: 13px; font-weight: 800;">BẢN ĐỒ TUYẾN ĐƯỜNG GỢI Ý</span>
+      <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Đang điều hướng</span>
+    </div>
+
+    <!-- SVG Simulated Map -->
+    <div class="route-map-box">
+      <svg viewBox="0 0 360 160" style="width: 100%; height: 100%;">
+        <!-- Road network lines -->
+        <path d="M 20 40 L 340 40 M 20 120 L 340 120 M 80 10 L 80 150 M 280 10 L 280 150" stroke="#f1f5f9" stroke-width="6" />
+        <!-- Curved Route -->
+        <path d="M 60 40 Q 120 140 200 40 T 300 120" fill="none" stroke="#0f172a" stroke-width="4" stroke-linecap="round" />
+
+        <!-- Source Hub Marker -->
+        <circle cx="60" cy="40" r="8" fill="#0f172a" />
+        <path d="M 60 48 L 52 64 L 68 64 Z" fill="#0f172a" />
+        <text x="35" y="24" font-size="10" font-weight="700" fill="#0f172a">HUB NGUỒN</text>
+
+        <!-- Destination Hub Marker -->
+        <circle cx="300" cy="120" r="8" fill="#0f172a" />
+        <path d="M 300 128 L 292 144 L 308 144 Z" fill="#0f172a" />
+        <text x="275" y="156" font-size="10" font-weight="700" fill="#0f172a">HUB ĐÍCH</text>
+
+        <!-- Route Distance Badge -->
+        <rect x="110" y="65" width="140" height="34" rx="6" fill="#ffffff" stroke="#e2e8f0" />
+        <text x="120" y="80" font-size="11" font-weight="800" fill="#0f172a">2,5 km · 10 phút</text>
+        <text x="120" y="93" font-size="9" fill="#64748b">Tuyến đường đề xuất</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Handover Points Card -->
+  <div class="staff-card" style="margin-bottom: 12px; padding: 14px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <span style="font-size: 12.5px; font-weight: 800;">ĐIỂM BÀN GIAO</span>
+      <span style="font-size: 11.5px; color: var(--text-muted);">Xe đạp điện</span>
+    </div>
+    <div class="handover-flow-row">
+      <div class="hub-flow-box">
+        <span class="hub-flow-sub">ĐI TỪ</span>
+        <strong class="hub-flow-title" id="relocFromHub">Hub KTX Khu A</strong>
+      </div>
+      <i class="fa-solid fa-arrow-right" style="color: var(--text-muted); font-size: 13px;"></i>
+      <div class="hub-flow-box">
+        <span class="hub-flow-sub">ĐI ĐẾN</span>
+        <strong class="hub-flow-title" id="relocToHub">Hub Ga Metro A</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 Metric Boxes -->
+  <div class="stats-3col-row" style="margin-bottom: 12px;">
+    <div class="stat-mini-box">
+      <div class="stat-number" id="relocVehicleCount">20</div>
+      <div class="stat-caption">Xe đang vận chuyển</div>
+    </div>
+    <div class="stat-mini-box">
+      <div class="stat-number" id="relocDistance">2,5 km</div>
+      <div class="stat-caption">Khoảng cách dự kiến</div>
+    </div>
+    <div class="stat-mini-box">
+      <div class="stat-number" id="relocDuration">10 phút</div>
+      <div class="stat-caption">Thời gian dự kiến</div>
+    </div>
+  </div>
+
+  <!-- Progress Card -->
+  <div class="staff-card" style="margin-bottom: 20px; padding: 14px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <span style="font-size: 12.5px; font-weight: 800;">TIẾN ĐỘ ĐIỀU CHUYỂN</span>
+      <span style="font-size: 11px; color: var(--text-muted);">Đang cập nhật</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px;">
+      <span>Đã nhận và đang di chuyển</span>
+      <span id="relocProgressCount">12 / 20 xe</span>
+    </div>
+    <div class="progress-bar-rail">
+      <div class="progress-bar-fill" id="relocProgressBar" style="width: 60%;"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-muted); margin-top: 6px;">
+      <span id="relocRemainingText">8 xe còn lại tại Hub nguồn</span>
+      <span id="relocPercentText">60%</span>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <button class="btn-staff-primary" onclick="StaffApp.goToScreen('screen-reloc-handover')">
+    <span>Bắt đầu điều phối</span>
+  </button>
+  <button class="btn-staff-secondary" onclick="StaffApp.openRelocIncidentReport()">
+    <span>BÁO CÁO SỰ CỐ</span>
+  </button>
+</section>
