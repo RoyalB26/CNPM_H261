@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 from typing import Any
+from .ownership import normalize_user_ownership
 
 
 DEFAULT_SEED_PATH = (
@@ -148,4 +149,8 @@ def load_seed(
         )
 
 
+    try:
+        normalize_user_ownership(seed)
+    except (ValueError, TypeError, KeyError, AttributeError) as exc:
+        raise SeedLoadError(f"Dữ liệu chủ sở hữu không hợp lệ: {exc}") from exc
     return seed

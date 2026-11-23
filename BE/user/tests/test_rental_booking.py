@@ -202,6 +202,93 @@ class RentalBookingTests(unittest.TestCase):
         self.assertFalse(self.db.return_vehicle(ride["trip_id"], "Hub Đại học Quốc Tế")["success"])
         self.assertEqual(before, self.db.__dict__)
 
+    def test_destination_reserved_by_relocation_cannot_be_selected(self):
+        hub = self.db.get_hub('hub-04')
+        hub['available_parking'] = 1
+        self.db.relocations.append({'target_hub_id': hub['id'], 'status': 'PENDING',
+                                    'reserved_slot_ids': ['P31'], 'total_bikes': 1})
+        self.payload['destination_hub_id'] = hub['id']
+        self.assert_rejected_without_changes()
+
+    def test_return_rechecks_incoming_holds_after_booking(self):
+        for status in ('PENDING', 'IN_PROGRESS', 'IN_TRANSIT'):
+            with self.subTest(status=status):
+                self.setUp()
+                booking = self.db.create_booking(self.payload)
+                ride = self.db.start_ride(booking['id'])['ride']
+                hub = self.db.get_hub('hub-04')
+                hub['available_parking'] = 1
+                self.db.relocations.append({'target_hub_id': hub['id'], 'status': status,
+                                            'reserved_slot_ids': ['P31'], 'total_bikes': 1})
+                before = copy.deepcopy(self.db.__dict__)
+                self.assertFalse(self.db.return_vehicle(ride['trip_id'], hub['name'])['success'])
+                self.assertEqual(before, self.db.__dict__)
+                self.db.relocations[-1]['status'] = 'COMPLETED'
+                self.assertTrue(self.db.return_vehicle(ride['trip_id'], hub['name'])['success'])
+
+    def test_legacy_incoming_holds_without_slot_ids_block_return(self):
+        booking = self.db.create_booking(self.payload)
+        ride = self.db.start_ride(booking['id'])['ride']
+        hub = self.db.get_hub('hub-04')
+        hub['available_parking'] = 2
+        self.db.relocations.append({'target_hub_id': hub['id'], 'status': 'IN_PROGRESS', 'total_bikes': 2})
+        before = copy.deepcopy(self.db.__dict__)
+        self.assertFalse(self.db.return_vehicle(ride['trip_id'], hub['name'])['success'])
+        self.assertEqual(before, self.db.__dict__)
+
+    def test_parking_booking_already_deducted_is_not_deducted_twice(self):
+        hub = self.db.get_hub('hub-04')
+        hub['available_parking'] = 2
+        held = self.db.create_booking({'plan_type': 'parking', 'hub_id': hub['id'],
+                                      'personal_plate': '59-A1 888.88', 'parking_slot': 'P31'})
+        self.assertNotIn('error', held)
+        self.assertEqual(hub['available_parking'], 1)
+        booking = self.db.create_booking({**self.payload, 'destination_hub_id': hub['id']})
+        ride = self.db.start_ride(booking['id'])['ride']
+        self.assertTrue(self.db.return_vehicle(ride['trip_id'], hub['name'])['success'])
+        self.assertEqual(hub['available_parking'], 0)
+        self.assertEqual(hub['slots'][0]['reserved_by'], held['id'])
+        self.assertEqual(held['status'], 'Đã xác nhận')
+
+    def test_sample_slot_list_does_not_replace_total_capacity(self):
+        booking = self.db.create_booking(self.payload)
+        ride = self.db.start_ride(booking['id'])['ride']
+        hub = self.db.get_hub('hub-04')
+        hub['slots'] = []
+        count = hub['available_parking']
+        self.assertTrue(self.db.return_vehicle(ride['trip_id'], hub['name'])['success'])
+        self.assertEqual(hub['available_parking'], count - 1)
+
+    def test_mismatched_booking_trip_or_status_prevents_return(self):
+        for field, value in (('trip', 'TRIP-OTHER'), ('status', 'Đã xác nhận')):
+            with self.subTest(field=field):
+                self.setUp()
+                booking = self.db.create_booking(self.payload)
+                ride = self.db.start_ride(booking['id'])['ride']
+                if field == 'trip':
+                    booking['rental_trip']['trip_id'] = value
+                else:
+                    booking['status'] = value
+                before = copy.deepcopy(self.db.__dict__)
+                self.assertFalse(self.db.return_vehicle(ride['trip_id'], 'Hub Đại học Quốc Tế')['success'])
+                self.assertEqual(before, self.db.__dict__)
+
+    def test_vehicle_already_recorded_at_a_hub_cannot_be_silently_moved(self):
+        booking = self.db.create_booking(self.payload)
+        ride = self.db.start_ride(booking['id'])['ride']
+        self.db.get_hub('hub-03')['bikes'].append({'id': ride['vehicle_id'], 'status': 'Sẵn sàng'})
+        before = copy.deepcopy(self.db.__dict__)
+        self.assertFalse(self.db.return_vehicle(ride['trip_id'], 'Hub Đại học Quốc Tế')['success'])
+        self.assertEqual(before, self.db.__dict__)
+
+    def test_duplicate_legacy_vehicle_locations_are_rejected(self):
+        self.db.reset()
+        bike = next(b for b in self.db.get_hub('hub-01')['bikes'] if b['id'] == 'XE-024')
+        self.db.get_hub('hub-03')['bikes'].append(copy.deepcopy(bike))
+        before = copy.deepcopy(self.db.__dict__)
+        self.assertFalse(self.db.return_vehicle('TRIP-8821', 'Hub Đại học Quốc Tế')['success'])
+        self.assertEqual(before, self.db.__dict__)
+
     def test_seed_trip_links_to_unique_legacy_booking(self):
         self.db.reset()
         self.assertTrue(self.db.return_vehicle("TRIP-8821", "Hub Đại học Quốc Tế")["success"])

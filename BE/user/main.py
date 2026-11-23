@@ -25,12 +25,13 @@ if PARENT_DIR not in sys.path:
 
 from mock_db import db
 from user.payments import PaymentError, pay_invoice
-from user.incidents import create_report, report_view
-from user.hubs import search_hubs, suggest_route
+from user.incidents import IncidentError, create_report, report_view
+from user.hubs import hub_detail, search_hubs, suggest_route
+from user.alternatives import booking_alternatives
 from user.bookings import expire_rental_bookings
 from user.swaps import SwapError, complete_swap
 from user.charging import ChargingError, start_charging, stop_charging
-from user.invoices import InvoiceNotFound, current_invoice
+from user.invoices import InvoiceConflict, InvoiceNotFound, current_invoice
 from user.schemas import (
     UserLoginRequest, UserLoginResponse, UserLoginErrorResponse, UserProfileResponse, UserVehicleItem,
     UpdateProfileRequest, UpdateProfileResponse, UpdateProfileErrorResponse,
@@ -164,7 +165,7 @@ async def api_list_hubs(request: Request) -> JSONResponse:
         query = SearchHubQuery.model_validate(dict(request.query_params))
     except ValidationError:
         return JSONResponse({"success": False, "error": "Bộ lọc Hub không hợp lệ"}, status_code=422)
-    hubs = [HubDetailResponse.model_validate(hub) for hub in search_hubs(db, query)]
+    hubs = [hub_detail(db, hub) for hub in search_hubs(db, query)]
     return JSONResponse([hub.model_dump(mode="json", exclude_unset=True) for hub in hubs])
 
 async def api_get_hub(request: Request) -> JSONResponse:
@@ -172,7 +173,7 @@ async def api_get_hub(request: Request) -> JSONResponse:
     hub = db.get_hub(request.path_params["hub_id"])
     if hub is None:
         return JSONResponse({"error": "Hub không tồn tại"}, status_code=404)
-    response = HubDetailResponse.model_validate(hub)
+    response = hub_detail(db, hub)
     return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
 
 async def api_suggest_route(request: Request) -> JSONResponse:
@@ -231,7 +232,7 @@ async def api_create_booking(request: Request) -> JSONResponse:
 
     if "error" in bk:
         return JSONResponse(
-            BookingErrorResponse(error=bk["error"]).model_dump(mode="json"),
+            BookingErrorResponse(success=False, error=bk["error"], alternatives=booking_alternatives(db, booking_request)).model_dump(mode="json", exclude_unset=True),
             status_code=409
         )
 
@@ -454,10 +455,12 @@ async def api_return_vehicle(request: Request) -> JSONResponse:
 
 async def api_list_incidents(request: Request) -> JSONResponse:
     """Trả lịch sử báo cáo cùng trạng thái phiếu mới nhất, không ghi store."""
-    return JSONResponse([
-        report_view(db, report).model_dump(mode="json", exclude_unset=True)
-        for report in db.incidents
-    ])
+    try:
+        reports = [report_view(db, report).model_dump(mode="json", exclude_unset=True)
+                   for report in db.get_user_incidents()]
+    except IncidentError as exc:
+        return JSONResponse(IncidentErrorResponse(error=str(exc)).model_dump(mode="json"), status_code=exc.status_code)
+    return JSONResponse(reports)
 
 async def api_create_incident(request: Request) -> JSONResponse:
     """Kiểm tra báo cáo rồi tạo phiếu đúng Hub; Gateway lưu hai bản ghi cùng nhau."""
@@ -471,8 +474,8 @@ async def api_create_incident(request: Request) -> JSONResponse:
         return JSONResponse(IncidentErrorResponse(error="Dữ liệu báo cáo không hợp lệ").model_dump(mode="json"), status_code=422)
     try:
         response = create_report(db, report_request)
-    except ValueError:
-        return JSONResponse(IncidentErrorResponse(error="Hub báo cáo không tồn tại").model_dump(mode="json"), status_code=404)
+    except IncidentError as exc:
+        return JSONResponse(IncidentErrorResponse(error=str(exc)).model_dump(mode="json"), status_code=exc.status_code)
     return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
 
 async def api_get_invoice(request: Request) -> JSONResponse:
@@ -485,6 +488,8 @@ async def api_get_invoice(request: Request) -> JSONResponse:
         response = current_invoice(db, query)
     except InvoiceNotFound as exc:
         return JSONResponse(PaymentErrorResponse(error=str(exc)).model_dump(mode="json"), status_code=404)
+    except InvoiceConflict as exc:
+        return JSONResponse(PaymentErrorResponse(error=str(exc)).model_dump(mode="json"), status_code=409)
     return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
 
 async def api_pay_invoice(request: Request) -> JSONResponse:

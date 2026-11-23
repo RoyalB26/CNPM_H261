@@ -12,6 +12,8 @@ unified under a single API Gateway on port 8000:
 import os
 import sys
 import importlib.util
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from starlette.applications import Starlette
 from starlette.routing import Route
 from starlette.responses import JSONResponse
@@ -23,6 +25,8 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 from shared.middleware import SharedPersistenceMiddleware
+from shared.database import storage
+from user.expiry_worker import expiry_interval, run_expiry_worker
 
 
 
@@ -69,7 +73,25 @@ middleware = [
     )
 ]
 
-app = Starlette(debug=True, routes=all_routes, middleware=middleware)
+@asynccontextmanager
+async def lifespan(app):
+    """Tạo khóa chung, khởi động quét hết hạn và thu hồi tác vụ khi tắt Gateway."""
+    interval = expiry_interval(os.environ.get("BE_BOOKING_EXPIRY_INTERVAL_SECONDS", "5"))
+    app.state.request_lock = asyncio.Lock()
+    worker = asyncio.create_task(
+        run_expiry_worker(storage, app.state.request_lock, interval),
+        name="user-booking-expiry",
+    )
+    app.state.expiry_task = worker
+    try:
+        yield
+    finally:
+        worker.cancel()
+        with suppress(asyncio.CancelledError):
+            await worker
+
+
+app = Starlette(debug=True, routes=all_routes, middleware=middleware, lifespan=lifespan)
 
 if __name__ == "__main__":
     import uvicorn

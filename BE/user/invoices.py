@@ -11,6 +11,10 @@ class InvoiceNotFound(ValueError):
     """Không có hóa đơn phù hợp bộ chọn của người dùng demo."""
 
 
+class InvoiceConflict(ValueError):
+    """Kết quả trùng mã; không tự chọn bản ghi đầu tiên để hiển thị."""
+
+
 def invoice_time(value: str) -> datetime:
     """So sánh thời gian ISO mới và thời gian hiển thị Việt Nam của seed cũ."""
     try:
@@ -26,14 +30,22 @@ def current_invoice(db: MockDatabaseStore, query: InvoiceQuery) -> InvoiceRespon
     if query.invoice_type == 'parking':
         # Bản demo một tài khoản: chỉ xem vé của xe cá nhân hoặc biển số đã đặt.
         plates = {plate_key(v['plate_number']) for v in db.get_user_vehicles()}
-        plates.update(plate_key(b.get('personal_plate') or '') for b in db.bookings if b.get('plan_type') == 'parking')
+        plates.update(plate_key(b.get('personal_plate') or '') for b in db.get_bookings() if b.get('plan_type') in ('parking', 'personal'))
         for record in db.parking_records:
-            if plate_key(record['plate_number']) not in plates:
+            if 'user_id' in record:
+                if not db.owns_user_record(record):
+                    continue
+            elif record.get('booking_id'):
+                linked = [b for b in db.bookings if b['id'] == record['booking_id']]
+                if len(linked) != 1 or not db.owns_user_record(linked[0]):
+                    continue
+            elif plate_key(record['plate_number']) not in plates:
                 continue
             if query.booking_id is not None and record.get('booking_id') != query.booking_id:
                 continue
             description = f"Gửi xe tại {record['hub_name']} · {record['slot_id']}"
             invoice = {
+                'user_id': db.user['id'],
                 'id': f"INV-{record['ticket_code']}", 'service_type': 'parking',
                 'title': 'Hóa đơn gửi xe cá nhân', 'reference_id': record['plate_number'],
                 'items': [{'label': description, 'description': description, 'amount': record['parking_fee']}],
@@ -50,6 +62,8 @@ def current_invoice(db: MockDatabaseStore, query: InvoiceQuery) -> InvoiceRespon
             invoice = booking.get(key)
             if not invoice:
                 continue
+            if not db.owns_user_record(invoice):
+                continue
             if query.booking_id is not None and booking['id'] != query.booking_id:
                 continue
             if query.trip_id is not None and (booking.get('rental_trip') or {}).get('trip_id') != query.trip_id:
@@ -60,4 +74,7 @@ def current_invoice(db: MockDatabaseStore, query: InvoiceQuery) -> InvoiceRespon
                 candidates.append(invoice)
     if not candidates:
         raise InvoiceNotFound('Chưa có hóa đơn phù hợp yêu cầu')
+    ids = [item['id'] for item in candidates]
+    if len(ids) != len(set(ids)):
+        raise InvoiceConflict('Mã hóa đơn bị trùng, chưa thể xác định hóa đơn duy nhất')
     return InvoiceResponse.model_validate(max(candidates, key=lambda i: invoice_time(i['created_at'])))

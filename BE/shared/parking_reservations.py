@@ -11,6 +11,36 @@ def slot_id(booking: dict) -> str:
     return booking.get('parking_slot') or booking.get('resource_id') or booking.get('resource_name', '').removeprefix('Chỗ đỗ ').split(' · ')[0].strip()
 
 
+def available_parking_capacity(db, hub: dict) -> int:
+    """Trừ chỗ dành cho điều chuyển; booking gửi xe đã trừ bộ đếm khi giữ ô.
+
+    Danh sách slots của seed chỉ mô tả một phần chỗ đỗ. Sử dụng bộ đếm tổng,
+    không suy ra toàn bộ sức chứa từ số phần tử slots hoặc trừ booking lần hai.
+    """
+    available = hub.get('available_parking', 0)
+    if type(available) is not int or available <= 0:
+        return 0
+    reserved = 0
+    for task in db.relocations:
+        if task.get('target_hub_id') != hub['id'] or task.get('status') not in ('PENDING', 'IN_PROGRESS', 'IN_TRANSIT'):
+            continue
+        ids = task.get('reserved_slot_ids') or []
+        count = task.get('total_bikes', len(ids))
+        # Runtime cũ có thể chỉ có tổng số xe hoặc chỉ có ID chỗ giữ.
+        reserved += max(len(set(ids)), count if type(count) is int and count > 0 else 0)
+    return max(0, available - reserved)
+
+
+def parking_slot_blocked(db, hub: dict, slot: dict) -> bool:
+    """Chỗ đang bảo trì/bị khóa không được cấp hoặc tự mở lại khi xe rời bãi."""
+    if slot.get('status') in ('MAINTENANCE', 'DEACTIVATED', 'Bảo trì', 'Đang bảo trì', 'Không khả dụng'):
+        return True
+    return any(ticket.get('status') in ('PENDING', 'ASSIGNED', 'IN_PROGRESS')
+               and ticket.get('device_code') == slot['id']
+               and ticket.get('hub_id', hub['id']) == hub['id']
+               for ticket in db.maintenance_tickets)
+
+
 def choose_parking_slot(db, hub: dict, payload: dict) -> dict:
     """Kiểm tra toàn bộ ràng buộc trước khi trả chỗ có thể giữ, không ghi store."""
     plate = payload.get('personal_plate')
@@ -18,7 +48,7 @@ def choose_parking_slot(db, hub: dict, payload: dict) -> dict:
         raise ValueError('Cần cung cấp biển số phương tiện cá nhân')
     if hub is None or hub.get('status') != 'ACTIVE':
         raise ValueError('Hub gửi xe không tồn tại hoặc không hoạt động')
-    if hub.get('available_parking', 0) <= 0:
+    if available_parking_capacity(db, hub) <= 0:
         raise ValueError('Hub không còn chỗ đỗ')
     live_bookings = [b for b in db.bookings if b.get('plan_type') in ('parking', 'personal')
                      and b.get('status') in ('Đã xác nhận', 'Đang sử dụng')]
@@ -32,7 +62,8 @@ def choose_parking_slot(db, hub: dict, payload: dict) -> dict:
     tasks = [t for t in db.relocations if t.get('target_hub_id') == hub['id']
              and t.get('status') in ('PENDING', 'IN_PROGRESS', 'IN_TRANSIT')]
     occupied.update(s for t in tasks for s in t.get('reserved_slot_ids', []))
-    free = [s for s in hub.get('slots', []) if s.get('is_available') and s['id'] not in occupied]
+    free = [s for s in hub.get('slots', []) if s.get('is_available') and not s.get('reserved_by')
+            and not s.get('occupied_by') and s['id'] not in occupied and not parking_slot_blocked(db, hub, s)]
     legacy_holds = sum(t['total_bikes'] for t in tasks if not t.get('reserved_slot_ids'))
     free = free[legacy_holds:]
     requested = payload.get('parking_slot') or payload.get('resource_id')
@@ -52,6 +83,8 @@ def release_parking_slot(db, booking: dict) -> None:
     occupied = any(r['hub_id'] == hub['id'] and r['slot_id'] == slot['id'] and r.get('checkout_time') is None
                    for r in db.parking_records)
     slot.pop('reserved_by')
-    if not occupied:
+    if not occupied and not parking_slot_blocked(db, hub, slot):
         slot['is_available'] = True
         hub['available_parking'] = min(hub['parking_capacity'], hub['available_parking'] + 1)
+    elif not occupied:
+        slot['is_available'] = False

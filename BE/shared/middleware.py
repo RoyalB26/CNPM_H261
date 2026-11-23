@@ -20,7 +20,9 @@ class SharedPersistenceMiddleware:
             return
 
         # Cho các request dùng chung db chạy lần lượt.
-        async with self._request_lock:
+        app_state = getattr(scope.get("app"), "state", None)
+        request_lock = getattr(app_state, "request_lock", self._request_lock)
+        async with request_lock:
             path = scope.get("path", "")
             method = scope.get("method", "GET")
 

@@ -21,6 +21,7 @@ class ActiveRideResponse(BaseModel):
     model_config = ConfigDict(strict=True)
 
     trip_id: str = Field(..., min_length=1, examples=["TRIP-8821"])
+    user_id: Optional[str] = Field(None, min_length=1)
     vehicle_id: str = Field(..., min_length=1, examples=["XE-024"])
     origin_hub: str = Field(..., min_length=1, examples=["Hub Ga Metro ĐHQG"])
     destination_hub: Optional[str] = Field(..., examples=["Hub Đại học Bách khoa"])
@@ -31,6 +32,7 @@ class ActiveRideResponse(BaseModel):
     booking_id: Optional[str] = None
     started_at: Optional[str] = None
     hourly_rate: Optional[int] = Field(None, ge=0)
+    billing_started_at: Optional[str] = None
 
 class StartRideResponse(BaseModel):
     """Kết quả nhận xe thành công kèm chuyến đi vừa được tạo."""
@@ -44,6 +46,7 @@ class ActiveParkingResponse(BaseModel):
     model_config = ConfigDict(strict=True)
 
     ticket_id: str = Field(..., min_length=1, examples=["PRK-901"])
+    user_id: Optional[str] = Field(None, min_length=1)
     plate_number: str = Field(..., min_length=1, examples=["59-X1 123.45"])
     hub_name: str = Field(..., min_length=1, examples=["Hub Ga Metro ĐHQG"])
     slot_id: str = Field(..., min_length=1, examples=["P08"])
@@ -56,6 +59,7 @@ class ActiveChargingResponse(BaseModel):
     model_config = ConfigDict(strict=True)
 
     session_id: str = Field(..., min_length=1, examples=["CHG-302"])
+    user_id: Optional[str] = Field(None, min_length=1)
     port_id: str = Field(..., min_length=1, examples=["S03"])
     power_consumed_kwh: float = Field(..., ge=0, allow_inf_nan=False)
     current_charge: int = Field(..., ge=0, le=100, description="Mức sạc hiện tại, đơn vị %")

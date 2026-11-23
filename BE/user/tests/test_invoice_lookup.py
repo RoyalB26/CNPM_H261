@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from shared.memory_store import MockDatabaseStore
-from user.invoices import InvoiceNotFound, current_invoice, invoice_time
+from user.invoices import InvoiceConflict, InvoiceNotFound, current_invoice, invoice_time
 from user.schemas.payment import InvoiceQuery
 
 
@@ -70,6 +70,13 @@ class InvoiceLookupTests(unittest.TestCase):
         self.assertNotEqual(current_invoice(self.db, InvoiceQuery()).id, "OLD-INVOICE")
         self.assertEqual(invoice_time("22/11/2026 · 10:00"),
                          invoice_time("2026-11-22T03:00:00+00:00"))
+
+    def test_duplicate_invoice_id_not_silently_selected(self):
+        self.db.bookings.append(copy.deepcopy(self.db.bookings[0]))
+        before = copy.deepcopy(self.db.__dict__)
+        with self.assertRaises(InvoiceConflict):
+            current_invoice(self.db, InvoiceQuery(type='rental'))
+        self.assertEqual(before, self.db.__dict__)
 
 
 if __name__ == "__main__":

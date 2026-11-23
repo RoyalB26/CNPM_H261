@@ -11,7 +11,7 @@ from .hub import (
 )
 from .booking import (
     BookingServiceItem, CreateBookingRequest, BookingResponse,
-    BookingErrorResponse, CancelBookingRequest,
+    BookingErrorResponse, BookingAlternative, CancelBookingRequest,
     CancelBookingResponse, CancelBookingNotFoundResponse, ExpireBookingsResponse,
     CompleteSwapRequest, CompleteSwapResponse
 )
@@ -33,7 +33,7 @@ __all__ = [
     "ChargingPortInfo", "ParkingSlotInfo", "BatterySwapOption", "HubPricingPolicy",
     "RouteSuggestionRequest", "RouteSuggestionResponse",
     "BookingServiceItem", "CreateBookingRequest", "BookingResponse",
-    "BookingErrorResponse", "CancelBookingRequest",
+    "BookingErrorResponse", "BookingAlternative", "CancelBookingRequest",
     "CancelBookingResponse", "CancelBookingNotFoundResponse",
     "ExpireBookingsResponse",
     "CompleteSwapRequest", "CompleteSwapResponse",

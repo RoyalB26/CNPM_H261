@@ -12,6 +12,7 @@ class InvoiceResponse(BaseModel):
     """Hóa đơn từ dữ liệu nghiệp vụ; không tự bổ sung mã, giá hoặc thời gian mẫu."""
 
     id: str = Field(..., example="INV-2026-901")
+    user_id: Optional[str] = Field(None, min_length=1)
     service_type: Literal["rental", "charging", "battery_swap", "parking"]
     title: str = Field(..., example="Hóa đơn thuê xe điện")
     reference_id: str

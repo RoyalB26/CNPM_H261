@@ -7,7 +7,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from shared.memory_store import MockDatabaseStore
-from user.hubs import available_bikes, search_hubs, suggest_route
+from user.hubs import available_bikes, hub_detail, search_hubs, suggest_route
 from user.schemas.hub import SearchHubQuery, RouteSuggestionRequest
 
 
@@ -46,3 +46,24 @@ class HubTests(unittest.TestCase):
         self.db.hubs = []
         with self.assertRaises(ValueError):
             suggest_route(self.db, self.query)
+
+    def test_hub_view_subtracts_incoming_hold_without_mutating_store(self):
+        hub = self.db.get_hub('hub-02')
+        hub['available_parking'] = 3
+        self.db.relocations.append({'target_hub_id': hub['id'], 'status': 'PENDING',
+                                    'total_bikes': 2, 'reserved_slot_ids': ['P11', 'P12']})
+        before = copy.deepcopy(self.db.__dict__)
+        self.assertEqual(hub_detail(self.db, hub).available_parking, 1)
+        self.assertEqual(before, self.db.__dict__)
+        self.db.relocations[-1]['status'] = 'COMPLETED'
+        self.assertEqual(hub_detail(self.db, hub).available_parking, 3)
+
+    def test_reserved_destination_excluded_from_search_and_route(self):
+        hub = self.db.get_hub('hub-02')
+        hub['available_parking'] = 1
+        self.db.relocations.append({'target_hub_id': hub['id'], 'status': 'PENDING',
+                                    'total_bikes': 1, 'reserved_slot_ids': ['P11']})
+        result = suggest_route(self.db, self.query)
+        self.assertNotEqual(result.destination_hub.id, hub['id'])
+        found = search_hubs(self.db, SearchHubQuery(vehicle_type='personal'))
+        self.assertNotIn(hub['id'], [h['id'] for h in found])

@@ -43,3 +43,30 @@ class RentalPaymentTests(unittest.TestCase):
         with self.assertRaises(PaymentError):
             pay_invoice(self.db, PaymentSubmitRequest(invoice_id=self.invoice['id'], method='wallet'))
         self.assertEqual(before, self.db.__dict__)
+
+    def test_invoice_type_reference_total_or_items_mismatch_not_paid(self):
+        original = copy.deepcopy(self.invoice)
+        for changes in ({'service_type': 'charging'}, {'reference_id': 'XE-OTHER'},
+                        {'total_amount': self.invoice['total_amount'] + 1},
+                        {'items': [{'description': 'Sai khoản phí', 'amount': 1}]},
+                        {'total_amount': '2167'}, {'transaction_id': 'TXN-ALREADY-CREATED'}):
+            with self.subTest(changes=changes):
+                self.invoice.clear(); self.invoice.update(copy.deepcopy(original)); self.invoice.update(changes)
+                before = copy.deepcopy(self.db.__dict__)
+                with self.assertRaises(PaymentError) as error:
+                    pay_invoice(self.db, PaymentSubmitRequest(invoice_id=self.invoice['id'], method='wallet'))
+                self.assertEqual(error.exception.status_code, 409)
+                self.assertEqual(before, self.db.__dict__)
+
+    def test_changed_final_trip_fee_prevents_payment(self):
+        self.db.bookings[0]['rental_trip']['total_fee'] += 1
+        before = copy.deepcopy(self.db.__dict__)
+        with self.assertRaises(PaymentError):
+            pay_invoice(self.db, PaymentSubmitRequest(invoice_id=self.invoice['id'], method='wallet'))
+        self.assertEqual(before, self.db.__dict__)
+
+    def test_changed_current_hub_price_does_not_reprice_final_invoice(self):
+        self.db.get_hub('hub-01')['pricing']['rental_bike_hourly'] = 999999
+        result = pay_invoice(self.db, PaymentSubmitRequest(invoice_id=self.invoice['id'], method='wallet'))
+        self.assertTrue(result.success)
+        self.assertEqual(self.invoice['status'], 'paid')

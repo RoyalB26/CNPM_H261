@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 from typing import Annotated, List, Literal, Optional
 from .payment import InvoiceResponse
+from .hub import HubSummary
 
 
 BookingPlanType = Literal["rental", "personal", "swap", "parking", "charging", "battery_swap"]
@@ -52,7 +53,9 @@ class CreateBookingRequest(BaseModel):
             raise ValueError("Các mã chỗ đỗ không khớp nhau")
         if self.plan_type == "parking" and (not self.personal_plate or not self.personal_plate.strip()):
             raise ValueError("Đặt chỗ gửi xe cần biển số")
-        if self.plan_type == "charging":
+        if self.plan_type == 'personal' and self.resource_id is not None:
+            raise ValueError('Gói ghép cần dùng parking_slot và charging_port riêng, không dùng resource_id chung')
+        if self.plan_type in ("charging", "personal"):
             if not self.personal_plate or not self.personal_plate.strip():
                 raise ValueError("Đặt cổng sạc cần biển số")
             if self.arrival_time is not None or any(s.time_slot is not None for s in self.services):
@@ -63,6 +66,7 @@ class RentalTripHistory(BaseModel):
     """Thông tin chuyến đi lưu trong booking, tương thích phiên seed thiếu mốc bắt đầu."""
 
     trip_id: str
+    user_id: Optional[str] = Field(None, min_length=1)
     booking_id: str
     vehicle_id: str
     origin_hub: str
@@ -77,12 +81,14 @@ class RentalTripHistory(BaseModel):
     return_hub_name: Optional[str] = None
     hourly_rate: Optional[int] = Field(None, ge=0)
     total_fee: Optional[int] = Field(None, ge=0)
-    billing_source: Optional[Literal["started_at", "legacy_elapsed_minutes"]] = None
+    billing_source: Optional[Literal["billing_started_at", "started_at", "legacy_elapsed_minutes"]] = None
+    billing_started_at: Optional[str] = None
 
 class ChargingSessionHistory(BaseModel):
     """Thông tin phiên sạc đã lưu, gồm điện năng mô phỏng và đơn giá chốt."""
 
     session_id: str
+    user_id: Optional[str] = Field(None, min_length=1)
     booking_id: Optional[str] = None
     port_id: str
     hub_id: Optional[str] = None
@@ -98,7 +104,11 @@ class ChargingSessionHistory(BaseModel):
     measurement_source: Optional[Literal["mock_input"]] = None
 
 class BookingResponse(BaseModel):
-    """Bản ghi đặt trước theo cấu trúc hiện tại của store dùng chung."""
+    """Bản ghi đặt trước và mốc tính phí thuê xe được xác nhận bởi Backend."""
+
+    billing_started_at: Optional[str] = None
+    user_id: Optional[str] = Field(None, min_length=1)
+    rental_hourly_rate: Optional[int] = Field(None, ge=0)
 
     id: str = Field(..., example="EMH-1024")
     hub_id: str = Field(..., examples=["hub-01"])
@@ -128,6 +138,7 @@ class BookingResponse(BaseModel):
     charging_rate_per_kwh: Optional[int] = Field(None, ge=0)
     charging_session: Optional[ChargingSessionHistory] = None
     charging_invoice: Optional[InvoiceResponse] = None
+    personal_bundle: Optional[bool] = None
 
 class CompleteSwapRequest(BaseModel):
     """Mã booking đổi pin lấy từ URL, không nhận giá hoặc số lượng mới."""
@@ -149,11 +160,18 @@ class ExpireBookingsResponse(BaseModel):
     expired_booking_ids: list[str]
     expired_count: int = Field(..., ge=0)
 
+class BookingAlternative(BaseModel):
+    """Lựa chọn có thể gửi lại để đặt; chưa giữ chỗ và chưa có mã booking."""
+
+    hub: HubSummary
+    request: CreateBookingRequest
+
 class BookingErrorResponse(BaseModel):
     """Lỗi dữ liệu đầu vào hoặc xung đột trạng thái khi xử lý đặt trước."""
 
     success: Literal[False] = False
     error: str
+    alternatives: List[BookingAlternative] = Field(default_factory=list)
 
 class CancelBookingRequest(BaseModel):
     """Mã booking lấy từ URL; API hủy không yêu cầu body JSON."""

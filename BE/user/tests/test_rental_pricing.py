@@ -1,4 +1,4 @@
-"""Kiểm tra cước nhận/trả xe, biên làm tròn và giá được chốt khi nhận."""
+"""Kiểm tra cước từ lúc đặt xe, biên làm tròn và đơn giá đã xác nhận."""
 
 import copy
 from datetime import datetime, timedelta, timezone
@@ -34,20 +34,54 @@ class RentalPricingTests(unittest.TestCase):
     def test_snapshot_rate_and_invoice_match_return(self):
         db = MockDatabaseStore()
         db.user['active_services']['ride'] = None
-        booking = db.create_booking({'plan_type': 'rental', 'hub_id': 'hub-02', 'resource_name': 'XE-052'})
-        start = datetime(2026, 11, 21, 8, 8, tzinfo=timezone.utc)
+        confirmed = datetime(2026, 11, 21, 8, 0, tzinfo=timezone.utc)
+        with patch('shared.memory_store.datetime') as clock:
+            clock.now.return_value = confirmed
+            booking = db.create_booking({'plan_type': 'rental', 'hub_id': 'hub-02', 'resource_name': 'XE-052'})
+        db.get_hub('hub-02')['pricing']['rental_bike_hourly'] = 20000
+        start = confirmed + timedelta(minutes=8)
         with patch('shared.memory_store.datetime') as clock:
             clock.now.return_value = start
             ride = db.start_ride(booking['id'])['ride']
         db.get_hub('hub-02')['pricing']['rental_bike_hourly'] = 20000
         with patch('shared.memory_store.datetime') as clock:
-            clock.now.return_value = start + timedelta(minutes=30)
+            clock.now.return_value = confirmed + timedelta(minutes=30)
             result = db.return_vehicle(ride['trip_id'], 'Hub Đại học Quốc Tế')
         self.assertTrue(result['success'])
         self.assertEqual(result['elapsed_minutes'], 30)
         self.assertEqual(result['total_fee'], 5000)
         self.assertEqual(booking['rental_trip']['total_fee'], 5000)
         self.assertEqual(booking['rental_invoice']['total_amount'], 5000)
+        self.assertEqual(ride['started_at'], start.isoformat())
+        self.assertEqual(ride['billing_started_at'], confirmed.isoformat())
+        self.assertEqual(booking['rental_trip']['billing_source'], 'billing_started_at')
+        self.assertEqual(ride['hourly_rate'], 10000)
+
+    def test_bad_booking_clock_does_not_move_bike(self):
+        db = MockDatabaseStore()
+        db.user['active_services']['ride'] = None
+        booking = db.create_booking({'plan_type': 'rental', 'hub_id': 'hub-02', 'resource_name': 'XE-052'})
+        for timestamp in ['bad', '2026-01-01T00:00:00', (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()]:
+            booking['billing_started_at'] = timestamp
+            before = copy.deepcopy(db.__dict__)
+            self.assertFalse(db.start_ride(booking['id'])['success'])
+            self.assertEqual(before, db.__dict__)
+
+    def test_invalid_booking_price_does_not_reserve_bike(self):
+        db = MockDatabaseStore()
+        db.get_hub('hub-02')['pricing']['rental_bike_hourly'] = -1
+        before = copy.deepcopy(db.__dict__)
+        self.assertIn('error', db.create_booking({'plan_type': 'rental', 'hub_id': 'hub-02', 'resource_name': 'XE-052'}))
+        self.assertEqual(before, db.__dict__)
+
+    def test_legacy_booking_keeps_receive_time_without_inventing_date(self):
+        db = MockDatabaseStore()
+        db.user['active_services']['ride'] = None
+        booking = db.create_booking({'plan_type': 'rental', 'hub_id': 'hub-02', 'resource_name': 'XE-052'})
+        booking.pop('billing_started_at'); booking.pop('rental_hourly_rate')
+        ride = db.start_ride(booking['id'])['ride']
+        self.assertNotIn('billing_started_at', ride)
+        self.assertEqual(rental_charge(ride, datetime.fromisoformat(ride['started_at']) + timedelta(minutes=22), ride['hourly_rate'])['total_fee'], 3667)
 
     def test_invalid_start_does_not_move_vehicle(self):
         db = MockDatabaseStore()
