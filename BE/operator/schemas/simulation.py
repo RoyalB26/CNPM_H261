@@ -1,14 +1,14 @@
-"""
-Operator What-if Simulation Schemas
-Smart E-Mobility Hub - ĐHQG-HCM
-"""
+"""Model dữ liệu cho các API mô phỏng What-if của Operator."""
 
-from typing import List, Optional
 from enum import Enum
-from pydantic import BaseModel, Field
+from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ScenarioType(str, Enum):
+    """Các tình huống mô phỏng được mô tả trong hệ thống."""
+
     DEMAND_SURGE = "Nhu cầu sạc tăng đột biến"
     PARKING_FULL = "Bãi đỗ đầy"
     CHARGER_FAILURE = "Trạm sạc gặp sự cố"
@@ -17,108 +17,230 @@ class ScenarioType(str, Enum):
 
 
 class SourceStateType(str, Enum):
+    """Nguồn dữ liệu dùng làm đầu vào mô phỏng."""
+
     LIVE_STATE_A = "LIVE_A"
     MANUAL_STATE_A_PRIME = "MANUAL_A_PRIME"
 
 
 class HubStateSnapshot(BaseModel):
-    hub_id: str = Field(..., example="HUB-01")
-    hub_code: str = Field(..., example="HUB-01")
-    name: str = Field(..., example="Hub Ga Metro A")
-    total_parking_capacity: int = Field(100, example=100)
-    current_bikes: int = Field(65, example=65)
-    free_parking_slots: int = Field(35, example=35)
-    total_chargers: int = Field(20, example=20)
-    active_chargers: int = Field(18, example=18)
-    base_power_kw: float = Field(200.0, example=200.0)
-    max_power_kw: float = Field(1000.0, example=1000.0)
+    """Ảnh chụp trạng thái một Hub tại thời điểm mô phỏng."""
+
+    hub_id: str = Field(..., min_length=1, examples=["hub-01"])
+    hub_code: str = Field(..., min_length=1, examples=["HUB-01"])
+    name: str = Field(..., min_length=1, examples=["Hub Ga Metro ĐHQG"])
+
+    total_parking_capacity: int = Field(
+        ..., strict=True, gt=0, examples=[20]
+    )
+    current_bikes: int = Field(
+        ..., strict=True, ge=0, examples=[3]
+    )
+    free_parking_slots: int = Field(
+        ..., strict=True, ge=0, examples=[6]
+    )
+    total_chargers: int = Field(
+        ..., strict=True, ge=0, examples=[4]
+    )
+    active_chargers: int = Field(
+        ..., strict=True, ge=0, examples=[3]
+    )
+    base_power_kw: float = Field(
+        ..., strict=True, ge=0, allow_inf_nan=False, examples=[10.85]
+    )
+    max_power_kw: float = Field(
+        ..., strict=True, gt=0, allow_inf_nan=False, examples=[100.0]
+    )
 
 
 class SimulationSourceState(BaseModel):
-    source_type: SourceStateType = Field(default=SourceStateType.LIVE_STATE_A)
-    source_label: str = Field("Trạng thái mạng lưới hiện tại (A)", example="Trạng thái mạng lưới hiện tại (A)")
+    """Nguồn dữ liệu và thông tin thời điểm chụp trạng thái."""
+
+    source_type: SourceStateType
+    source_label: str = Field(
+        ..., examples=["Snapshot từ store; công suất nền ước tính"]
+    )
+    captured_at: str = Field(
+        ..., examples=["2026-11-03T10:00:00+00:00"]
+    )
+    power_basis: str = Field(
+        ..., examples=["Ước tính 50% tổng công suất cổng sẵn sàng"]
+    )
     hub_snapshots: List[HubStateSnapshot]
 
 
 class SimulationScenarioConfig(BaseModel):
-    scenario_name: str = Field(..., example="Nhu cầu sạc tăng cao")
-    scenario_type: ScenarioType = Field(default=ScenarioType.DEMAND_SURGE)
-    demand_increase_pct: int = Field(50, ge=-50, le=300, example=50)
-    duration_minutes: int = Field(60, ge=10, le=360, example=60)
-    start_time: str = Field("18:00", example="18:00")
-    affected_chargers_count: int = Field(2, ge=0, example=2)
-    lost_power_kw: float = Field(50.0, ge=0.0, example=50.0)
-    target_fill_rate_pct: int = Field(95, ge=0, le=100, example=95)
-    additional_bikes_count: int = Field(30, ge=0, example=30)
+    """Cấu hình tình huống; bản cơ bản hỗ trợ tăng nhu cầu sạc."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    scenario_name: str = Field(
+        ..., min_length=1, pattern=r"\S",
+        examples=["Nhu cầu sạc tăng 50%"]
+    )
+    scenario_type: ScenarioType = ScenarioType.DEMAND_SURGE
+    demand_increase_pct: int = Field(
+        default=50, ge=-50, le=300, examples=[50]
+    )
+    duration_minutes: int = Field(
+        default=60, ge=10, le=360, examples=[60]
+    )
+    start_time: str = Field(default="18:00", examples=["18:00"])
+
+    # Các tham số này phải bằng 0 với tình huống tăng nhu cầu thuần túy.
+    affected_chargers_count: int = Field(default=0, ge=0, examples=[0])
+    lost_power_kw: float = Field(
+        default=0.0, ge=0, allow_inf_nan=False, examples=[0.0]
+    )
+    target_fill_rate_pct: int = Field(default=95, ge=0, le=100)
+    additional_bikes_count: int = Field(default=0, ge=0, examples=[0])
+
+    # Giữ tương thích dữ liệu cũ; BE tự kiểm tra thay vì tin hai cờ này.
     is_input_valid: bool = True
     is_grid_state_loaded: bool = True
 
 
+class SimulationRunRequest(BaseModel):
+    """Đầu vào chung cho kiểm tra tham số và chạy mô phỏng."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source_type: SourceStateType = SourceStateType.LIVE_STATE_A
+    hub_snapshots: Optional[List[HubStateSnapshot]] = None
+    config: SimulationScenarioConfig
+
+    # Cờ kiểm thử lỗi timeout, chưa phải kết nối IoT thực.
+    trigger_timeout_error: bool = Field(
+        default=False, strict=True, examples=[False]
+    )
+
+
 class SimulationValidationResult(BaseModel):
-    is_valid: bool
-    error_code: Optional[str] = Field(None, example="EX-10-01")
-    error_type: Optional[str] = Field(None, example="INVALID_INPUT")
-    message: str = Field(..., example="Dữ liệu đầu vào hợp lệ")
-    details: Optional[str] = None
+    """Kết quả kiểm tra hợp lệ kèm dữ liệu đã chuẩn hóa."""
+
+    is_valid: bool = Field(..., examples=[True])
+    message: str = Field(..., examples=["Dữ liệu đầu vào hợp lệ"])
+    source: SimulationSourceState
+    config: SimulationScenarioConfig
+
+
+class SimulationErrorResponse(BaseModel):
+    """Lỗi API mô phỏng, giữ mã nghiệp vụ EX-10-01 và EX-10-02."""
+
+    status_code: str = Field(..., examples=["422"])
+    error: int = Field(default=1, examples=[1])
+    detail: str = Field(..., examples=["Thiếu cấu hình mô phỏng"])
+    is_valid: bool = False
+    error_code: str = Field(..., examples=["EX-10-01"])
+    error_type: str = Field(..., examples=["INVALID_INPUT"])
+    message: str = Field(..., examples=["Dữ liệu mô phỏng không hợp lệ"])
 
 
 class HubLoadPoint(BaseModel):
-    time_label: str = Field(..., example="17:00")
-    metro_hub_load_pct: int = Field(..., example=48)
-    bachkhoa_hub_load_pct: int = Field(..., example=42)
-    warning_threshold_pct: int = Field(85, example=85)
+    """Một điểm dữ liệu trên biểu đồ tải Hub."""
+
+    time_label: str = Field(..., examples=["18:00"])
+    metro_hub_load_pct: int = Field(..., examples=[81])
+    bachkhoa_hub_load_pct: int = Field(..., examples=[51])
+    warning_threshold_pct: int = Field(default=85, examples=[85])
 
 
 class PowerLoadPoint(BaseModel):
-    time_label: str = Field(..., example="17:00")
-    power_kw: float = Field(..., example=75.0)
-    station_limit_kw: float = Field(180.0, example=180.0)
+    """Một điểm dữ liệu trên biểu đồ công suất."""
+
+    time_label: str = Field(..., examples=["18:00"])
+    power_kw: float = Field(..., examples=[160.0])
+    station_limit_kw: float = Field(default=180.0, examples=[180.0])
 
 
 class DispatchRecommendationItem(BaseModel):
-    title: str = Field(..., example="Điều chuyển xe khẩn cấp")
-    source_hub: Optional[str] = Field("Hub KTX Khu A", example="Hub KTX Khu A")
-    target_hub: Optional[str] = Field("Hub Ga Metro A", example="Hub Ga Metro A")
-    bike_count: Optional[int] = Field(20, example=20)
-    vehicle_type: Optional[str] = Field("Xe đạp điện", example="Xe đạp điện")
+    """Đề xuất được trình bày trong kết quả mô phỏng."""
+
+    title: str = Field(..., examples=["Điều chuyển xe khẩn cấp"])
+    source_hub: Optional[str] = None
+    target_hub: Optional[str] = None
+    bike_count: Optional[int] = None
+    vehicle_type: Optional[str] = None
     details: List[str] = Field(default_factory=list)
 
 
 class SimulationResultResponse(BaseModel):
-    simulation_id: str = Field(..., example="SIM-109")
-    scenario_name: str = Field(..., example="Nhu cầu sạc tăng 50%")
-    status: str = Field("Hoàn thành", example="Hoàn thành")
-    executed_at: str = Field(..., example="22/10/2026")
+    """Kết quả mô phỏng; đánh dấu rõ khi dùng dữ liệu mẫu."""
+
+    simulation_id: str = Field(..., examples=["SIM-ABC123"])
+    scenario_name: str = Field(..., examples=["Nhu cầu sạc tăng 50%"])
+    status: str = Field(..., examples=["Hoàn thành (dữ liệu mẫu)"])
+    executed_at: str = Field(
+        ..., examples=["2026-11-03T10:00:00+00:00"]
+    )
+    is_mock: bool = Field(..., examples=[True])
+    result_basis: str = Field(
+        ..., examples=["Biểu đồ mẫu, chưa tính theo snapshot/config"]
+    )
+
     load_chart_data: List[HubLoadPoint]
     power_chart_data: List[PowerLoadPoint]
-    peak_power_kw: float = Field(185.0, example=185.0)
-    peak_metro_load_pct: int = Field(92, example=92)
-    overloaded_hubs: str = Field("2 / 12", example="2 / 12")
-    overloaded_chargers: str = Field("15 / 60", example="15 / 60")
-    metro_deficit_bikes: int = Field(35, example=35)
+    peak_power_kw: float
+    peak_metro_load_pct: int
+    overloaded_hubs: str
+    overloaded_chargers: str
+    metro_deficit_bikes: int
     recommendations: List[DispatchRecommendationItem]
 
 
 class SimulationSaveRuleRequest(BaseModel):
-    simulation_id: str = Field(..., example="SIM-109")
-    rule_name: str = Field(..., example="Kịch bản ứng phó vỡ trận ga Metro giờ cao điểm")
-    operation_instructions: str = Field(..., example="Điều chuyển xe từ Hub KTX Khu A sang Hub Ga Metro.")
-    auto_match_on_high_load: bool = Field(True)
+    """Yêu cầu lưu quy tắc tham chiếu tới một phiên đã chạy."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    simulation_id: str = Field(
+        ..., min_length=1, pattern=r"\S", examples=["SIM-ABC123"]
+    )
+    rule_name: str = Field(
+        ..., min_length=1, pattern=r"\S",
+        examples=["Ứng phó cao điểm tại Ga Metro"]
+    )
+    operation_instructions: str = Field(
+        ..., min_length=1, pattern=r"\S",
+        examples=["Điều chuyển xe từ Hub KTX sang Hub Ga Metro."]
+    )
+    auto_match_on_high_load: bool = Field(
+        default=True, strict=True, examples=[True]
+    )
+
+
+class SimulationSaveRuleResponse(BaseModel):
+    """Kết quả lưu quy tắc vào store."""
+
+    success: bool = Field(..., examples=[True])
+    message: str = Field(..., examples=["Đã lưu quy tắc vào store"])
+    rule_id: str = Field(..., examples=["RULE-ABC123"])
+    simulation_id: str = Field(..., examples=["SIM-ABC123"])
+    history_id: str = Field(..., examples=["SIM-ABC123"])
 
 
 class SimulationHistoryItem(BaseModel):
-    id: str = Field(..., example="SIM-108")
-    title: str = Field(..., example="Tăng sinh viên giờ cao điểm Metro")
-    parameters_summary: str = Field(..., example="Tham số: Nhu cầu +150%, Hub Metro A hỏng 3 cổng")
-    executed_at: str = Field(..., example="10/10/2026 16:30")
-    duration_str: str = Field("45s", example="45s")
-    created_by: str = Field("Nguyen Van A", example="Nguyen Van A")
-    status: str = Field("Thành công", example="Thành công")
-    what_if_params: str = Field(..., example="Nhu cầu tăng +150%, 3 cổng sạc hỏng tại Hub Metro A, Thời gian giả định: 2 giờ.")
-    recorded_result: str = Field(..., example="2 Hub vượt ngưỡng 85% tải, thiếu hụt 35 xe đạp điện tại các trạm kết nối.")
-    saved_rule: str = Field(..., example="Tự động gửi lệnh điều chuyển 20 xe từ Hub KTX A sang Metro A khi nhu cầu > 80%.")
+    """Một phiên mô phỏng và dữ liệu phục vụ xem lại."""
+
+    id: str = Field(..., examples=["SIM-ABC123"])
+    title: str = Field(..., examples=["Nhu cầu sạc tăng 50%"])
+    parameters_summary: str
+    executed_at: str
+    duration_str: str
+    created_by: str
+    status: str
+    what_if_params: str
+    recorded_result: str
+    saved_rule: str = ""
+
+    # Seed cũ chưa lưu đủ các trường này.
+    source: Optional[SimulationSourceState] = None
+    config: Optional[SimulationScenarioConfig] = None
+    result: Optional[SimulationResultResponse] = None
 
 
 class SimulationHistoryList(BaseModel):
-    total: int = 28
+    """Danh sách lịch sử với tổng số bản ghi thực tế."""
+
+    total: int = Field(..., ge=0, examples=[1])
     items: List[SimulationHistoryItem]

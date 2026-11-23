@@ -1,0 +1,69 @@
+<!-- Partial: user/partials/screens/booking/select-charging.html -->
+<section id="screen-select-charging" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-select-parking')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Chọn tài nguyên</span>
+    <span class="nav-action"><i class="fa-solid fa-bolt" style="font-size: 18px;"></i></span>
+  </div>
+
+  <div class="step-indicator">
+    <div class="step-label">Bước 2/3 · Chọn tài nguyên</div>
+    <div class="step-bars">
+      <div class="bar active"></div>
+      <div class="bar active"></div>
+      <div class="bar"></div>
+    </div>
+  </div>
+
+  <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;" class="hub-name-display">Hub Ga Metro ĐHQG</div>
+
+  <div class="segmented-tabs">
+    <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-bike')">Thuê xe</button>
+    <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-parking')">Chỗ đỗ</button>
+    <button class="segmented-tab active" onclick="App.switchBookingTab('screen-select-charging')">Sạc</button>
+    <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-battery-swap')">Đổi pin</button>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">Phương tiện cá nhân *</label>
+    <div class="input-box">
+      <select id="chargingPersonalVehicle">
+        <option value="Xe máy điện · 59-X1 123.45">Xe máy điện · 59-X1 123.45</option>
+        <option value="Xe đạp điện · 59-MD 889.92">Xe đạp điện · 59-MD 889.92</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">Ngày sử dụng *</label>
+    <div class="input-box">
+      <select id="chargingUseDate">
+        <option value="18/10/2026">18/10/2026</option>
+        <option value="19/10/2026">19/10/2026</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group" style="margin-bottom: 14px;">
+    <label class="form-label">Khung giờ và cổng sạc</label>
+    <div id="chargerSlotsContainer">
+      <div class="card-box selectable selected" id="slot-s03" style="display: flex; justify-content: space-between; align-items: center; padding: 14px; margin-bottom: 10px;" onclick="App.selectChargerSlot('10:00 – 11:00 · S03', 'slot-s03')">
+        <span style="font-size: 14px; font-weight: 700;">10:00 – 11:00 · S03</span>
+        <div class="radio-circle checked"></div>
+      </div>
+
+      <div class="card-box selectable" id="slot-s04" style="display: flex; justify-content: space-between; align-items: center; padding: 14px;" onclick="App.selectChargerSlot('11:00 – 12:00 · S04', 'slot-s04')">
+        <span style="font-size: 14px; font-weight: 700;">11:00 – 12:00 · S04</span>
+        <div class="radio-circle"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note-box-simple">
+    Giỏ dịch vụ: chỗ đỗ + lịch sạc, cùng xe và cùng Hub. Có thể chỉnh trước khi đặt.
+  </div>
+
+  <button class="btn-primary" style="width: 100%; font-weight: 700; padding: 13px;" onclick="App.navigateTo('screen-review-booking')">
+    Kiểm tra đặt chỗ (2)
+  </button>
+</section>

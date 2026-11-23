@@ -1,0 +1,47 @@
+<!-- Partial: operator/partials/layout/login-2fa.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- ================= 2FA LOGIN VIEW (Operator Wireframe 1.jpg) ================= -->
+<div id="operatorLoginView" class="login-overlay-container">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo-circle">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <h2 style="font-size: 19px; font-weight: 800; margin-bottom: 4px;">ĐĂNG NHẬP ĐIỀU HÀNH</h2>
+      <p style="font-size: 13px; color: var(--text-muted);">Smart E-Mobility Hub · Trung tâm điều phối ĐHQG</p>
+    </div>
+
+    <div class="login-body">
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px;">Email quản trị viên</label>
+        <input type="email" id="loginEmail" value="admin@e-mobility.com" style="width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 13.5px;" readonly>
+      </div>
+
+      <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 14px; margin-bottom: 18px; text-align: center;">
+        <div style="font-size: 13px; font-weight: 700; margin-bottom: 4px;">Xác thực hai lớp (2FA)</div>
+        <div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 12px;">Nhập mã 6 chữ số từ ứng dụng Authenticator hoặc email</div>
+
+        <div class="otp-inputs-row">
+          <input type="text" maxlength="1" class="otp-digit" value="8" data-idx="0">
+          <input type="text" maxlength="1" class="otp-digit" value="4" data-idx="1">
+          <input type="text" maxlength="1" class="otp-digit" value="9" data-idx="2">
+          <input type="text" maxlength="1" class="otp-digit" value="2" data-idx="3">
+          <input type="text" maxlength="1" class="otp-digit" value="0" data-idx="4">
+          <input type="text" maxlength="1" class="otp-digit" value="1" data-idx="5">
+        </div>
+        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 10px;">
+          Gửi lại mã sau <span style="font-weight: 700; color: var(--text-main);" id="otpTimer">54s</span>
+        </div>
+      </div>
+
+      <button class="btn-primary-dark" style="width: 100%; justify-content: center; padding: 12px; font-size: 14px;" onclick="OperatorApp.completeLogin()">
+        <i class="fa-solid fa-lock-open"></i>
+        <span>XÁC NHẬN ĐĂNG NHẬP</span>
+      </button>
+
+      <div style="text-align: center; margin-top: 14px;">
+        <a href="javascript:void(0)" onclick="alert('Đã gửi mã mới về email admin@e-mobility.com')" style="font-size: 12px; color: var(--text-muted); text-decoration: underline;">Đăng nhập bằng phương thức khác</a>
+      </div>
+    </div>
+  </div>
+</div>

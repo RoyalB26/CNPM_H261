@@ -1,0 +1,34 @@
+<!-- Partial: user/partials/screens/booking/review-rental.html -->
+<section id="screen-review-rental" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-select-bike')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Kiểm tra đặt xe</span>
+  </div>
+  <div class="card-box">
+    <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">Phương tiện dùng chung</h3>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+      <span style="color: var(--text-muted);">Mã xe</span>
+      <span style="font-weight: 600;" id="reviewRentalBike">XE-024 (Pin 85%)</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+      <span style="color: var(--text-muted);">Hub lấy xe</span>
+      <span style="font-weight: 600;" id="reviewRentalOriginHub">Hub Ga Metro ĐHQG</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px;">
+      <span style="color: var(--text-muted);">Hub trả xe dự kiến</span>
+      <span style="font-weight: 600;" id="reviewRentalDestHub">Hub ĐH Bách Khoa</span>
+    </div>
+  </div>
+
+  <!-- Rental Conflict Error Alert -->
+  <div id="rentalErrorAlert" style="display: none; background: #fef2f2; border: 1.5px solid #f87171; border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 16px; color: #991b1b; font-size: 13px; align-items: flex-start; gap: 10px;">
+    <i class="fa-solid fa-triangle-exclamation" style="font-size: 18px; color: #ef4444; flex-shrink: 0; margin-top: 1px;"></i>
+    <div id="rentalErrorAlertText"><strong>Thông báo:</strong> Không thể thuê một phương tiện hai lần.</div>
+  </div>
+
+  <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; margin-bottom: 24px; font-size: 12.5px; color: var(--text-muted);" id="reviewRentalPolicyNote">
+    Thời gian giữ xe: 10 phút sau khi xác nhận. Cước phí tạm tính: 10,000đ/giờ (thanh toán khi quét mã mở xe tại Hub).
+  </div>
+  <button class="btn-secondary" style="margin-bottom: 10px; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-select-bike')">Chỉnh sửa lựa chọn</button>
+  <button class="btn-primary" style="width: 100%; font-weight: 700;" onclick="App.confirmRental()">Xác nhận thuê xe</button>
+</section>

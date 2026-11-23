@@ -1,0 +1,21 @@
+<!-- Partial: operator/partials/modals/emergency.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- MODAL: DỪNG KHẨN CẤP (EMERGENCY) -->
+<div id="modalEmergency" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header-dark" style="background: #991b1b;">
+      <span><i class="fa-solid fa-triangle-exclamation"></i> XÁC NHẬN CẢNH BÁO</span>
+      <i class="fa-solid fa-xmark" style="cursor: pointer;" onclick="OperatorApp.closeModal('modalEmergency')"></i>
+    </div>
+    <div class="modal-body">
+      <h3 style="font-size: 16px; margin-bottom: 8px;">Kích hoạt DỪNG KHẨN CẤP TOÀN HỆ THỐNG?</h3>
+      <p style="font-size: 13.5px; color: var(--text-muted); line-height: 1.5; border-left: 3px solid #ef4444; padding-left: 10px;">
+        Hành động này sẽ ngắt toàn bộ kịch bản tự động điều phối và khóa truy cập người dùng mới ngay lập tức.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary-light" onclick="OperatorApp.closeModal('modalEmergency')">Hủy bỏ</button>
+      <button class="btn-primary-dark" style="background: #ef4444;" onclick="OperatorApp.confirmEmergency()">Xác nhận Dừng</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,21 @@
+<!-- Partial: operator/partials/modals/deactivate-hub.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- MODAL: DEACTIVATE HUB -->
+<div id="modalDeactivateHub" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header-dark">
+      <span>XÁC NHẬN TẠM NGƯNG (DEACTIVATE)</span>
+      <i class="fa-solid fa-xmark" style="cursor: pointer;" onclick="OperatorApp.closeModal('modalDeactivateHub')"></i>
+    </div>
+    <div class="modal-body">
+      <h4 id="deactivateHubTitle" style="margin-bottom: 8px; font-size: 15px;">Chuyển Hub sang trạng thái Deactivate?</h4>
+      <p style="font-size: 13px; color: var(--text-muted); line-height: 1.4; border-left: 3px solid var(--accent-red); padding-left: 10px;">
+        Toàn bộ cổng sạc sẽ bị khóa vật lý. Các phiên đặt chỗ tương lai sẽ tự động bị hủy hoặc điều hướng. Bạn có chắc chắn?
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary-light" onclick="OperatorApp.closeModal('modalDeactivateHub')">Hủy bỏ</button>
+      <button class="btn-primary-dark" style="background: var(--accent-red);" onclick="OperatorApp.confirmDeactivate()">Xác nhận Ngưng</button>
+    </div>
+  </div>
+</div>

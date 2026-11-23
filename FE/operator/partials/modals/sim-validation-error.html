@@ -1,0 +1,27 @@
+<!-- Partial: operator/partials/modals/sim-validation-error.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- MODAL: VALIDATION ERROR THAM SỐ (Operator Wireframe 15.jpg) -->
+<div id="modalValidationError" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header-dark" style="background: #b91c1c;">
+      <span>CẢNH BÁO THAM SỐ</span>
+      <i class="fa-solid fa-xmark" style="cursor: pointer;" onclick="OperatorApp.closeModal('modalValidationError')"></i>
+    </div>
+    <div class="modal-body" style="text-align: center; padding: 30px 24px;">
+      <div style="width: 60px; height: 60px; border-radius: 50%; border: 3px solid #ef4444; color: #ef4444; font-size: 28px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+        <i class="fa-solid fa-exclamation"></i>
+      </div>
+      <h3 style="font-size: 17px; font-weight: 800; margin-bottom: 8px;">THAM SỐ KHÔNG HỢP LỆ</h3>
+      <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;" id="valErrorDesc">
+        Hub 04 có số lượng xe vượt quá sức chứa tối đa của trạm (120/100 chỗ). Vui lòng điều chỉnh lại dữ liệu trước khi mô phỏng.
+      </p>
+      <div style="font-size: 12px; font-family: monospace; color: #b91c1c; font-weight: 700;">
+        Mã lỗi: EX-10-01 (INVALID_INPUT)
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content: center;">
+      <button class="btn-secondary-light" style="padding: 9px 20px;" onclick="OperatorApp.closeModal('modalValidationError')">HỦY</button>
+      <button class="btn-primary-dark" style="padding: 9px 20px;" onclick="OperatorApp.fixValidationError()">CHỈNH SỬA DỮ LIỆU</button>
+    </div>
+  </div>
+</div>

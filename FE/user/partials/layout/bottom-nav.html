@@ -1,0 +1,21 @@
+<!-- Partial: user/partials/layout/bottom-nav.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- Global App Bottom Navigation Bar -->
+<nav class="bottom-nav" id="globalBottomNav">
+  <button class="nav-item active" id="navItemMap" onclick="App.navigateTo('screen-map-home')">
+    <i class="fa-solid fa-map-location-dot"></i>
+    <span>Trang chủ</span>
+  </button>
+  <button class="nav-item" id="navItemBookings" onclick="App.navigateTo('screen-my-bookings')">
+    <i class="fa-regular fa-calendar-check"></i>
+    <span>Lịch đặt</span>
+  </button>
+  <button class="nav-item" id="navItemActive" onclick="App.navigateTo('screen-active-services')">
+    <i class="fa-solid fa-chart-line"></i>
+    <span>Đang dùng</span>
+  </button>
+  <button class="nav-item" id="navItemReport" onclick="App.navigateTo('screen-report-incident')">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <span>Sự cố</span>
+  </button>
+</nav>

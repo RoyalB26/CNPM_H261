@@ -1,0 +1,50 @@
+<!-- Partial: user/partials/screens/auth-profile/register.html -->
+<section id="screen-register" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-login')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Đăng ký tài khoản</span>
+  </div>
+  <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 20px;">Tạo tài khoản sử dụng phương tiện và trạm sạc</p>
+
+  <form id="registerForm" onsubmit="App.handleRegister(event)">
+    <div class="form-group">
+      <label class="form-label">Họ và tên</label>
+      <div class="input-box">
+        <input type="text" placeholder="Ví dụ: Nguyễn Văn A" required>
+        <i class="fa-regular fa-user input-icon"></i>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Số điện thoại</label>
+      <div class="input-box">
+        <input type="tel" placeholder="09xxxxxxxx" required>
+        <i class="fa-solid fa-phone input-icon"></i>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email trường / cá nhân</label>
+      <div class="input-box">
+        <input type="email" placeholder="example@hcmut.edu.vn" required>
+        <i class="fa-regular fa-envelope input-icon"></i>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Mật khẩu</label>
+      <div class="input-box">
+        <input type="password" placeholder="Tối thiểu 6 ký tự" required>
+        <i class="fa-solid fa-lock input-icon"></i>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom: 24px;">
+      <label class="form-label">Xác nhận mật khẩu</label>
+      <div class="input-box">
+        <input type="password" placeholder="Nhập lại mật khẩu" required>
+        <i class="fa-solid fa-lock input-icon"></i>
+      </div>
+    </div>
+    <button type="submit" class="btn-primary" style="margin-bottom: 16px;">Tạo tài khoản</button>
+  </form>
+  <p style="text-align: center; font-size: 13.5px; color: var(--text-muted);">
+    Đã có tài khoản? <a href="javascript:void(0)" onclick="App.navigateTo('screen-login')" style="font-weight: 600; color: var(--text-main); text-decoration: none;">Đăng nhập</a>
+  </p>
+</section>

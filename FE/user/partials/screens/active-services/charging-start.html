@@ -1,0 +1,49 @@
+<!-- Partial: user/partials/screens/active-services/charging-start.html -->
+<section id="screen-charging-start" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-personal-booking')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Bắt đầu sử dụng sạc</span>
+    <span class="nav-action"><i class="fa-solid fa-bolt" style="font-size: 18px;"></i></span>
+  </div>
+
+  <div style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 14px;">EMH-1024 · Hub Ga Metro</div>
+
+  <div class="card-box" style="margin-bottom: 16px;">
+    <div style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--text-main);">Lịch sạc đã đăng ký</div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Phương tiện</span>
+      <span style="font-weight: 600; color: var(--text-main);">59-X1 123.45</span>
+    </div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Cổng sạc</span>
+      <span style="font-weight: 600; color: var(--text-main);">S03</span>
+    </div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Khung giờ</span>
+      <span style="font-weight: 600; color: var(--text-main);">10:00 – 11:00</span>
+    </div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Trạng thái</span>
+      <span style="font-weight: 600; color: var(--text-main);">Sẵn sàng theo lịch</span>
+    </div>
+  </div>
+
+  <div class="form-group" style="margin-bottom: 16px;">
+    <label class="form-label" style="font-weight: 700;">Mã cổng sạc thực tế *</label>
+    <div class="input-with-button">
+      <input type="text" id="chargingPortCodeInput" value="S03" />
+      <button type="button" class="btn-inline-action" onclick="App.showToast('Quét QR cổng sạc S03 thành công!')">Quét QR</button>
+    </div>
+  </div>
+
+  <label class="checkbox-custom-row">
+    <input type="checkbox" id="chargingCheckConfirm" checked />
+    <span>Tôi đã cắm sạc đúng phương tiện và cổng sạc.</span>
+  </label>
+
+  <p style="font-size: 13px; color: var(--text-muted); margin-top: 18px; margin-bottom: 28px; line-height: 1.5;">
+    Chỉ bắt đầu khi quyền sử dụng, lịch, cổng sạc và thứ tự thao tác hợp lệ.
+  </p>
+
+  <button class="btn-primary" style="width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-charging-active')">Xác nhận bắt đầu sạc</button>
+</section>

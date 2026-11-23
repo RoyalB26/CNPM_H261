@@ -1,0 +1,28 @@
+<!-- Partial: operator/partials/modals/telemetry-drawer.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- DRAWER: TẤT CẢ NHẬT KÝ TELEMETRY (Wireframe 2.jpg) -->
+<div id="drawerTelemetry" class="modal-backdrop">
+  <div class="modal-dialog" style="width: 620px;">
+    <div class="modal-header-dark">
+      <span><i class="fa-solid fa-list-ul" style="margin-right: 8px;"></i> NHẬT KÝ TELEMETRY THỜI GIAN THỰC</span>
+      <i class="fa-solid fa-xmark" style="cursor: pointer;" onclick="OperatorApp.closeModal('drawerTelemetry')"></i>
+    </div>
+    <div class="modal-body" style="max-height: 480px; overflow-y: auto;">
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <select style="padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12.5px;">
+          <option>Tất cả cấp độ</option>
+          <option>Cảnh báo (Alert)</option>
+          <option>Nguy cơ (Warning)</option>
+          <option>Bình thường (Info)</option>
+        </select>
+        <input type="text" placeholder="Tìm kiếm nhật ký..." style="flex: 1; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12.5px;">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;" id="telemetryFullList">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary-light" onclick="OperatorApp.closeModal('drawerTelemetry')">Đóng</button>
+    </div>
+  </div>
+</div>

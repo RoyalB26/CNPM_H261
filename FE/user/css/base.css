@@ -1,0 +1,127 @@
+/* Root variables and base layout */
+:root {
+  --bg-app: #f4f6f8;
+  --bg-card: #ffffff;
+  --bg-subtle: #f8fafc;
+  --border-color: #e2e8f0;
+  --border-focus: #111827;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
+  --primary-color: #111827;
+  --primary-hover: #1f2937;
+  --primary-text: #ffffff;
+  --accent-green: #10b981;
+  --accent-blue: #2563eb;
+  --accent-red: #ef4444;
+  --accent-amber: #f59e0b;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.1);
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ============================================================
+   2. GIAO DIỆN DÀNH RIÊNG CHO ĐIỆN THOẠI DI ĐỘNG (Screen <= 768px)
+   ============================================================ */
+@media (max-width: 768px) {
+  body {
+    background: #ffffff;
+  }
+
+  .app-container {
+    max-width: 100%;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh; /* Chiều cao động chuẩn trình duyệt di động Safari/Chrome */
+    max-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+  }
+
+  /* Hiển thị status bar trên mobile */
+  .status-bar {
+    height: 44px;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #0f172a;
+    background: #ffffff;
+    z-index: 50;
+    user-select: none;
+  }
+
+  .status-bar .status-icons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .screen {
+    padding: 16px 16px 80px 16px;
+    max-width: 100%;
+  }
+
+  #screen-map-home {
+    padding: 12px 14px 75px 14px;
+  }
+
+  .sim-map-wrapper {
+    height: calc(100dvh - 180px);
+    max-height: 520px;
+    border-radius: var(--radius-lg);
+  }
+
+  #bookingCardsContainer,
+  #hubListContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Bottom nav bar chạm đáy mobile theo đúng tỷ lệ màn hình */
+  .bottom-nav {
+    height: 68px;
+    justify-content: space-around;
+    gap: 0;
+    padding-bottom: 6px;
+  }
+
+  .nav-item {
+    flex: 1;
+    min-width: auto;
+    padding: 6px 0;
+  }
+
+  /* Bottom sheet trên mobile trượt lên từ đáy */
+  .bottom-sheet-modal {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    border-radius: 24px 24px 0 0;
+    padding: 24px 20px 80px 20px;
+    transform: translateY(100%);
+  }
+
+  .bottom-sheet-modal.open {
+    transform: translateY(0);
+  }
+}
+

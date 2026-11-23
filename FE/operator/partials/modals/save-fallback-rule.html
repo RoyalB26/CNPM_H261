@@ -1,0 +1,34 @@
+<!-- Partial: operator/partials/modals/save-fallback-rule.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- MODAL: LƯU KỊCH BẢN DỰ PHÒNG (Operator Wireframe 20.jpg) -->
+<div id="modalSaveFallbackRule" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header-dark">
+      <span>LƯU KỊCH BẢN DỰ PHÒNG</span>
+      <i class="fa-solid fa-xmark" style="cursor: pointer;" onclick="OperatorApp.closeModal('modalSaveFallbackRule')"></i>
+    </div>
+    <div class="modal-body">
+      <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 14px;">
+        Lưu lại quy tắc ứng phó để sử dụng cho các lần vận hành sau.
+      </p>
+      <div style="margin-bottom: 14px;">
+        <label class="form-label">Tên kịch bản dự phòng</label>
+        <input type="text" id="fallbackRuleName" class="form-input" value="Kịch bản ứng phó vỡ trận ga Metro giờ cao điểm">
+      </div>
+      <div style="margin-bottom: 14px;">
+        <label class="form-label">Mô tả quy tắc vận hành & Hướng dẫn xử lý</label>
+        <textarea id="fallbackRuleDesc" class="form-input" rows="3" placeholder="Nhập quy tắc điều phối, ưu tiên sạc và hướng dẫn xử lý... Ví dụ: điều chuyển xe từ Hub KTX Khu A sang Hub Ga Metro.">Điều chuyển xe từ Hub KTX Khu A sang Hub Ga Metro A khi tỷ lệ tải vượt 85%.</textarea>
+      </div>
+      <div>
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+          <input type="checkbox" id="autoMatchRuleCheck" checked>
+          <span>Cho phép hệ thống tự động so khớp dữ liệu khi tải cao</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary-light" onclick="OperatorApp.closeModal('modalSaveFallbackRule')">HỦY</button>
+      <button class="btn-primary-dark" onclick="OperatorApp.confirmSaveFallbackRule()">XÁC NHẬN LƯU</button>
+    </div>
+  </div>
+</div>

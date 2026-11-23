@@ -1,0 +1,74 @@
+<!-- Partial: user/partials/screens/incidents/report-incident.html -->
+<section id="screen-report-incident" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Báo cáo sự cố</span>
+    <i class="fa-solid fa-triangle-exclamation nav-action"></i>
+  </div>
+
+  <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Sự cố được chuyển đến đơn vị vận hành</p>
+
+  <form id="incidentForm" onsubmit="App.handleIncidentSubmit(event)">
+    <div class="form-group">
+      <label class="form-label">Loại tài nguyên *</label>
+      <div class="input-box">
+        <select id="incResourceType">
+          <option value="Phương tiện">Phương tiện</option>
+          <option value="Chỗ đỗ">Chỗ đỗ xe</option>
+          <option value="Cổng sạc">Cổng sạc pin</option>
+          <option value="Cơ sở hạ tầng">Cơ sở hạ tầng Hub</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Mã thiết bị / tài nguyên *</label>
+      <div style="display: flex; gap: 8px;">
+        <div class="input-box" style="flex: 1;">
+          <input type="text" id="incResourceCode" value="XE-024" required>
+        </div>
+        <button type="button" class="btn-secondary" style="width: auto; padding: 0 14px; font-size: 13px;" onclick="App.showToast('Đã quét mã QR thiết bị')">Quét QR</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Hub xảy ra sự cố *</label>
+      <div class="input-box">
+        <select id="incHubName">
+          <option value="Hub Ga Metro ĐHQG">Hub Ga Metro ĐHQG</option>
+          <option value="Hub Đại học Bách khoa">Hub Đại học Bách khoa</option>
+          <option value="Hub KTX Khu B">Hub KTX Khu B</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Loại sự cố *</label>
+      <div class="input-box">
+        <select id="incType">
+          <option value="Không mở được khóa">Không mở được khóa</option>
+          <option value="Lỗi phanh / xích / động cơ">Lỗi phanh / xích / động cơ</option>
+          <option value="Trụ sạc không vào điện">Trụ sạc không vào điện</option>
+          <option value="Chỗ đỗ bị chiếm trái phép">Chỗ đỗ bị chiếm trái phép</option>
+          <option value="Khác">Khác</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Mô tả sự cố *</label>
+      <div class="input-box">
+        <textarea id="incDescription" rows="3" placeholder="Mô tả cụ thể sự cố gặp phải..." required>Xe không mở được khóa sau khi xác nhận nhận xe.</textarea>
+      </div>
+    </div>
+
+    <div class="card-box" style="display: flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px dashed var(--border-color); cursor: pointer;" onclick="App.showToast('Đã đính kèm hình ảnh sự cố')">
+      <i class="fa-solid fa-camera" style="font-size: 18px; color: var(--text-muted);"></i>
+      <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">Thêm ảnh minh họa (tùy chọn)</span>
+    </div>
+
+    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">Các trường có dấu * là bắt buộc.</p>
+
+    <button type="submit" class="btn-primary">Gửi báo cáo</button>
+  </form>
+</section>

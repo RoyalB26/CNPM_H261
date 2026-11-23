@@ -22,6 +22,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
+from shared.middleware import SharedPersistenceMiddleware
+
+
+
 def load_backend_submodule(subfolder, module_name):
     folder_path = os.path.join(BASE_DIR, subfolder)
     for k in list(sys.modules.keys()):
@@ -56,6 +60,7 @@ async def root_status(request):
 all_routes = [Route("/", root_status)] + user_mod.routes + op_mod.routes + staff_mod.routes
 
 middleware = [
+    Middleware(SharedPersistenceMiddleware),
     Middleware(
         CORSMiddleware,
         allow_origins=["*"],

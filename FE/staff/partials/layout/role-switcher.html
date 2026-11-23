@@ -1,0 +1,11 @@
+<!-- Partial: staff/partials/layout/role-switcher.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- Floating Role Switcher for Staff Demo -->
+<div class="role-selector-floating">
+  <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Chuyển vai trò thử nghiệm:</div>
+  <select id="staffRoleSelect" onchange="StaffApp.switchRole(this.value)">
+    <option value="relocation">1. Nhân viên điều phối xe (Relocation - Ảnh 3, 4, 5)</option>
+    <option value="maintenance">2. Nhân viên bảo trì / Kỹ thuật (Maintenance - Ảnh 6, 7, 8, 9, 10)</option>
+    <option value="security">3. Bảo vệ Hub / Gửi xe cá nhân (Security Guard - Ảnh 11, 12, 13)</option>
+  </select>
+</div>

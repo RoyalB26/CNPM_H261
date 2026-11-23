@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional
+from pydantic import BaseModel, ConfigDict, Field
+from typing import List, Literal, Optional
 
 class BikeInfo(BaseModel):
     id: str = Field(..., example="XE-024")
@@ -37,6 +37,10 @@ class HubPricingPolicy(BaseModel):
     battery_swap_fee: int = 25000
 
 class HubSummary(BaseModel):
+    """Thông tin Hub; giữ các trường bổ sung trong store chung."""
+
+    model_config = ConfigDict(extra="allow")
+
     id: str = Field(..., example="hub-01")
     name: str = Field(..., example="Hub Ga Metro ĐHQG")
     address: str = Field(..., example="Khu đô thị ĐHQG - HCM")
@@ -46,6 +50,7 @@ class HubSummary(BaseModel):
     available_parking: int = Field(8, description="Số chỗ đỗ còn trống")
     available_chargers: int = Field(2, description="Số cổng sạc khả dụng")
     available_batteries: int = Field(6, description="Số pin đầy có sẵn")
+    status: str
 
 class HubDetailResponse(HubSummary):
     bikes: List[BikeInfo] = []
@@ -58,18 +63,24 @@ class HubDetailResponse(HubSummary):
     battery_swaps: int = 6
 
 class SearchHubQuery(BaseModel):
+    """Bộ lọc Hub cho demo; không lọc nếu không gửi điều kiện."""
+
     keyword: Optional[str] = None
-    vehicle_type: Optional[str] = "bike"
+    status: Optional[Literal["ACTIVE", "WARNING", "MAINTENANCE", "DEACTIVATED"]] = None
+    vehicle_type: Optional[Literal["bike", "personal"]] = None
     destination: Optional[str] = None
 
 class RouteSuggestionRequest(BaseModel):
+    """Tọa độ hợp lệ dùng để chọn Hub lấy xe và Hub trả xe cho demo."""
+
+    model_config = ConfigDict(strict=True)
     origin_name: Optional[str] = None
-    origin_lat: float = Field(..., example=10.8753)
-    origin_lng: float = Field(..., example=106.8005)
+    origin_lat: float = Field(..., ge=-90, le=90, allow_inf_nan=False)
+    origin_lng: float = Field(..., ge=-180, le=180, allow_inf_nan=False)
     dest_name: Optional[str] = None
-    dest_lat: float = Field(..., example=10.8805)
-    dest_lng: float = Field(..., example=106.8055)
-    vehicle_type: str = Field("bike", example="bike")
+    dest_lat: float = Field(..., ge=-90, le=90, allow_inf_nan=False)
+    dest_lng: float = Field(..., ge=-180, le=180, allow_inf_nan=False)
+    vehicle_type: Literal["bike"] = "bike"
 
 class RouteSuggestionResponse(BaseModel):
     origin_hub: HubSummary

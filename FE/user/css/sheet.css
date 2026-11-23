@@ -1,0 +1,133 @@
+/* Modal Bottom Sheet & Component helpers */
+
+/* Modal Bottom Sheet */
+.bottom-sheet-modal {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-radius: 24px 24px 0 0;
+  padding: 24px 20px 80px 20px;
+  box-shadow: 0 -8px 30px rgba(0,0,0,0.15);
+  transform: translateY(100%);
+  transition: transform 0.25s ease-out;
+  z-index: 45;
+}
+
+.bottom-sheet-modal.open {
+  transform: translateY(0);
+}
+
+.sheet-handle {
+  width: 44px;
+  height: 5px;
+  background: #cbd5e1;
+  border-radius: 3px;
+  margin: 0 auto 16px auto;
+}
+
+/* User Specific EU-08..EU-29 Components */
+.nav-icon-badge-p {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--text-main);
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+.input-with-button {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 4px 6px 4px 14px;
+}
+
+.input-with-button input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  background: transparent;
+}
+
+.input-with-button .btn-inline-action {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.input-with-button .btn-inline-action:hover {
+  background: #f8fafc;
+}
+
+.checkbox-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-main);
+  cursor: pointer;
+  margin-top: 14px;
+  margin-bottom: 14px;
+}
+
+.checkbox-custom-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-color);
+  cursor: pointer;
+}
+
+.note-box-simple {
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.detail-row-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  padding: 7px 0;
+}
+
+.detail-row-line:not(:last-child) {
+  border-bottom: 1px solid #f8fafc;
+}
+
+.status-badge-outline {
+  display: inline-block;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 14px;
+}
+
+#screen-parking-exit-confirm.active {
+  background: #f1f5f9;
+}

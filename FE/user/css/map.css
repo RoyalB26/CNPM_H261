@@ -1,0 +1,73 @@
+/* MapLibre viewport & GeoJSON Hub pin markers */
+/* MapLibre GL map, GeoJSON hub pins and Modal bottom sheet */
+/* Map Simulation & MapLibre Styles */
+.sim-map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  background: #f1f5f9;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+#maplibre-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* MapLibre GeoJSON Hub Marker Pin (Monochrome Wireframe Style) */
+.maplibre-hub-marker {
+  width: 20px;
+  height: 26px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));
+}
+
+.maplibre-hub-marker:hover {
+  transform: scale(1.3);
+}
+
+.maplibre-hub-marker svg {
+  width: 20px;
+  height: 26px;
+}
+
+.maplibre-place-marker {
+  width: 26px;
+  height: 26px;
+  background: #3b82f6;
+  color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  border: 2px solid #ffffff;
+  cursor: pointer;
+}
+
+.maplibregl-popup-content {
+  border-radius: 12px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.map-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.map-pin {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.map-pin:hover {
+  transform: scale(1.2);
+}

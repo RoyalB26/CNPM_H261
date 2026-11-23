@@ -5,6 +5,8 @@ Smart E-Mobility Hub - ĐHQG-HCM
 
 from .auth import (
     OperatorLoginRequest,
+    OperatorLoginResponse,
+    OperatorAuthErrorResponse,
     Operator2FARequest,
     OperatorProfile,
     OperatorTokenResponse,
@@ -15,6 +17,7 @@ from .dashboard import (
     TelemetryEvent,
     HubLiveStatus,
     EmergencyHaltRequest,
+    EmergencyHaltErrorResponse,
     EmergencyHaltResponse,
 )
 from .relocation import (
@@ -23,6 +26,8 @@ from .relocation import (
     RelocationCommandCreate,
     RelocationCommandItem,
     RelocationCommandList,
+
+    RelocationResponse,
 )
 from .maintenance import (
     FaultSeverity,
@@ -31,14 +36,24 @@ from .maintenance import (
     MaintenanceAssignRequest,
     MaintenanceCreateRequest,
     MaintenanceTicketList,
+    MaintenanceAssignResponse,
+    MaintenanceErrorResponse,
 )
+
+
 from .hub_manage import (
     HubOperationalStatus,
     HubConfig,
     HubConfigUpdate,
     HubDeactivateRequest,
     HubManageList,
+    HubConfigUpdateResponse,
+    HubDeactivateResponse,
+    HubErrorResponse,
 )
+
+
+
 from .simulation import (
     ScenarioType,
     SourceStateType,
@@ -53,10 +68,15 @@ from .simulation import (
     SimulationSaveRuleRequest,
     SimulationHistoryItem,
     SimulationHistoryList,
+    SimulationRunRequest,
+    SimulationErrorResponse,
+    SimulationSaveRuleResponse,
 )
 
 __all__ = [
     "OperatorLoginRequest",
+    "OperatorLoginResponse",
+    "OperatorAuthErrorResponse",
     "Operator2FARequest",
     "OperatorProfile",
     "OperatorTokenResponse",
@@ -65,23 +85,38 @@ __all__ = [
     "TelemetryEvent",
     "HubLiveStatus",
     "EmergencyHaltRequest",
+    "EmergencyHaltErrorResponse",
     "EmergencyHaltResponse",
     "RelocationStatus",
     "RelocationPriority",
     "RelocationCommandCreate",
     "RelocationCommandItem",
     "RelocationCommandList",
+    "RelocationResponse",
+
+
+
     "FaultSeverity",
     "MaintenanceStatus",
     "MaintenanceTicketItem",
     "MaintenanceAssignRequest",
     "MaintenanceCreateRequest",
     "MaintenanceTicketList",
+    "MaintenanceAssignResponse",
+    "MaintenanceErrorResponse",
+
     "HubOperationalStatus",
     "HubConfig",
     "HubConfigUpdate",
     "HubDeactivateRequest",
     "HubManageList",
+    "HubConfigUpdateResponse",
+    "HubDeactivateResponse",
+    "HubErrorResponse",
+
+
+
+
     "ScenarioType",
     "SourceStateType",
     "HubStateSnapshot",
@@ -95,4 +130,8 @@ __all__ = [
     "SimulationSaveRuleRequest",
     "SimulationHistoryItem",
     "SimulationHistoryList",
+
+    "SimulationRunRequest",
+    "SimulationErrorResponse",
+    "SimulationSaveRuleResponse",
 ]

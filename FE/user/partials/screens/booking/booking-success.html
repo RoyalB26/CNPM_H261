@@ -1,0 +1,26 @@
+<!-- Partial: user/partials/screens/booking/booking-success.html -->
+<section id="screen-booking-success" class="screen" style="text-align: center; justify-content: center; align-items: center;">
+  <div style="width: 72px; height: 72px; background: #ecfdf5; color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 16px;">
+    <i class="fa-solid fa-check"></i>
+  </div>
+  <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 6px;">Đặt chỗ thành công!</h2>
+  <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 24px;" id="successBookingId">Mã đặt: EMH-1024</p>
+
+  <div class="card-box" style="text-align: left; width: 100%; margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+      <span style="color: var(--text-muted);">Hub</span>
+      <span style="font-weight: 600;" id="successBookingHub">Hub Ga Metro ĐHQG</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+      <span style="color: var(--text-muted);">Thời gian giữ chỗ đến</span>
+      <span style="font-weight: 700; color: #ef4444;" id="successBookingHoldUntil">08:10</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13px;">
+      <span style="color: var(--text-muted);">Trạng thái</span>
+      <span style="color: #10b981; font-weight: 600;">Đã giữ tài nguyên</span>
+    </div>
+  </div>
+
+  <button class="btn-primary" style="margin-bottom: 12px;" onclick="App.navigateTo('screen-my-bookings')">Xem danh sách đặt chỗ</button>
+  <button class="btn-secondary" onclick="App.navigateTo('screen-pickup')">Đến bước nhận xe / dịch vụ</button>
+</section>

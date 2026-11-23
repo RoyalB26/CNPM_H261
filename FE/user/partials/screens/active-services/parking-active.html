@@ -1,0 +1,43 @@
+<!-- Partial: user/partials/screens/active-services/parking-active.html -->
+<section id="screen-parking-active" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-active-services')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Đang sử dụng chỗ đỗ</span>
+    <span class="nav-icon-badge-p">P</span>
+  </div>
+
+  <div style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 12px;" id="parkingActiveSubtitle">EMH-1024 · Hub Ga Metro</div>
+
+  <div class="status-badge-outline" id="parkingActiveStatus">Đang đỗ</div>
+
+  <div class="card-box" style="margin-bottom: 16px;">
+    <div style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--text-main);">Thông tin phiên đỗ</div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Phương tiện</span>
+      <span style="font-weight: 600; color: var(--text-main);" id="parkingActivePlate">59-X1 123.45</span>
+    </div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Vị trí</span>
+      <span style="font-weight: 600; color: var(--text-main);" id="parkingActiveSlot">P08</span>
+    </div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Giờ vào</span>
+      <span style="font-weight: 600; color: var(--text-main);" id="parkingActiveCheckin">10:00</span>
+    </div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Giờ dự kiến rời</span>
+      <span style="font-weight: 600; color: var(--text-main);" id="parkingActiveEstExit">12:00</span>
+    </div>
+    <div class="detail-row-line">
+      <span style="color: var(--text-muted);">Cập nhật gần nhất</span>
+      <span style="font-weight: 600; color: var(--text-main);" id="parkingActiveLastUpdate">10:15:02</span>
+    </div>
+  </div>
+
+  <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5;">
+    Phí giữ xe được thanh toán trực tiếp cho bảo vệ tại Hub.
+  </p>
+
+  <button class="btn-secondary" style="margin-bottom: 12px; border: 1.5px solid var(--border-color); background: #ffffff; width: 100%; font-weight: 700;" onclick="App.prepareReport('Chỗ đỗ', 'P08')">Báo sự cố vị trí đỗ</button>
+  <button class="btn-primary" style="width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-parking-exit-confirm')">Xe rời chỗ đỗ</button>
+</section>

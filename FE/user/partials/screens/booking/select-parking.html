@@ -1,0 +1,75 @@
+<!-- Partial: user/partials/screens/booking/select-parking.html -->
+<section id="screen-select-parking" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-hub-detail')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Chọn tài nguyên</span>
+    <span class="nav-action nav-icon-badge-p">P</span>
+  </div>
+
+  <div class="step-indicator">
+    <div class="step-label">Bước 2/3 · Chọn tài nguyên</div>
+    <div class="step-bars">
+      <div class="bar active"></div>
+      <div class="bar active"></div>
+      <div class="bar"></div>
+    </div>
+  </div>
+
+  <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;" class="hub-name-display">Hub Ga Metro ĐHQG</div>
+
+  <div class="segmented-tabs">
+    <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-bike')">Thuê xe</button>
+    <button class="segmented-tab active" onclick="App.switchBookingTab('screen-select-parking')">Chỗ đỗ</button>
+    <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-charging')">Sạc</button>
+    <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-battery-swap')">Đổi pin</button>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">Phương tiện cá nhân *</label>
+    <div class="input-box">
+      <select id="parkingPersonalVehicle">
+        <option value="Xe máy điện · 59-X1 123.45">Xe máy điện · 59-X1 123.45</option>
+        <option value="Xe đạp điện · 59-MD 889.92">Xe đạp điện · 59-MD 889.92</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">Ngày / giờ đến *</label>
+    <div class="input-box">
+      <select id="parkingArrivalTime">
+        <option value="18/10/2026 · 10:00">18/10/2026 · 10:00</option>
+        <option value="18/10/2026 · 11:00">18/10/2026 · 11:00</option>
+        <option value="18/10/2026 · 14:00">18/10/2026 · 14:00</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group" style="margin-bottom: 12px;">
+    <label class="form-label">Thời lượng dự kiến *</label>
+    <div class="input-box">
+      <select id="parkingDuration">
+        <option value="2 giờ">2 giờ</option>
+        <option value="1 giờ">1 giờ</option>
+        <option value="3 giờ">3 giờ</option>
+        <option value="4 giờ">4 giờ</option>
+      </select>
+    </div>
+  </div>
+
+  <div style="display: inline-block; background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 14px; font-size: 12.5px; font-weight: 700; color: var(--text-main); margin-bottom: 14px;" id="parkingAvailBadge">
+    8 vị trí đỗ còn khả dụng
+  </div>
+
+  <div class="note-box-simple">
+    Đã chọn: chỗ đỗ. Có thể thêm lịch sạc cho cùng phương tiện.
+  </div>
+
+  <button class="btn-secondary" style="margin-bottom: 12px; width: 100%; font-weight: 700; padding: 12px;" onclick="App.switchBookingTab('screen-select-charging')">
+    Thêm lịch sạc cho xe này
+  </button>
+
+  <button class="btn-primary" style="width: 100%; font-weight: 700; padding: 13px;" onclick="App.navigateTo('screen-review-parking')">
+    Kiểm tra đặt chỗ (1)
+  </button>
+</section>

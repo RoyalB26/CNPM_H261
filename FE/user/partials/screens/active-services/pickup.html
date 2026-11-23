@@ -1,0 +1,16 @@
+<!-- Partial: user/partials/screens/active-services/pickup.html -->
+<section id="screen-pickup" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-my-bookings')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Nhận phương tiện</span>
+  </div>
+  <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 20px;">
+    Quét mã QR dán trên tay lái xe <strong>XE-024</strong> tại Hub Ga Metro để mở khóa nhận xe.
+  </p>
+  <div style="height: 240px; background: #1e293b; border-radius: var(--radius-md); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; margin-bottom: 24px; position: relative;">
+    <i class="fa-solid fa-qrcode" style="font-size: 80px; opacity: 0.8; margin-bottom: 12px;"></i>
+    <span style="font-size: 12px; color: #94a3b8;">Đang tìm mã QR phương tiện...</span>
+    <div style="position: absolute; width: 180px; height: 180px; border: 2px dashed #38bdf8; border-radius: 12px;"></div>
+  </div>
+  <button class="btn-primary" onclick="App.navigateTo('screen-vehicle-ready')">Giả lập quét mã thành công</button>
+</section>

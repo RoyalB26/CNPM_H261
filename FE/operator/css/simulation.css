@@ -1,0 +1,190 @@
+/* What-If Simulation wizard, Charts, History and Spinner */
+/* ================= SIMULATION STYLES (Wireframes 13-21) ================= */
+.simulation-stepper-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px 24px;
+  margin-bottom: 24px;
+  gap: 18px;
+}
+
+.sim-step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.sim-step-item.active {
+  opacity: 1;
+}
+
+.step-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.step-text {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.step-line {
+  width: 60px;
+  height: 1px;
+  background: #cbd5e1;
+}
+
+.sim-subview {
+  display: none;
+}
+
+.sim-subview.active {
+  display: block;
+}
+
+.source-card {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.source-card:hover {
+  border-color: #94a3b8;
+}
+
+.source-card.selected {
+  border: 2px solid #0f172a;
+  background: #fafafa;
+}
+
+.sim-grid-4boxes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.sim-card-box {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.box-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
+}
+
+.radio-checkbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.choice-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.metric-line {
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+}
+
+.metric-line:last-child {
+  border-bottom: none;
+}
+
+/* Charts & Result Cards */
+.chart-panel-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.chart-canvas-box {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.sim-svg-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.sim-metric-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.recommendation-item {
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+/* Simulation history styles (Wireframe 21.jpg) */
+.history-filter-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 14px 18px;
+  align-items: center;
+}
+
+.history-row-active td {
+  background: #f8fafc !important;
+  border-left: 3px solid #0f172a;
+}
+
+/* Spinner */
+.sim-spinner {
+  width: 44px;
+  height: 44px;
+  border: 4px solid #e2e8f0;
+  border-top: 4px solid #0f172a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

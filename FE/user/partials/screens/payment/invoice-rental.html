@@ -1,0 +1,23 @@
+<!-- Partial: user/partials/screens/payment/invoice-rental.html -->
+<section id="screen-invoice-rental" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Hóa đơn dịch vụ</span>
+  </div>
+  <div class="card-box">
+    <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 12px;" id="invoiceRentalTitle">Hóa đơn thuê xe điện</h3>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+      <span style="color: var(--text-muted);" id="invoiceRentalItemLabel">Thời gian sử dụng (45 phút)</span>
+      <span style="font-weight: 600;" id="invoiceRentalItemCost">15,000 đ</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 12px;">
+      <span style="color: var(--text-muted);">Phụ phí trễ hạn</span>
+      <span style="font-weight: 600;" id="invoiceRentalPenaltyCost">0 đ</span>
+    </div>
+    <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; display: flex; justify-content: space-between; font-size: 16px; font-weight: 800;">
+      <span>Tổng thanh toán</span>
+      <span id="invoiceRentalTotalCost">15,000 đ</span>
+    </div>
+  </div>
+  <button class="btn-primary" id="btnPayRental" onclick="App.setupInvoiceAndPay('rental', 15000)">Chọn thanh toán</button>
+</section>

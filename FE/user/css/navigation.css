@@ -1,0 +1,148 @@
+/* Viewport, Top bar, Step bar and Bottom navigation */
+/* Screen Viewport & Transitions */
+.view-viewport {
+  flex: 1;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg-card);
+  scroll-behavior: smooth;
+}
+
+.view-viewport::-webkit-scrollbar {
+  width: 4px;
+}
+.view-viewport::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.screen {
+  display: none;
+  padding: 20px 20px 80px 20px;
+  min-height: 100%;
+  flex-direction: column;
+  animation: fadeIn 0.18s ease-in-out;
+}
+
+.screen.active {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Header bar */
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+
+.top-nav .nav-back {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  transition: background 0.15s;
+}
+
+.top-nav .nav-back:hover {
+  background: var(--bg-subtle);
+}
+
+.top-nav .nav-title {
+  font-size: 19px;
+  font-weight: 700;
+  flex: 1;
+  color: var(--text-main);
+}
+
+.top-nav .nav-action {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-main);
+}
+
+/* Step Bar / Progress Indicator */
+.step-indicator {
+  margin-bottom: 16px;
+}
+.step-indicator .step-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.step-indicator .step-bars {
+  display: flex;
+  gap: 8px;
+}
+.step-indicator .bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border-color);
+  border-radius: 2px;
+}
+.step-indicator .bar.active {
+  background: var(--text-main);
+}
+
+/* Bottom Navigation Bar */
+.bottom-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 68px;
+  background: #ffffff;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 40;
+  padding-bottom: 6px;
+}
+
+.bottom-nav.hidden {
+  display: none;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  transition: color 0.15s;
+  padding: 6px 0;
+}
+
+.nav-item i {
+  font-size: 20px;
+}
+
+.nav-item.active {
+  color: var(--text-main);
+}
+

@@ -1,0 +1,134 @@
+/* Staff profile card, Buttons and Bottom navigation */
+/* Staff Profile header card */
+.staff-profile-header-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0 16px 0;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 12px;
+}
+
+.avatar-black-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.segmented-tabs-line {
+  display: flex;
+  border-bottom: 2px solid #e2e8f0;
+  gap: 12px;
+}
+
+.tab-line-btn {
+  flex: 1;
+  padding: 10px 4px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: none;
+  background: none;
+  cursor: pointer;
+  position: relative;
+}
+
+.tab-line-btn.active {
+  color: var(--text-main);
+  font-weight: 800;
+}
+
+.tab-line-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: #0f172a;
+}
+
+/* Radio select box */
+.radio-card-select.active {
+  border: 2px solid #0f172a;
+  background: #fafafa;
+}
+
+/* Buttons */
+.btn-staff-primary {
+  width: 100%;
+  padding: 13px;
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 0.15s;
+}
+
+.btn-staff-primary:hover {
+  opacity: 0.9;
+}
+
+.btn-staff-secondary {
+  width: 100%;
+  padding: 11px;
+  background: #ffffff;
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* Bottom Nav */
+.staff-bottom-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: #ffffff;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 50;
+  padding-bottom: 4px;
+}
+
+.staff-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.staff-nav-item.active {
+  color: var(--text-main);
+  font-weight: 800;
+}

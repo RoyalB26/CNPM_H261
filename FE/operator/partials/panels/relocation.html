@@ -1,0 +1,45 @@
+<!-- Partial: operator/partials/panels/relocation.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- ================= PANEL 2: ĐIỀU PHỐI PHƯƠNG TIỆN ================= -->
+<section id="tab-relocation" class="section-panel">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div>
+      <h1 class="page-title">Điều phối phương tiện</h1>
+      <p class="page-subtitle" style="margin-bottom: 0;">Quản lý nhiệm vụ điều chuyển xe giữa các Hub</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn-secondary-light" onclick="OperatorApp.loadRelocations()" title="Làm mới danh sách lệnh điều phối">
+        <i class="fa-solid fa-rotate"></i> <span>Làm mới</span>
+      </button>
+      <button class="btn-primary-dark" onclick="OperatorApp.openCreateRelocationModal()">
+        <i class="fa-solid fa-plus"></i>
+        <span>Tạo lệnh điều phối mới</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="data-table-container">
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Mã lệnh</th>
+          <th>Hub nguồn</th>
+          <th>Hub đích</th>
+          <th>Số xe</th>
+          <th>Tiến độ</th>
+          <th>NV điều chuyển</th>
+          <th>Ưu tiên</th>
+          <th>Trạng thái</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody id="relocationTableBody">
+        <tr>
+          <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 24px;">
+            Đang tải dữ liệu lệnh điều phối...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

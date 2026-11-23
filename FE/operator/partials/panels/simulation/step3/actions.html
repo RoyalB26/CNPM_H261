@@ -1,0 +1,61 @@
+<!-- Partial: operator/partials/panels/simulation/step3/actions.html -->
+<!-- Right Column: AI Dispatch Recommendations & Execution Actions -->
+    <div>
+      <div class="sim-card-box" style="margin-bottom: 18px;">
+        <div class="box-title">ĐỀ XUẤT ĐIỀU PHỐI TỰ ĐỘNG</div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Dựa trên kết quả phân tích Trạng thái B</div>
+
+        <!-- Item 1: Urgent Relocation -->
+        <div class="recommendation-item">
+          <div style="font-weight: 700; font-size: 13.5px; margin-bottom: 6px;">Điều chuyển xe khẩn cấp</div>
+          <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+            <div>• Nguồn: <strong>Hub KTX Khu A</strong></div>
+            <div>• Đích: <strong>Hub Ga Metro A</strong></div>
+            <div>• Số lượng: <strong>20 xe đạp điện</strong></div>
+          </div>
+        </div>
+
+        <!-- Item 2: Smart Charging Schedule -->
+        <div class="recommendation-item" style="margin-top: 10px;">
+          <div style="font-weight: 700; font-size: 13.5px; margin-bottom: 6px;">Ưu tiên lịch sạc thông minh</div>
+          <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+            <div>• Hub Ga Metro: Tăng công suất sạc cổng 1-5</div>
+            <div>• Tạm hoãn sạc các xe pin &gt; 70%</div>
+          </div>
+        </div>
+
+        <!-- Item 3: User Guidance -->
+        <div class="recommendation-item" style="margin-top: 10px;">
+          <div style="font-weight: 700; font-size: 13.5px; margin-bottom: 6px;">Điều hướng người dùng</div>
+          <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+            <div>• Gợi ý trả xe sang Hub KTX Khu B</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result Actions Box matching 19.jpg -->
+      <div class="sim-card-box">
+        <div class="box-title">XỬ LÝ KẾT QUẢ</div>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px;">
+
+          <button class="btn-secondary-light" style="width: 100%; justify-content: center; padding: 10px;" onclick="OperatorApp.openSaveRuleModal()">
+            <i class="fa-regular fa-bookmark" style="margin-right: 6px;"></i> Lưu kịch bản dự phòng
+          </button>
+
+          <button class="btn-primary-dark" style="width: 100%; justify-content: center; padding: 11px;" onclick="OperatorApp.applyDispatchPlan()">
+            <i class="fa-solid fa-bolt" style="margin-right: 6px;"></i> Tạo nhiệm vụ điều phối / bảo trì ngay
+          </button>
+
+          <button class="btn-secondary-light" style="width: 100%; justify-content: center; border: none; font-size: 12.5px; color: #2563eb;" onclick="OperatorApp.goToSimStep(2)">
+            Điều chỉnh tham số & Chạy lại
+          </button>
+
+          <button class="btn-secondary-light" style="width: 100%; justify-content: center; padding: 8px;" onclick="OperatorApp.goToSimStep(1)">
+            Quay lại
+          </button>
+
+        </div>
+      </div>
+
+    </div>
+  </div>

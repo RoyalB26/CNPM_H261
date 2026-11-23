@@ -1,4 +1,10 @@
-// Auto-generated list of named locations from DHQG.geojson
+/**
+ * @fileoverview Danh sách tọa độ các địa điểm có tên trong Khu đô thị ĐHQG-HCM (trích xuất từ `FE/map/DHQG.geojson`).
+ * @module User/PlacesData
+ * @description
+ * Cung cấp hằng số toàn cục `DHQG_NAMED_PLACES` phục vụ tính năng tìm kiếm địa điểm, trường đại học,
+ * ký túc xá và tiện ích nội khu ngay cả khi mở trực tiếp bằng giao thức `file://` (không cần fetch file GeoJSON).
+ */
 const DHQG_NAMED_PLACES = [
   {
     "name": "Hub Ga Metro ĐHQG",

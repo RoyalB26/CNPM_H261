@@ -103,7 +103,10 @@ const ApiService = {
     if (this.isBackendAvailable) {
       try {
         const res = await fetch(`${API_BASE_URL}/hubs`);
-        if (res.ok) return await res.json();
+        if (res.ok) {
+          const data = await res.json();
+          return Array.isArray(data) ? data : (data && (data.items || data.hubs)) || [];
+        }
       } catch (e) {
         console.warn("GetHubs API error:", e);
       }
@@ -137,16 +140,16 @@ const ApiService = {
 
   async createBooking(bookingPayload) {
     if (this.isBackendAvailable) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/bookings`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(bookingPayload)
-        });
-        if (res.ok) return await res.json();
-      } catch (e) {
-        console.warn("CreateBooking API error:", e);
+      const res = await fetch(`${API_BASE_URL}/bookings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bookingPayload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || data.error || data.message || `HTTP ${res.status}`);
       }
+      return data;
     }
     return {
       id: `EMH-${Math.floor(1000 + Math.random() * 9000)}`,

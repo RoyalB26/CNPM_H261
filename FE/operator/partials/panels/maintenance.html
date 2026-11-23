@@ -1,0 +1,51 @@
+<!-- Partial: operator/partials/panels/maintenance.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- ================= PANEL 3: QUẢN LÝ BẢO TRÌ (Operator Wireframe 7.jpg) ================= -->
+<section id="tab-maintenance" class="section-panel">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div>
+      <h1 class="page-title">Quản lý bảo trì</h1>
+      <p class="page-subtitle" style="margin-bottom: 0;">Theo dõi và phân công xử lý các sự cố hạ tầng và phương tiện</p>
+    </div>
+    <button class="btn-primary-dark" onclick="OperatorApp.openAssignMaintenanceModal('ERR-8812')">
+      <i class="fa-solid fa-plus"></i>
+      <span>Tạo phiếu bảo trì</span>
+    </button>
+  </div>
+
+  <div class="data-table-container">
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Mã sự cố</th>
+          <th>Mã TB / QR</th>
+          <th>Nguồn báo cáo</th>
+          <th>Phân loại lỗi</th>
+          <th>NV bảo trì</th>
+          <th>Trạng thái</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody id="maintenanceTableBody">
+        <tr>
+          <td><strong>ERR-8812</strong></td>
+          <td>CS-02-HUB_A</td>
+          <td>Cảnh báo IoT</td>
+          <td>Quá nhiệt cổng sạc (58°C)</td>
+          <td><em id="assignedStaff_ERR-8812">Chưa gán</em></td>
+          <td><span class="badge badge-danger" id="statusBadge_ERR-8812">Chờ xử lý</span></td>
+          <td><button class="btn-primary-dark" style="padding: 5px 12px; font-size: 12px;" onclick="OperatorApp.openAssignMaintenanceModal('ERR-8812')">Phân công</button></td>
+        </tr>
+        <tr>
+          <td><strong>INC-2026-089</strong></td>
+          <td>XE-024</td>
+          <td>End-User</td>
+          <td>Không mở được khóa</td>
+          <td>Le Van D</td>
+          <td><span class="badge badge-warning">Đang xử lý</span></td>
+          <td><button class="btn-secondary-light" style="padding: 5px 12px; font-size: 12px;" onclick="alert('Chi tiết phiếu INC-2026-089')">Chi tiết</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

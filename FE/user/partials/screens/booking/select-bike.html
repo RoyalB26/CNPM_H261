@@ -1,0 +1,72 @@
+<!-- Partial: user/partials/screens/booking/select-bike.html -->
+<section id="screen-select-bike" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-hub-detail')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Chọn tài nguyên</span>
+    <i class="fa-solid fa-bicycle nav-action"></i>
+  </div>
+
+  <div class="step-indicator">
+    <div class="step-label">Bước 2/3 · Chọn tài nguyên</div>
+    <div class="step-bars">
+      <div class="bar active"></div>
+      <div class="bar active"></div>
+      <div class="bar"></div>
+    </div>
+  </div>
+
+  <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;" class="hub-name-display">Hub Ga Metro ĐHQG</div>
+
+  <!-- Resource Type Tabs -->
+  <div class="segmented-tabs">
+    <button class="segmented-tab active" onclick="App.switchBookingTab('screen-select-bike')">Thuê xe</button>
+    <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-parking')">Chỗ đỗ</button>
+    <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-charging')">Sạc</button>
+    <button class="segmented-tab" onclick="App.switchBookingTab('screen-select-battery-swap')">Đổi pin</button>
+  </div>
+
+  <!-- Bike Items Container -->
+  <div id="bikeListContainer">
+    <!-- Bike Item 1 -->
+    <div class="card-box selectable selected" id="bike-item-1" onclick="App.selectBike('XE-024', 85, 'bike-item-1')">
+      <div>
+        <div style="font-weight: 700; font-size: 14.5px; margin-bottom: 4px;">XE-024 · Xe đạp điện</div>
+        <div style="font-size: 12.5px; color: var(--text-muted);">Pin 85% · Sẵn sàng</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <i class="fa-solid fa-bicycle" style="font-size: 18px;"></i>
+        <div class="radio-circle checked" id="radio-bike-1"></div>
+      </div>
+    </div>
+
+    <!-- Bike Item 2 -->
+    <div class="card-box selectable" id="bike-item-2" onclick="App.selectBike('XE-031', 92, 'bike-item-2')">
+      <div>
+        <div style="font-weight: 700; font-size: 14.5px; margin-bottom: 4px;">XE-031 · Xe đạp điện</div>
+        <div style="font-size: 12.5px; color: var(--text-muted);">Pin 92% · Sẵn sàng</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <i class="fa-solid fa-bicycle" style="font-size: 18px;"></i>
+        <div class="radio-circle" id="radio-bike-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-group" style="margin-top: 14px;">
+    <label class="form-label">Hub trả xe dự kiến</label>
+    <div class="input-box">
+      <select id="selectDestHub">
+        <option value="Hub Đại học Bách khoa">Hub Đại học Bách khoa</option>
+        <option value="Hub KTX Khu B">Hub KTX Khu B</option>
+        <option value="Hub Đại học Quốc Tế">Hub Đại học Quốc Tế</option>
+      </select>
+    </div>
+  </div>
+
+  <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; margin-bottom: 16px; font-size: 12.5px; color: var(--text-muted); line-height: 1.4;">
+    Đã chọn 1 xe thuê. Chuyển sang xe cá nhân sẽ thay lựa chọn hiện tại.
+  </div>
+
+  <button class="btn-secondary" style="margin-bottom: 12px; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-select-parking')">Chọn dịch vụ xe cá nhân</button>
+  <button class="btn-primary" style="width: 100%; font-weight: 700; padding: 13px;" onclick="App.navigateTo('screen-review-rental')">Kiểm tra đặt xe</button>
+</section>

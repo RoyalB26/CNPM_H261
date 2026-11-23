@@ -1,0 +1,57 @@
+<!-- Partial: operator/partials/modals/create-relocation.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- MODAL: TẠO LỆNH ĐIỀU PHỐI -->
+<div id="modalCreateRelocation" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header-dark">
+      <span>TẠO LỆNH ĐIỀU PHỐI PHƯƠNG TIỆN</span>
+      <i class="fa-solid fa-xmark" style="cursor: pointer;" onclick="OperatorApp.closeModal('modalCreateRelocation')"></i>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom: 14px;">
+        <label class="form-label">Hub Nguồn (source_hub_id)</label>
+        <select id="relocSourceHub" class="form-input">
+          <option value="hub-01">Hub Ga Metro ĐHQG (HUB-01)</option>
+          <option value="hub-03">Hub KTX Khu B (HUB-03)</option>
+          <option value="hub-04">Hub Đại học Quốc Tế (HUB-04)</option>
+          <option value="hub-05">Hub Thư viện Trung tâm (HUB-05)</option>
+        </select>
+      </div>
+      <div style="margin-bottom: 14px;">
+        <label class="form-label">Hub Đích (target_hub_id)</label>
+        <select id="relocDestHub" class="form-input">
+          <option value="hub-02">Hub Đại học Bách khoa (HUB-02)</option>
+          <option value="hub-01">Hub Ga Metro ĐHQG (HUB-01)</option>
+          <option value="hub-04">Hub Đại học Quốc Tế (HUB-04)</option>
+          <option value="hub-05">Hub Thư viện Trung tâm (HUB-05)</option>
+        </select>
+      </div>
+      <div style="margin-bottom: 14px;">
+        <label class="form-label">Số lượng xe cần điều chuyển (bike_count: 1 - 50)</label>
+        <input type="number" id="relocCount" value="2" min="1" max="50" class="form-input">
+      </div>
+      <div style="margin-bottom: 14px;">
+        <label class="form-label">Nhân viên điều chuyển (assigned_staff_id)</label>
+        <select id="relocStaff" class="form-input">
+          <option value="STF-01">STF-01 - Nhân viên điều chuyển 1 (Đang rảnh)</option>
+          <option value="STF-02">STF-02 - Nguyen Van B (Đang di chuyển)</option>
+        </select>
+      </div>
+      <div style="margin-bottom: 14px;">
+        <label class="form-label">Mức độ ưu tiên (priority)</label>
+        <select id="relocPriority" class="form-input">
+          <option value="Bình thường">Bình thường</option>
+          <option value="Khẩn cấp">Khẩn cấp</option>
+        </select>
+      </div>
+      <div style="margin-bottom: 14px;">
+        <label class="form-label">Ghi chú (notes)</label>
+        <input type="text" id="relocNotes" class="form-input" placeholder="Ví dụ: Điều phối bù xe thiếu hụt giờ cao điểm" value="Điều phối bù xe thiếu hụt giờ cao điểm">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary-light" onclick="OperatorApp.closeModal('modalCreateRelocation')">Hủy</button>
+      <button class="btn-primary-dark" onclick="OperatorApp.submitRelocation()">Tạo lệnh điều phối</button>
+    </div>
+  </div>
+</div>

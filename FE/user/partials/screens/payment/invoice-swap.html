@@ -1,0 +1,19 @@
+<!-- Partial: user/partials/screens/payment/invoice-swap.html -->
+<section id="screen-invoice-swap" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Hóa đơn đổi pin</span>
+  </div>
+  <div class="card-box">
+    <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 12px;" id="invoiceSwapTitle">Hóa đơn đổi pin</h3>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 12px;">
+      <span style="color: var(--text-muted);" id="invoiceSwapItemLabel">Đổi 1 khối pin 48V</span>
+      <span style="font-weight: 600;" id="invoiceSwapItemCost">25,000 đ</span>
+    </div>
+    <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; display: flex; justify-content: space-between; font-size: 16px; font-weight: 800;">
+      <span>Tổng thanh toán</span>
+      <span id="invoiceSwapTotalCost">25,000 đ</span>
+    </div>
+  </div>
+  <button class="btn-primary" id="btnPaySwap" onclick="App.setupInvoiceAndPay('swap', 25000)">Chọn thanh toán</button>
+</section>

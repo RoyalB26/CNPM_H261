@@ -1,0 +1,130 @@
+/* Responsive styles for Desktop & Tablet */
+/* ============================================================
+   RESPONSIVE DESIGN: MOBILE VS DESKTOP / LAPTOP
+   ============================================================ */
+
+/* 1. MẶC ĐỊNH CHO MÁY TÍNH / LAPTOP (Screen > 768px)
+   Hiển thị giao diện Web Dashboard sang trọng, rộng rãi, chia layout logic */
+body {
+  font-family: var(--font-family);
+  background: #f1f5f9;
+  color: var(--text-main);
+  min-height: 100vh;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-x: hidden;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 1080px;
+  height: 94vh;
+  max-height: 920px;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08), 0 0 0 1px #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s ease;
+}
+
+/* Ẩn status bar mô phỏng điện thoại trên máy tính */
+.status-bar {
+  display: none;
+}
+
+/* Tối ưu các khối nội dung trên màn hình máy tính */
+.screen {
+  padding: 32px 40px 90px 40px;
+  max-width: 860px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Màn hình map trên máy tính: rộng rãi, góc nhìn thoáng */
+#screen-map-home {
+  max-width: 100%;
+  padding: 20px 24px 80px 24px;
+}
+
+.sim-map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  background: #f1f5f9;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--border-color);
+}
+
+/* Các form đăng nhập, đăng ký trên máy tính căn giữa vừa vặn */
+#screen-login,
+#screen-register,
+#screen-forgot-password {
+  max-width: 440px;
+  padding: 40px 20px 90px 20px;
+}
+
+/* Grid hiển thị card rộng rãi hơn trên desktop */
+#bookingCardsContainer,
+#hubListContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
+}
+
+/* Bottom Nav bar trên Desktop: thiết kế dạng thanh dock tinh tế */
+.bottom-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: #ffffff;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  align-items: center;
+  z-index: 40;
+  padding-bottom: 0;
+}
+
+.nav-item {
+  flex: none;
+  min-width: 90px;
+  font-size: 12px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  transition: all 0.15s;
+}
+
+.nav-item:hover {
+  background: var(--bg-subtle);
+}
+
+/* Modal Bottom sheet trên Desktop căn thành card popup thanh thoát */
+.bottom-sheet-modal {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  width: 380px;
+  right: auto;
+  border-radius: 20px;
+  padding: 22px 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  border: 1px solid var(--border-color);
+  transform: translateY(140%);
+  transition: transform 0.25s ease;
+  z-index: 45;
+}
+
+.bottom-sheet-modal.open {
+  transform: translateY(0);
+}
+
+

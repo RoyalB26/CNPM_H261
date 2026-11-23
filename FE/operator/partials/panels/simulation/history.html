@@ -1,0 +1,158 @@
+<!-- Partial: operator/partials/panels/simulation/history.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- ================= VIEW: LỊCH SỬ MÔ PHỎNG (Operator Wireframe 21.jpg) ================= -->
+<div id="simHistoryView" class="sim-subview">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+    <div>
+      <h2 style="font-size: 19px; font-weight: 800;">Lịch sử mô phỏng <span class="badge badge-neutral" style="font-size: 12px; margin-left: 6px;">28 phiên</span></h2>
+      <p style="font-size: 13px; color: var(--text-muted);">Tổng: 28 kịch bản | Gần nhất: 10/10/2026 16:30</p>
+    </div>
+    <button class="btn-secondary-light" onclick="OperatorApp.goToSimStep(1)">
+      <i class="fa-solid fa-arrow-left" style="margin-right: 6px;"></i> Quay lại
+    </button>
+  </div>
+
+  <!-- Toolbar filters matching 21.jpg -->
+  <div class="history-filter-bar">
+    <input type="text" placeholder="Tìm theo tên kịch bản, ID, Operator..." class="form-input" style="flex: 2;">
+    <select class="form-input" style="flex: 1;">
+      <option>Trạng thái: Tất cả</option>
+      <option>Thành công</option>
+      <option>Thất bại</option>
+    </select>
+    <select class="form-input" style="flex: 1;">
+      <option>Loại biến cố: Tất cả</option>
+      <option>Quá tải sạc</option>
+      <option>Hỏng cổng sạc</option>
+      <option>Gián đoạn IoT</option>
+    </select>
+    <input type="text" value="Khoảng ngày: 01/10 - 10/10" class="form-input" style="flex: 1.2;">
+    <button class="btn-secondary-light" style="padding: 8px 14px;">Đặt lại</button>
+  </div>
+
+  <!-- Split Grid: Table on left, Inspector details on right -->
+  <div style="display: grid; grid-template-columns: 1.7fr 1.3fr; gap: 20px; align-items: start;">
+
+    <!-- History Table -->
+    <div class="data-table-container">
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tên kịch bản / Quy tắc</th>
+            <th>Thời gian</th>
+            <th>Trạng thái</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="simHistoryTableBody">
+          <tr class="history-row-active" onclick="OperatorApp.inspectHistoryItem('SIM-108')">
+            <td><strong>#SIM-108</strong></td>
+            <td>
+              <div style="font-weight: 700;">Tăng sinh viên giờ cao điểm Metro</div>
+              <div style="font-size: 11.5px; color: var(--text-muted);">Tham số: Nhu cầu +150%, Hub Metro A hỏng 3 cổng</div>
+            </td>
+            <td style="font-size: 12px;">10/10/2026<br><span style="color: var(--text-muted);">16:30</span></td>
+            <td><span class="badge badge-success">Thành công</span></td>
+            <td>
+              <button class="btn-secondary-light" style="padding: 3px 8px; font-size: 11px;">Xem</button>
+              <button class="btn-primary-dark" style="padding: 3px 8px; font-size: 11px;" onclick="event.stopPropagation(); alert('Đã nạp lại tham số kịch bản #SIM-108')">Tải lại</button>
+            </td>
+          </tr>
+          <tr onclick="OperatorApp.inspectHistoryItem('SIM-107')">
+            <td><strong>#SIM-107</strong></td>
+            <td>
+              <div style="font-weight: 700;">Quá tải sạc Hub KTX Khu A</div>
+              <div style="font-size: 11.5px; color: var(--text-muted);">Tham số: 100% cổng sạc bận, thời gian đợi &gt; 25p</div>
+            </td>
+            <td style="font-size: 12px;">09/10/2026<br><span style="color: var(--text-muted);">09:15</span></td>
+            <td><span class="badge badge-success">Thành công</span></td>
+            <td>
+              <button class="btn-secondary-light" style="padding: 3px 8px; font-size: 11px;">Xem</button>
+              <button class="btn-primary-dark" style="padding: 3px 8px; font-size: 11px;" onclick="event.stopPropagation(); alert('Đã nạp lại tham số kịch bản #SIM-107')">Tải lại</button>
+            </td>
+          </tr>
+          <tr onclick="OperatorApp.inspectHistoryItem('SIM-106')">
+            <td><strong>#SIM-106</strong></td>
+            <td>
+              <div style="font-weight: 700;">Sự cố gián đoạn IoT toàn hệ thống</div>
+              <div style="font-size: 11.5px; color: var(--text-muted);">Mất tín hiệu telemetry 12 Hubs trên diện rộng</div>
+            </td>
+            <td style="font-size: 12px;">08/10/2026<br><span style="color: var(--text-muted);">14:00</span></td>
+            <td><span class="badge badge-danger">Thất bại</span></td>
+            <td>
+              <button class="btn-secondary-light" style="padding: 3px 8px; font-size: 11px;">Xem</button>
+              <button class="btn-secondary-light" style="padding: 3px 8px; font-size: 11px; background: #fee2e2; color: #b91c1c; border-color: #fca5a5;" onclick="event.stopPropagation(); OperatorApp.triggerSimulationFailure()">Thử lại</button>
+            </td>
+          </tr>
+          <tr onclick="OperatorApp.inspectHistoryItem('SIM-105')">
+            <td><strong>#SIM-105</strong></td>
+            <td>
+              <div style="font-weight: 700;">Hỏng 5 cổng sạc nhanh Ga Metro A</div>
+              <div style="font-size: 11.5px; color: var(--text-muted);">Công suất trạm giảm 50%, cảnh báo nhiệt độ cao</div>
+            </td>
+            <td style="font-size: 12px;">05/10/2026<br><span style="color: var(--text-muted);">06:00</span></td>
+            <td><span class="badge badge-success">Thành công</span></td>
+            <td>
+              <button class="btn-secondary-light" style="padding: 3px 8px; font-size: 11px;">Xem</button>
+              <button class="btn-primary-dark" style="padding: 3px 8px; font-size: 11px;" onclick="event.stopPropagation(); alert('Đã nạp lại tham số kịch bản #SIM-105')">Tải lại</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="padding: 12px 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--text-muted);">
+        <span>Hiển thị 1 - 4 trên tổng số 28 phiên mô phỏng</span>
+        <div style="display: flex; gap: 4px;">
+          <button class="btn-secondary-light" style="padding: 2px 8px; font-size: 11px;">&lt;</button>
+          <button class="btn-primary-dark" style="padding: 2px 8px; font-size: 11px;">1</button>
+          <button class="btn-secondary-light" style="padding: 2px 8px; font-size: 11px;">2</button>
+          <button class="btn-secondary-light" style="padding: 2px 8px; font-size: 11px;">3</button>
+          <button class="btn-secondary-light" style="padding: 2px 8px; font-size: 11px;">&gt;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inspector Card on Right matching 21.jpg -->
+    <div class="sim-card-box" id="historyInspectorBox">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span class="badge badge-neutral" style="font-size: 11.5px; font-weight: 700;">ĐANG CHỌN #SIM-108</span>
+      </div>
+      <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px;" id="inspTitle">Tăng sinh viên giờ cao điểm Metro</h3>
+      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+        Khởi chạy: 10/10/2026 16:30 | Thời lượng: 45s | Người tạo: Nguyen Van A
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">BỘ THAM SỐ WHAT-IF</div>
+        <div style="background: #f8fafc; border-radius: 8px; padding: 10px; font-size: 12.5px; line-height: 1.4;" id="inspParams">
+          Nhu cầu tăng +150%, 3 cổng sạc hỏng tại Hub Metro A, Thời gian giả định: 2 giờ.
+        </div>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">KẾT QUẢ GHI NHẬN</div>
+        <div style="background: #f8fafc; border-radius: 8px; padding: 10px; font-size: 12.5px; line-height: 1.4;" id="inspResult">
+          2 Hub vượt ngưỡng 85% tải, thiếu hụt 35 xe đạp điện tại các trạm kết nối.
+        </div>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">QUY TẮC ỨNG PHÓ ĐÃ LƯU</div>
+        <div style="background: #f8fafc; border-radius: 8px; padding: 10px; font-size: 12.5px; line-height: 1.4;" id="inspRule">
+          Tự động gửi lệnh điều chuyển 20 xe từ Hub KTX A sang Metro A khi nhu cầu &gt; 80%.
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button class="btn-secondary-light" style="width: 100%; justify-content: center; padding: 9px;" onclick="alert('Đã xuất file báo cáo phân tích BTL3_WhatIf_SIM108.pdf')">
+          <i class="fa-regular fa-file-pdf" style="margin-right: 6px;"></i> XUẤT BÁO CÁO (PDF/XLSX)
+        </button>
+        <button class="btn-primary-dark" style="width: 100%; justify-content: center; padding: 10px;" onclick="OperatorApp.reloadScenarioParams('SIM-108')">
+          <i class="fa-solid fa-rotate" style="margin-right: 6px;"></i> TẢI LẠI THAM SỐ (OP-10-01)
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</div>

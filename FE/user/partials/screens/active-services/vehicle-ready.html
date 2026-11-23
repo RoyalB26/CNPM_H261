@@ -1,0 +1,24 @@
+<!-- Partial: user/partials/screens/active-services/vehicle-ready.html -->
+<section id="screen-vehicle-ready" class="screen" style="text-align: center; justify-content: center; align-items: center;">
+  <div style="width: 72px; height: 72px; background: #ecfdf5; color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 16px;">
+    <i class="fa-solid fa-lock-open"></i>
+  </div>
+  <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 6px;">Mở khóa thành công!</h2>
+  <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 16px;">Xe XE-024 đã mở chốt khóa an toàn</p>
+
+  <div class="card-box" style="text-align: left; width: 100%; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 6px;">
+      <span style="color: var(--text-muted);">Phương tiện</span>
+      <span style="font-weight: 700;">XE-024 (Pin 85%)</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 6px;">
+      <span style="color: var(--text-muted);">Cước thuê khởi điểm</span>
+      <span style="font-weight: 700; color: #0284c7;">10,000 đ</span>
+    </div>
+    <div style="font-size: 12px; color: var(--text-muted); border-top: 1px dashed var(--border-color); padding-top: 6px; margin-top: 6px;">
+      Vui lòng xác nhận thanh toán cước phí để bắt đầu tính giờ chuyến đi.
+    </div>
+  </div>
+
+  <button class="btn-primary" style="width: 100%; font-weight: 700;" onclick="App.payAndStartRide()">Thanh toán và bắt đầu chuyến đi</button>
+</section>

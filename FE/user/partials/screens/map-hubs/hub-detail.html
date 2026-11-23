@@ -1,0 +1,40 @@
+<!-- Partial: user/partials/screens/map-hubs/hub-detail.html -->
+<section id="screen-hub-detail" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title" id="fullHubDetailTitle">Hub Ga Metro ĐHQG</span>
+  </div>
+
+  <div style="height: 180px; background: #e2e8f0; border-radius: var(--radius-md); margin-bottom: 16px; display: flex; align-items: center; justify-content: center; position: relative;">
+    <i class="fa-solid fa-map-location-dot" style="font-size: 40px; color: #94a3b8;"></i>
+    <span style="position: absolute; bottom: 8px; right: 10px; font-size: 11px; background: rgba(0,0,0,0.6); color: #fff; padding: 3px 8px; border-radius: 4px;" id="hubDetailAddressBadge">Khu đô thị ĐHQG - HCM</span>
+  </div>
+
+  <div class="card-box" style="margin-bottom: 16px;">
+    <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">Tài nguyên tại Hub</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+        <i class="fa-solid fa-bicycle" style="font-size: 18px; margin-bottom: 4px;"></i>
+        <div style="font-size: 18px; font-weight: 800;" id="hubDetailBikeCount">5</div>
+        <div style="font-size: 12px; color: var(--text-muted);">Xe đạp điện</div>
+      </div>
+      <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+        <i class="fa-solid fa-square-parking" style="font-size: 18px; margin-bottom: 4px;"></i>
+        <div style="font-size: 18px; font-weight: 800;" id="hubDetailParkingCount">8</div>
+        <div style="font-size: 12px; color: var(--text-muted);">Chỗ đỗ trống</div>
+      </div>
+      <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+        <i class="fa-solid fa-bolt" style="font-size: 18px; margin-bottom: 4px;"></i>
+        <div style="font-size: 18px; font-weight: 800;" id="hubDetailChargerCount">2</div>
+        <div style="font-size: 12px; color: var(--text-muted);">Cổng sạc sẵn sàng</div>
+      </div>
+      <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+        <i class="fa-solid fa-car-battery" style="font-size: 18px; margin-bottom: 4px;"></i>
+        <div style="font-size: 18px; font-weight: 800;" id="hubDetailBatteryCount">6</div>
+        <div style="font-size: 12px; color: var(--text-muted);">Pin khả dụng</div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-primary" onclick="App.navigateTo('screen-select-bike')">Bắt đầu đặt chỗ</button>
+</section>

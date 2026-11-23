@@ -1,0 +1,24 @@
+<!-- Partial: user/partials/screens/booking/review-swap.html -->
+<section id="screen-review-swap" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-select-battery-swap')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Kiểm tra đổi pin</span>
+  </div>
+  <div class="card-box">
+    <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">Đổi pin xe điện</h3>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+      <span style="color: var(--text-muted);">Loại pin</span>
+      <span style="font-weight: 600;" id="reviewSwapType">48V - 20Ah Lithium</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+      <span style="color: var(--text-muted);">Trạm đổi</span>
+      <span style="font-weight: 600;" id="reviewSwapHub">Tủ pin Hub Ga Metro</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13.5px;">
+      <span style="color: var(--text-muted);">Chi phí</span>
+      <span style="font-weight: 600;" id="reviewSwapFee">25,000đ / lần</span>
+    </div>
+  </div>
+  <button class="btn-secondary" style="margin-top: 16px; margin-bottom: 10px; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-select-battery-swap')">Chỉnh sửa lựa chọn</button>
+  <button class="btn-primary" style="width: 100%; font-weight: 700;" onclick="App.confirmSwapAndPay()">Xác nhận đặt pin</button>
+</section>

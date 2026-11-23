@@ -1,0 +1,62 @@
+<!-- Partial: user/partials/screens/auth-profile/profile.html -->
+<section id="screen-profile" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-map-home')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Hồ sơ cá nhân</span>
+  </div>
+
+  <div class="card-box" style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+    <div style="width: 64px; height: 64px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #475569;">
+      <i class="fa-regular fa-user"></i>
+    </div>
+    <div>
+      <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 3px;" id="profileName">Nguyễn Văn A</h3>
+      <p style="font-size: 12.5px; color: var(--text-muted);" id="profileEmail">abc123@hcmut.edu.vn</p>
+      <p style="font-size: 12.5px; color: var(--text-muted);" id="profilePhone">0123456789</p>
+    </div>
+  </div>
+
+  <div class="card-box selectable" onclick="App.navigateTo('screen-edit-profile')">
+    <div style="display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600;">
+      <i class="fa-solid fa-pen-to-square" style="color: var(--text-muted);"></i>
+      <span>Chỉnh sửa hồ sơ cá nhân</span>
+    </div>
+    <i class="fa-solid fa-chevron-right" style="color: #cbd5e1; font-size: 13px;"></i>
+  </div>
+
+  <div class="card-box selectable" onclick="App.navigateTo('screen-payment-preferences')">
+    <div style="display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600;">
+      <i class="fa-regular fa-credit-card" style="color: var(--text-muted);"></i>
+      <span>Phương thức thanh toán</span>
+    </div>
+    <i class="fa-solid fa-chevron-right" style="color: #cbd5e1; font-size: 13px;"></i>
+  </div>
+
+  <div class="card-box selectable" onclick="App.navigateTo('screen-booking-history')">
+    <div style="display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600;">
+      <i class="fa-regular fa-calendar-check" style="color: var(--text-muted);"></i>
+      <span>Lịch sử đặt chỗ</span>
+    </div>
+    <i class="fa-solid fa-chevron-right" style="color: #cbd5e1; font-size: 13px;"></i>
+  </div>
+
+  <div class="card-box selectable" onclick="App.navigateTo('screen-incident-history')">
+    <div style="display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600;">
+      <i class="fa-solid fa-triangle-exclamation" style="color: var(--text-muted);"></i>
+      <span>Lịch sử báo cáo sự cố</span>
+    </div>
+    <i class="fa-solid fa-chevron-right" style="color: #cbd5e1; font-size: 13px;"></i>
+  </div>
+
+  <div class="card-box selectable" onclick="App.navigateTo('screen-security')">
+    <div style="display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600;">
+      <i class="fa-solid fa-lock" style="color: var(--text-muted);"></i>
+      <span>Cài đặt bảo mật</span>
+    </div>
+    <i class="fa-solid fa-chevron-right" style="color: #cbd5e1; font-size: 13px;"></i>
+  </div>
+
+  <button class="btn-secondary" style="margin-top: 16px;" onclick="App.handleLogout()">
+    <i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng xuất
+  </button>
+</section>

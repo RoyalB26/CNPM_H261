@@ -1,0 +1,28 @@
+<!-- Partial: operator/partials/modals/sim-loading.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- MODAL: ĐANG TÍNH TOÁN VÀ MÔ PHỎNG (Operator Wireframe 17.jpg) -->
+<div id="modalSimLoading" class="modal-backdrop">
+  <div class="modal-dialog" style="text-align: center;">
+    <div class="modal-body" style="padding: 36px 28px;">
+      <div class="sim-spinner" style="margin: 0 auto 18px;"></div>
+      <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 6px;">ĐANG TÍNH TOÁN VÀ MÔ PHỎNG CÁC BIẾN CỐ...</h3>
+      <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px;">
+        Hệ thống đang mô phỏng diễn biến thay đổi trạng thái mạng lưới dựa trên dữ liệu IoT/giả lập...
+      </p>
+
+      <!-- Progress Bar -->
+      <div style="background: #e2e8f0; border-radius: 999px; height: 10px; overflow: hidden; margin-bottom: 8px;">
+        <div id="simProgressBar" style="background: #0f172a; width: 65%; height: 100%; transition: width 0.3s;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-muted); margin-bottom: 24px;">
+        <span id="simPhaseText">Đang xử lý: Dự báo tải sạc & Lưu lượng xe</span>
+        <span id="simTimeRemain">Thời gian còn lại ước tính: 00:05 s</span>
+      </div>
+
+      <div style="display: flex; justify-content: center; gap: 12px;">
+        <button class="btn-secondary-light" style="padding: 8px 24px;" onclick="OperatorApp.cancelSimulation()">HỦY TIẾN TRÌNH</button>
+        <button class="btn-primary-dark" style="padding: 8px 28px;" onclick="OperatorApp.waitSimulation()">ĐỢI</button>
+      </div>
+    </div>
+  </div>
+</div>

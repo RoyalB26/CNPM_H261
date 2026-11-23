@@ -1,0 +1,44 @@
+<!-- Partial: operator/partials/layout/sidebar.html -->
+<!-- Được nạp tự động vào index.html bởi HtmlInclude (FE/shared/js/include.js) -->
+<!-- Left Navigation Sidebar -->
+<aside class="sidebar">
+  <div>
+    <div class="brand-title">
+      <i class="fa-solid fa-bolt" style="margin-right: 6px;"></i> Hệ thống E-smart
+    </div>
+    <nav class="menu-list">
+      <button class="menu-item active" onclick="OperatorApp.switchTab('tab-overview')">
+        <i class="fa-solid fa-table-cells-large"></i>
+        <span>Tổng quan</span>
+      </button>
+      <button class="menu-item" onclick="OperatorApp.switchTab('tab-relocation')">
+        <i class="fa-solid fa-right-left"></i>
+        <span>Điều phối phương tiện</span>
+      </button>
+      <button class="menu-item" onclick="OperatorApp.switchTab('tab-maintenance')">
+        <i class="fa-solid fa-wrench"></i>
+        <span>Quản lý bảo trì</span>
+      </button>
+      <button class="menu-item" onclick="OperatorApp.switchTab('tab-hubs')">
+        <i class="fa-solid fa-building-columns"></i>
+        <span>Quản lý Hub</span>
+      </button>
+      <button class="menu-item" onclick="OperatorApp.switchTab('tab-simulation')">
+        <i class="fa-regular fa-clone"></i>
+        <span>Mô phỏng kịch bản</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Current Operator Profile -->
+  <div class="user-profile-badge">
+    <div class="user-avatar">OP</div>
+    <div style="flex: 1;">
+      <div style="font-size: 13px; font-weight: 700;">Nhân viên 1</div>
+      <div style="font-size: 11.5px; color: var(--text-muted);">Nhân viên giám sát</div>
+    </div>
+    <button onclick="OperatorApp.showLoginView()" title="Đăng xuất / Đổi tài khoản" style="background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px;">
+      <i class="fa-solid fa-arrow-right-from-bracket"></i>
+    </button>
+  </div>
+</aside>

@@ -1,0 +1,22 @@
+<!-- Partial: user/partials/screens/my-bookings/cancel-confirm.html -->
+<section id="screen-cancel-confirm" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="App.navigateTo('screen-booking-detail')"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="nav-title">Hủy đặt trước</span>
+  </div>
+  <p style="font-size: 14px; margin-bottom: 16px; line-height: 1.5;">
+    Bạn có chắc chắn muốn hủy đặt xe <strong>EMH-1023</strong> không? Tài nguyên sẽ được hoàn trả cho người dùng khác.
+  </p>
+  <div class="form-group" style="margin-bottom: 24px;">
+    <label class="form-label">Lý do hủy (tùy chọn)</label>
+    <div class="input-box">
+      <select>
+        <option>Thay đổi kế hoạch di chuyển</option>
+        <option>Đặt nhầm thời gian hoặc địa điểm</option>
+        <option>Lý do khác</option>
+      </select>
+    </div>
+  </div>
+  <button class="btn-primary" style="background: #ef4444; margin-bottom: 12px;" onclick="App.executeCancelBooking()">Xác nhận hủy đặt</button>
+  <button class="btn-secondary" onclick="App.navigateTo('screen-booking-detail')">Quay lại</button>
+</section>
