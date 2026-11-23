@@ -203,7 +203,11 @@ def test_tc_uc04_return_vehicle_outside_hub_radius_returns_400(
     """Trường hợp thất bại UC4: Trả xe ngoài bán kính Hub hoặc chưa đóng khóa trả 400."""
     response = api_client.post(
         f"{USER_API}/services/return-vehicle",
-        json={"force_error": True, "hub_id": "hub-02"},
+        json={
+            "trip_id": "TRIP-8821",
+            "hub_id": "hub-02",
+            "simulate_error": True,
+        },
     )
     assert response.status_code == 400
     assert response.json().get("success") is False

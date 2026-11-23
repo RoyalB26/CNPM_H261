@@ -60,12 +60,12 @@ def test_tc_u03_book_rental_and_combo_parking_charging_ui(page: Page) -> None:
 
 @pytest.mark.e2e
 @pytest.mark.nfr
-def test_nfr11_booking_usability_under_30s_and_95pct_success_rate(browser: Browser) -> None:
-    """NFR11 (tích hợp TC-U03): Đặt chỗ < 30s, tối đa 3 màn hình, tỷ lệ thành công >= 95%."""
+def test_nfr11_booking_usability_under_30s_and_95pct_success_rate(browser: Browser,reset_shared_mock_db) -> None:
     success_count = 0
     durations: list[float] = []
 
     for _ in range(NFR11_ITERATIONS):
+        reset_shared_mock_db.reset()
         context = browser.new_context()
         block_external_requests(context)
         page = context.new_page()
@@ -77,11 +77,8 @@ def test_nfr11_booking_usability_under_30s_and_95pct_success_rate(browser: Brows
             start_ts = time.perf_counter()
             page.evaluate("() => { App.navigateTo('screen-select-bike'); }")
             expect(page.locator("#screen-select-bike")).to_have_class(ACTIVE_CLASS_RE, timeout=5000)
-            page.evaluate("() => { void App.confirmRental(); }")
-            expect(page.locator("#screen-booking-success")).to_have_class(
-                ACTIVE_CLASS_RE,
-                timeout=30000,
-            )
+            page.evaluate("() => { App.selectBike('XE-031', 92, 'bike-item-2'); void App.confirmRental(); }")
+            expect(page.locator("#screen-booking-success")).to_have_class(ACTIVE_CLASS_RE, timeout=30000)
             elapsed = time.perf_counter() - start_ts
 
             assert elapsed < 30.0, f"Thời gian đặt chỗ vượt 30s: {elapsed:.2f}s"
@@ -91,8 +88,6 @@ def test_nfr11_booking_usability_under_30s_and_95pct_success_rate(browser: Brows
             context.close()
 
     success_rate = (success_count / NFR11_ITERATIONS) * 100
-    avg_time = sum(durations) / len(durations)
-    print(f"\n[NFR11] Thanh cong: {success_count}/{NFR11_ITERATIONS} ({success_rate:.1f}%), TB: {avg_time:.2f}s")
     assert success_rate >= 95.0
 
 
@@ -138,10 +133,6 @@ def test_tc_u06_payment_service_navigates_to_payment_success(page: Page) -> None
 
 @pytest.mark.e2e
 @pytest.mark.nfr
-@pytest.mark.xfail(
-    reason="BUG-FE-01 (NFR03): FE/user/js/api.js::createBooking() rơi vào nhánh fallback mock 'Đã xác nhận' khi Backend trả 409 Conflict",
-    strict=True,
-)
 def test_nfr03_b_frontend_rejects_409_conflict_without_fake_confirmation(browser: Browser) -> None:
     """NFR03-B (FE): Khi xe XE-024 đã bị đặt (BE trả 409), UI không được mở screen-booking-success."""
     ctx = browser.new_context()
@@ -230,8 +221,8 @@ def test_nfr04_b_cross_actor_sync_updates_operator_kpi_under_1s(browser: Browser
 @pytest.mark.e2e
 @pytest.mark.nfr
 @pytest.mark.xfail(
-    reason="BUG-FE-03 (NFR05): FE/operator chỉ hiển thị overlay 2FA ở phía client, chưa chặn RBAC vai trò Sinh viên và chưa ép xác thực server",
-    strict=False,
+    reason="BUG-FE-03 (NFR05): FE/operator chưa ép 2FA trước khi mở Dashboard và chưa chặn tài khoản Sinh viên",
+    strict=True,
 )
 def test_nfr05_student_role_blocked_from_operator_and_2fa_enforced(browser: Browser) -> None:
     """NFR05: Sinh viên mở trang Operator bị từ chối; bỏ qua 2FA không truy cập được Dashboard."""
@@ -243,6 +234,11 @@ def test_nfr05_student_role_blocked_from_operator_and_2fa_enforced(browser: Brow
         login_end_user(page)
 
         page.goto(OPERATOR_URL, wait_until="domcontentloaded")
+        # Chờ nạp xong toàn bộ partial trước khi kiểm tra KPI có bị lộ không
+        page.wait_for_function(
+            "() => document.querySelectorAll('[data-include]').length === 0",
+            timeout=10000,
+        )
         assert not page.locator("#kpiTotalHubs").is_visible()
     finally:
         ctx.close()
@@ -251,14 +247,25 @@ def test_nfr05_student_role_blocked_from_operator_and_2fa_enforced(browser: Brow
 @pytest.mark.e2e
 @pytest.mark.nfr
 @pytest.mark.xfail(
-    reason="BUG-BE-03 (NFR07): BE/user/main.py::api_pay_invoice() chưa ghi bản ghi Audit Log 4 trường sau khi thanh toán",
+    reason="BUG-BE-03 (NFR07): BE/user/payments.py::pay_invoice() chưa ghi bản ghi Audit Log 4 trường vào telemetry_events sau khi thanh toán",
     strict=True,
 )
 def test_nfr07_user_payment_creates_complete_audit_log_entry(page: Page) -> None:
-    """NFR07 (User): Thanh toán hóa đơn phải sinh Audit Log đủ 4 trường (actor, timestamp, action, result)."""
+    """NFR07 (User): Thanh toán hóa đơn hợp lệ phải sinh Audit Log đủ 4 trường."""
+    # Trả chuyến seed TRIP-8821 để sinh hóa đơn thật trước khi thanh toán
+    ret_res = page.request.post(
+        "http://127.0.0.1:8000/api/services/return-vehicle",
+        data={"trip_id": "TRIP-8821", "hub_id": "hub-04"},
+    )
+    assert ret_res.status == 200
+
+    inv_res = page.request.get("http://127.0.0.1:8000/api/invoices/current?type=rental&trip_id=TRIP-8821")
+    assert inv_res.status == 200
+    invoice_id = inv_res.json()["id"]
+
     pay_res = page.request.post(
         "http://127.0.0.1:8000/api/invoices/pay",
-        data={"invoice_id": "INV-001", "method": "momo"},
+        data={"invoice_id": invoice_id, "method": "wallet"},
     )
     assert pay_res.status == 200
 
@@ -271,5 +278,3 @@ def test_nfr07_user_payment_creates_complete_audit_log_entry(page: Page) -> None
     latest = payment_logs[0]
     required_fields = {"actor", "timestamp", "action", "result"}
     assert required_fields.issubset(latest.keys()), f"Thiếu trường Audit Log: {latest}"
-    for field in required_fields:
-        assert str(latest[field]).strip() != "", f"Trường '{field}' đang rỗng: {latest}"

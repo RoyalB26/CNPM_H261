@@ -34,14 +34,11 @@ def test_tc_o02_what_if_simulation_progress_bar_and_recommendations_ui(page: Pag
 
 
 @pytest.mark.e2e
-@pytest.mark.xfail(
-    reason="BUG-FE-05 (TC-O03): loadRelocations() gọi list.map() trên object {total, items}; payload submitRelocation() lệch schema RelocationCommandCreate (422)",
-    strict=True,
-)
 def test_tc_o03_create_relocation_command_via_dashboard_ui(
     page: Page,
     reset_shared_mock_db,
 ) -> None:
+    """TC-O03 (UC8): Tạo lệnh điều phối từ UI -> hiện thông báo thành công & lưu vào mock_db."""
     reloc_before = len(reset_shared_mock_db.relocations)
     dialogs = open_operator_dashboard(page)
 
@@ -56,29 +53,36 @@ def test_tc_o03_create_relocation_command_via_dashboard_ui(
     page.evaluate("() => { void OperatorApp.submitRelocation(); }")
     msg = wait_for_new_dialog(page, dialogs, prev, timeout_ms=5000)
 
-    assert "tạo lệnh điều phối" in msg.lower(), f"Thông điệp thực tế: {msg}"
+    assert "lệnh điều phối thành công" in msg.lower(), f"Thông điệp thực tế: {msg}"
     assert len(reset_shared_mock_db.relocations) == reloc_before + 1
     expect(page.locator("#relocationTableBody")).not_to_be_empty()
 
 @pytest.mark.e2e
-def test_tc_o04_assign_maintenance_ticket_via_dashboard_ui(page: Page) -> None:
-    """TC-O04 (UC9): Phân công phiếu bảo trì -> hiện thông báo thành công & chuyển trạng thái."""
+def test_tc_o04_assign_maintenance_ticket_via_dashboard_ui(page: Page,reset_shared_mock_db,) -> None:
     dialogs = open_operator_dashboard(page)
 
     switch_operator_tab(page, "maint")
     expect(page.locator("#maintenanceTableBody tr").first).to_be_visible(timeout=5000)
 
-    page.evaluate("() => { OperatorApp.openAssignMaintenanceModal('ERR-8812'); }")
+    # Dùng mã phiếu PENDING có thật trong mock_seed.json thay vì 'ERR-8812'
+    page.evaluate("() => { OperatorApp.openAssignMaintenanceModal('TICK-802'); }")
     expect(page.locator("#modalAssignMaintenance")).to_have_class(SHOW_CLASS_RE, timeout=5000)
 
+    # Đảm bảo chọn đúng kỹ thuật viên có role MAINTENANCE (STF-02) nếu modal có dropdown
+    tech_select = page.locator("#modalAssignMaintenance select").first
+    if tech_select.count() and tech_select.locator("option[value='STF-02']").count():
+        tech_select.select_option("STF-02")
+
     if page.locator("#assignNotes").count():
-        page.fill("#assignNotes", "Kiểm tra quá nhiệt cổng sạc ngay lập tức.")
+        page.fill("#assignNotes", "Kiểm tra quá nhiệt cổng sạc S02 ngay lập tức.")
 
     prev = len(dialogs)
     page.evaluate("() => { void OperatorApp.submitMaintenanceAssign(); }")
     msg = wait_for_new_dialog(page, dialogs, prev, timeout_ms=5000)
 
-    assert "phân công thành công" in msg.lower(), f"Thông điệp thực tế: {msg}"
+    assert "phân công" in msg.lower() and "không thể" not in msg.lower(), f"Thông điệp thực tế: {msg}"
+    ticket = next(t for t in reset_shared_mock_db.maintenance_tickets if t["code"] == "TICK-802")
+    assert ticket["status"] == "ASSIGNED"
 
 
 @pytest.mark.e2e

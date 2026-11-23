@@ -82,18 +82,50 @@ def test_tc_o01_simulation_iot_timeout_returns_504_ex_10_02(
     """Trường hợp thất bại: Gián đoạn dữ liệu IoT khi mô phỏng phải trả 504 (EX-10-02)."""
     response = api_client.post(
         f"{OPERATOR_API}/simulation/run",
-        json={"trigger_timeout_error": True},
+        json={
+            "source_type": "LIVE_A",
+            "config": {
+                "scenario_name": "Kiểm thử timeout IoT",
+                "scenario_type": "Nhu cầu sạc tăng đột biến",
+                "demand_increase_pct": 50,
+                "duration_minutes": 60,
+                "start_time": "18:00",
+                "affected_chargers_count": 0,
+                "lost_power_kw": 0.0,
+                "additional_bikes_count": 0,
+            },
+            "trigger_timeout_error": True,
+        },
     )
     assert response.status_code == 504
     assert response.json().get("error_code") == "EX-10-02"
 
 
 def test_tc_o01_save_fallback_rule_and_query_history(api_client: TestClient) -> None:
-    """Lưu kịch bản dự phòng từ kết quả mô phỏng và tra cứu lại danh sách lịch sử."""
+    """Chạy mô phỏng, lưu quy tắc ứng phó từ simulation_id thật và tra cứu lại lịch sử."""
+    run_res = api_client.post(
+        f"{OPERATOR_API}/simulation/run",
+        json={
+            "source_type": "LIVE_A",
+            "config": {
+                "scenario_name": "Kịch bản cao điểm Ga Metro",
+                "scenario_type": "Nhu cầu sạc tăng đột biến",
+                "demand_increase_pct": 100,
+                "duration_minutes": 60,
+                "start_time": "17:00",
+                "affected_chargers_count": 0,
+                "lost_power_kw": 0.0,
+                "additional_bikes_count": 0,
+            },
+        },
+    )
+    assert run_res.status_code == 200
+    sim_id = run_res.json()["simulation_id"]
+
     save_res = api_client.post(
         f"{OPERATOR_API}/simulation/save-rule",
         json={
-            "simulation_id": "SIM-109",
+            "simulation_id": sim_id,
             "rule_name": "Kịch bản ứng phó vỡ trận ga Metro giờ cao điểm",
             "operation_instructions": "Điều chuyển 20 xe từ Hub KTX Khu A sang Ga Metro.",
             "auto_match_on_high_load": True,

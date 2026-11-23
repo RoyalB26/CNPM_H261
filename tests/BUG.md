@@ -1,222 +1,231 @@
-# BÁO CÁO TỔNG HỢP LỖI TỒN ĐỌNG & KHOẢNG TRỐNG KIỂM THỬ (BUG & GAP REPORT)
+# BÁO CÁO TỔNG HỢP LỖI & KHOẢNG TRỐNG KIỂM THỬ (BUG REPORT LOG)
 
-- **Tên dự án:** Smart E-Mobility Hub – Hệ thống điều phối phương tiện điện trong Khu đô thị ĐHQG-HCM (CO3001)
-- **Nhóm thực hiện:** Nhóm 6 — Khoa Khoa học và Kỹ thuật Máy tính, Trường ĐH Bách khoa – ĐHQG-HCM
-- **Ngày cập nhật:** 19/11/2026
-- **Môi trường kiểm thử:** Windows / Python 3.11.9 / Pytest 9.2.0 / Playwright 0.10.0 / Starlette Unified Mock Backend (`127.0.0.1:8000`) & Static FE (`127.0.0.1:3000`)
-- **Bằng chứng thực thi tham chiếu:** `tests/pytest_execution.log` (chạy lệnh `NFR11_RUNS=20 pytest tests -v -s`)
-- **Phạm vi đánh giá:** Đối chiếu đồng thời giữa (1) Đặc tả đề bài gốc (`BTL_SoftwareEngineering_HK261_v1.pdf`), (2) Đặc tả kiểm thử Chương 5 (`BTL3_REPORT.pdf`, `test_spec.docx`) và (3) Mã nguồn thực tế (`BE/`, `FE/`, `tests/`).
-
-> **Lưu ý phương pháp luận:** Không coi mọi trường hợp `XFAIL` là lỗi đã được chứng minh hoàn toàn. Báo cáo này tách bạch rõ **Lỗi chức năng & tích hợp (Functional/Integration Bugs)**, **Khoảng trống triển khai phi chức năng (NFR Implementation Gaps)** và **Lỗi thiết kế kiểm thử (Test Defects)** đã được xác minh trực tiếp qua mã nguồn.
+- **Dự án:** Smart E-Mobility Hub – Hệ thống điều phối phương tiện điện trong Khu đô thị ĐHQG-HCM (CO3001)
+- **Nhóm thực hiện:** Nhóm 6 – HK261 (Hồ Quang Minh – 2412047, Trần Quỳnh Anh – 2533002)
+- **GVHD:** Trần Thị Ngọc Trâm
+- **Ngày cập nhật:** 23/11/2026 (sau khi đồng bộ nhánh `main` mới và chạy hồi quy toàn bộ bộ kiểm thử)
+- **Kết quả thực thi tham chiếu:** `pytest tests -v -s` — **56 test cases**: **47 PASSED**, **9 XFAILED (`strict=True`)**, **0 FAILED**, **0 XPASSED** (61.01s)
 
 ---
 
-## I. TIÊU CHÍ PHÂN LOẠI & TỔNG QUAN
+## I. TỔNG QUAN & TIÊU CHÍ PHÂN LOẠI
 
-### 1.1. Tiêu chí mức độ nghiêm trọng (Severity)
+Đối chiếu giữa Đặc tả bài toán, Đặc tả kiểm thử (BTL3 – Chương 5) và mã nguồn hiện hành (`BE/`, `FE/`):
+
+- **2 lỗi cũ đã được khắc phục (`Resolved`)** trên nhánh `main` mới và đã vượt qua kiểm thử hồi quy (`PASSED`): `BUG-FE-01`, `BUG-FE-05`.
+- **7 vấn đề còn tồn đọng (`Confirmed`)** được phản ánh qua **9 test `XFAIL (strict=True)`**, gồm:
+  - **2 Lỗi chức năng & tích hợp (Functional / Integration Bugs):** `BUG-BE-01`, `BUG-BE-02`.
+  - **5 Khoảng trống phi chức năng (NFR Nhóm 1 Gaps — 7 test `XFAIL`):** `BUG-FE-04` (NFR06), `BUG-FE-02` (NFR04-A & NFR04-B), `BUG-FE-03` (NFR05 FE & BE), `BUG-BE-03` (NFR07 User), `BUG-BE-04` (NFR07 Operator).
+
+### Định nghĩa mức độ nghiêm trọng (Severity)
 
 | Mức độ | Tiêu chí đánh giá |
 | :--- | :--- |
-| 🔴 **Critical** | Gây sai lệch nghiêm trọng dữ liệu nghiệp vụ cốt lõi (VD: đặt trùng tài nguyên nhưng báo thành công) hoặc làm ngừng hoàn toàn luồng vận hành chính. |
-| 🟠 **High** | Làm hỏng một chức năng/quy trình nghiệp vụ quan trọng, sai lệch trạng thái tài nguyên hoặc gây lỗ hổng kiểm soát truy cập, nhưng các phân hệ khác vẫn hoạt động. |
-| 🟡 **Medium** | Thiếu cơ chế đồng bộ thời gian thực hoặc kiểm tra tính tươi dữ liệu theo ngưỡng NFR đã cam kết trong đặc tả kiểm thử; có ảnh hưởng trải nghiệm nhưng có phương án tạm thời ở bản Prototype. |
-| 🟢 **Low** | Thiếu thông tin truy vết/kiểm toán (Audit Log) hoặc sai lệch nhỏ về chuẩn hóa trường dữ liệu log, chưa ảnh hưởng trực tiếp tới luồng đặt chỗ/vận hành. |
+| **Critical** | Gây sai lệch nghiêm trọng dữ liệu nghiệp vụ hoặc làm mất hoàn toàn khả năng thực hiện luồng cốt lõi. |
+| **High** | Làm hỏng một nghiệp vụ quan trọng hoặc bỏ qua kiểm soát an toàn/truy cập cốt lõi, nhưng hệ thống vẫn hoạt động được các luồng khác. |
+| **Medium** | Thiếu cơ chế bảo vệ hoặc đồng bộ dữ liệu theo ngưỡng NFR, có ảnh hưởng nhưng có phương án tạm thời. |
+| **Low** | Thiếu thông tin truy vết/kiểm toán (Audit Log), ít ảnh hưởng trực tiếp đến luồng nghiệp vụ chính. |
 
-### 1.2. Trạng thái xác minh (Verification Status)
+### Định nghĩa trạng thái xác minh (Verification Status)
 
-- **Confirmed:** Đã xác minh lỗi thực sự tồn tại trong mã nguồn BE/FE và có bằng chứng tái hiện rõ ràng.
-- **Confirmed + Test Defect:** Đã xác minh lỗi có thật trong mã nguồn ứng dụng, đồng thời test case hiện tại cũng có sai sót về dữ liệu đầu vào, tiền điều kiện hoặc assertion cần sửa song song.
-- **Pending Verification:** Có dấu hiệu lỗi nhưng cần bổ sung/chạy lại kịch bản test đúng điều kiện để chốt kết quả.
-- **Resolved:** Đã vá mã nguồn, gỡ `xfail` và regression test đạt `PASSED`.
+| Trạng thái | Ý nghĩa |
+| :--- | :--- |
+| **Confirmed** | Đã xác minh trực tiếp trong mã nguồn và tái hiện bằng test case đúng hợp đồng (`XFAIL strict=True`). |
+| **Resolved** | Đã được sửa trên nhánh `main` và vượt qua kiểm thử hồi quy (`PASSED`). |
 
-### 1.3. Bảng tổng hợp 9 vấn đề tồn đọng
+### Bảng tổng hợp theo dõi lỗi
 
-| Mã lỗi | Phân loại | Mức độ | Verification Status | Test Case liên kết | Hướng xử lý |
-| :--- | :--- | :---: | :--- | :--- | :--- |
-| `BUG-FE-01` | Frontend Bug | 🔴 Critical | Confirmed + Test Defect | `NFR03` (`test_user_flow.py`) | Vá nhánh fallback `409` ở FE; tách test đồng thời BE (`NFR03-A`) và xử lý `409` ở FE (`NFR03-B`) |
-| `BUG-FE-05` | Integration Bug (FE–BE) | 🟠 High | Confirmed | `TC-O03` (`test_operator_dashboard.py`) | Đồng bộ schema `RelocationCommandCreate` và đọc `data.items`; bổ sung assert DB |
-| `BUG-BE-01` | Functional Bug | 🟠 High | Confirmed | `TC-U03` (`test_user_booking_service.py`) | Bổ sung logic trừ `available_parking` & khóa cổng `S03` cho `personal`; bổ sung E2E combo |
-| `BUG-BE-02` | Functional / Integration Bug | 🟠 High | Confirmed + Test Defect | `TC-S02` (`test_staff_maintenance.py`, `test_staff_flow.py`) | Sửa cả 3 tầng FE–API–BE & đồng bộ seed `MT-102`/`BK-EB-018`; sửa test truyền rõ `outcome` |
-| `BUG-FE-04` | NFR Gap (Safety) | 🟠 High | Confirmed + Test Defect | `NFR06` (`test_operator_dashboard.py`) | Thêm cờ `system_halted`, chặn API booking (`503`) & đồng bộ khóa UI `< 2s`; sửa test đo thời gian thực |
-| `BUG-FE-03` | NFR Gap (Security) | 🟠 High | Confirmed | `NFR05` (`test_user_flow.py`, `test_auth.py`) | Áp đặt middleware RBAC/2FA trên route Operator; bổ sung test API trả `401`/`403` |
-| `BUG-FE-02` | NFR Gap (Data Consistency) | 🟡 Medium | Confirmed + Test Defect | `NFR04` (`test_user_flow.py`) | Thêm `last_updated_at` (> 30s) & cơ chế SSE/polling `<= 1s`; tách thành `NFR04-A` và `NFR04-B` |
-| `BUG-BE-03` | NFR Gap (Audit Log) | 🟢 Low | Confirmed + Test Defect | `NFR07` (`test_user_flow.py`) | Ghi Audit Log 4 trường trong `api_pay_invoice()`; sửa test assert đủ 4 trường & giá trị hợp lệ |
-| `BUG-BE-04` | NFR Gap (Audit Log) | 🟢 Low | Confirmed + Test Defect | `NFR07` (`test_operator_dashboard.py`) | Bổ sung `actor`, `action`, `result` cho telemetry Operator; thống nhất tên trường `timestamp` |
-
----
-
-## II. LỖI CHỨC NĂNG & TÍCH HỢP (4 FUNCTIONAL / INTEGRATION BUGS)
-
-### 🔴 BUG-FE-01: Frontend báo đặt xe thành công giả dù Backend đã từ chối trùng lặp (`409 Conflict`)
-
-- **Phân loại:** Frontend Bug | **Mức độ:** Critical | **Trạng thái:** Confirmed + Test Defect
-- **Phạm vi ảnh hưởng:** `FE/user/js/api.js::createBooking()`
-- **Preconditions:** Xe `XE-024` tại `hub-01` đã có booking hợp lệ trong `MockDatabaseStore`.
-- **Steps to Reproduce:**
-  1. Người dùng đăng nhập ứng dụng End-User (`FE/user/`).
-  2. Chọn `hub-01`, chọn xe `XE-024` và xác nhận đặt xe (`App.confirmRental()`).
-- **Expected Result:** Khi Backend trả HTTP `409 Conflict`, giao diện phải hiển thị thông báo xe đã có người đặt và giữ người dùng ở màn hình chọn xe.
-- **Actual Result:** Giao diện vẫn hiển thị trạng thái `"Đã xác nhận"` và điều hướng sang `#screen-booking-success`.
-- **Evidence:** `POST /api/bookings` trả HTTP `409`; nhánh `if (res.ok)` trong `api.js::createBooking()` thất bại nhưng hàm không `throw` mà rơi xuống nhánh fallback offline trả về object giả `{ id: "EMH-...", status: "Đã xác nhận" }`.
-- **Root Cause:** Lỗi xử lý HTTP error status ở lớp gọi API Frontend, gộp chung lỗi nghiệp vụ `4xx` với trường hợp mất kết nối mạng.
-- **Related Test & Lưu ý kiểm thử:** `test_nfr03_*` (`tests/e2e/test_user_flow.py`). Test ban đầu gọi `confirmRental()` tuần tự trên 2 trang nên chưa chứng minh được chống race condition; cần tách thành **NFR03-A** (bắn 2 request đồng thời vào Backend) và **NFR03-B** (kiểm tra Frontend xử lý `409`).
+| Mã lỗi | Phân loại | Severity | Verification Status | Số test liên kết | Trạng thái test |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| `BUG-FE-01` | Frontend Bug (NFR03) | Critical | **Resolved** | 2 | `PASSED` |
+| `BUG-FE-05` | Integration Bug (TC-O03 / UC8) | High | **Resolved** | 1 | `PASSED` |
+| `BUG-BE-01` | Functional Bug (TC-U03 / UC3) | High | **Confirmed** | 1 | `XFAIL` |
+| `BUG-BE-02` | Functional & Integration Bug (TC-S02 / UC9) | High | **Confirmed** | 1 | `XFAIL` |
+| `BUG-FE-04` | NFR Gap (NFR06 – Emergency Halt) | High | **Confirmed** | 1 | `XFAIL` |
+| `BUG-FE-03` | Security / NFR Gap (NFR05 – RBAC & 2FA) | High | **Confirmed** | 2 | `XFAIL` |
+| `BUG-FE-02` | NFR Gap (NFR04 – Stale Data & Sync <= 1s) | Medium | **Confirmed** | 2 | `XFAIL` |
+| `BUG-BE-03` | Audit / NFR Gap (NFR07 – User Payment Log) | Low | **Confirmed** | 1 | `XFAIL` |
+| `BUG-BE-04` | Audit / NFR Gap (NFR07 – Operator Audit Log) | Low | **Confirmed** | 1 | `XFAIL` |
 
 ---
 
-### 🟠 BUG-FE-05: Lệch Contract API và Crash `TypeError` khi tạo lệnh điều phối xe
+## II. CÁC LỖI CHỨC NĂNG & TÍCH HỢP CÒN TỒN ĐỌNG (2 OPEN BUGS)
 
-- **Phân loại:** Integration Bug (FE–BE) | **Mức độ:** High | **Trạng thái:** Confirmed
-- **Phạm vi ảnh hưởng:** `FE/operator/js/operator.js` (`loadRelocations`, `submitRelocation`) ↔ `BE/operator/main.py` (`list_relocations`, `RelocationCommandCreate`)
-- **Preconditions:** Operator đang mở tab Điều phối trên Operator Dashboard (`FE/operator/`), Hub nguồn có sẵn xe.
-- **Steps to Reproduce:**
-  1. Mở modal tạo lệnh điều phối (`openCreateRelocationModal`).
-  2. Nhập số lượng xe `2` và nhấn xác nhận (`submitRelocation`).
-- **Expected Result:** Backend lưu lệnh điều phối mới vào `db.relocations` (`200/201`), modal đóng, hiện thông báo thành công và bảng `#relocationTableBody` cập nhật dòng mới.
-- **Actual Result:** Không có thông báo thành công, modal bị treo và bảng danh sách không cập nhật.
-- **Evidence:**
-  1. `GET /api/v1/operator/relocation/commands` trả `{"total": int, "items": [...]}` nhưng `loadRelocations()` gọi trực tiếp `list.map(...)` gây `TypeError: list.map is not a function`.
-  2. `submitRelocation()` gửi `{source_hub, dest_hub, vehicle_count, assigned_staff}` tới `POST /api/v1/operator/relocation/commands`, lệch hoàn toàn với schema `RelocationCommandCreate` (`{source_hub_id, target_hub_id, bike_count, assigned_staff_id}`) gây HTTP `422 Unprocessable Entity`.
-- **Root Cause:** Bất đồng bộ API contract giữa Frontend và Backend ở cả chiều đọc danh sách lẫn chiều gửi payload tạo lệnh.
-- **Related Test & Biện pháp khắc phục:** `test_tc_o03_create_relocation_command_via_dashboard_ui` (`tests/e2e/test_operator_dashboard.py`). Sửa `loadRelocations()` đọc `Array.isArray(list) ? list : (list.items || [])`, chuẩn hóa payload khớp `RelocationCommandCreate`, và bổ sung assertion kiểm tra `len(db.relocations)` tăng thêm 1.
+### 1. `BUG-BE-01` — Đặt gói ghép chỗ đỗ & sạc (`plan_type="personal"`) chưa trừ chỗ đỗ và chưa khóa cổng sạc
 
----
-
-### 🟠 BUG-BE-01: Đặt combo đỗ xe và sạc cho xe cá nhân chưa cập nhật tài nguyên trên Backend
-
-- **Phân loại:** Functional Bug | **Mức độ:** High | **Trạng thái:** Confirmed
-- **Phạm vi ảnh hưởng:** `BE/mock_db.py::MockDatabaseStore.create_booking()`
-- **Preconditions:** `hub-01` có `available_parking > 0` và cổng sạc `S03` trong danh sách `hub["ports"]` có `is_available == True`.
-- **Steps to Reproduce:**
-  1. Gửi `POST /api/v1/user/bookings` với `plan_type: "personal"`, `hub_id: "hub-01"`, `personal_plate: "59-X1 123.45"`, `parking_slot: "P01"`, `charging_port: "S03"`, `duration_hours: 2`.
-  2. Kiểm tra lại trạng thái `hub-01` trong `MockDatabaseStore`.
-- **Expected Result:** `hub["available_parking"]` giảm đi 1 và phần tử có `id == "S03"` trong `hub["ports"]` chuyển `is_available = False` (theo yêu cầu đặt chỗ đỗ & lịch sạc xe cá nhân trong đề bài gốc và TC-U03).
-- **Actual Result:** API trả thành công và thêm bản ghi vào `self.bookings`, nhưng `available_parking` giữ nguyên và cổng `S03` vẫn có `is_available == True`.
-- **Evidence:** Trong `tests/unit/test_user_booking_service.py`, `hub_after["available_parking"] == parking_before` và `next(p for p in hub_after["ports"] if p["id"] == "S03")["is_available"] is True`.
-- **Root Cause:** `MockDatabaseStore.create_booking()` mới cài đặt logic kiểm tra và trừ tài nguyên cho nhánh `plan_type == "rental"`, bỏ trống nhánh cập nhật bãi đỗ/cổng sạc cho `plan_type == "personal"`.
-- **Related Test & Lưu ý kiểm thử:** `test_tc_u03_combo_parking_and_charging_updates_mock_db` (Unit) đã đúng hướng; cần bổ sung luồng E2E hoàn chỉnh chọn cổng `S03` + xác nhận combo + kiểm tra trạng thái DB trong `test_tc_u03_book_rental_and_combo_parking_charging_ui`.
+- **Phân loại:** Confirmed Functional Bug (TC-U03 / UC3)
+- **Severity:** High
+- **Verification Status:** Confirmed
+- **Phạm vi mã nguồn:** `BE/shared/memory_store.py::MockDatabaseStore.create_booking()`
+- **Preconditions:** Store đã được khôi phục về dữ liệu seed (`mock_seed.json`); `hub-01` (`Hub Ga Metro ĐHQG`) ở trạng thái `ACTIVE`, `available_parking = 8`, danh sách `hub["ports"]` có cổng `S03` với `is_available = True`.
+- **Steps to reproduce:**
+  1. Gửi `POST /api/v1/user/bookings` với payload:
+     `{"plan_type": "personal", "hub_id": "hub-01", "personal_plate": "59-X1 123.45", "parking_slot": "P01", "charging_port": "S03", "duration_hours": 2}`.
+  2. Đọc lại đối tượng `hub-01` trong `db.hubs`.
+- **Expected result:** `hub["available_parking"]` giảm đi 1 (còn `7`) và phần tử `port_s03 = next(p for p in hub["ports"] if p["id"] == "S03")` chuyển sang `is_available = False`.
+- **Actual result:** API trả về `200 OK` và chèn booking vào `db.bookings`, nhưng `hub["available_parking"]` giữ nguyên `8` và `port_s03["is_available"]` vẫn là `True`.
+- **Evidence:** Kiểm tra trực tiếp trạng thái `db.get_hub("hub-01")` sau request trong Unit test thất bại ở `assert hub_after["available_parking"] == parking_before - 1`; tài liệu `BE/user/README.md` cũng xác nhận gói ghép `personal` chưa được nâng cấp thành đặt gửi xe và sạc đồng thời.
+- **Root cause:** `BE/shared/memory_store.py::create_booking()` đã xử lý tách lẻ cho `plan_type == "parking"` (qua `choose_parking_slot`) và `plan_type == "charging"` (qua `select_charging_port`), nhưng chưa xử lý giao dịch đa tài nguyên cho `plan_type == "personal"` nên rơi vào nhánh `else:` chỉ ghi bản ghi booking.
+- **Hướng khắc phục:** Bổ sung nhánh xử lý nguyên tử (atomic) cho `plan_type == "personal"`: kiểm tra đồng thời chỗ đỗ và cổng sạc trước khi giữ chỗ; nếu một trong hai không khả dụng thì trả `409 Conflict` và không thay đổi tài nguyên nào.
+- **Related test:** `tests/unit/test_user_booking_service.py::test_tc_u03_combo_parking_and_charging_updates_mock_db` (`XFAIL`, `strict=True`).
 
 ---
 
-### 🟠 BUG-BE-02: Gửi kết quả bảo trì "Cần chuyển về xưởng" không khóa thiết bị và lệch dữ liệu 3 tầng
+### 2. `BUG-BE-02` — Kỹ thuật viên chọn `"Cần chuyển về xưởng"` không khóa thiết bị và không giảm số xe sẵn sàng
 
-- **Phân loại:** Functional / Integration Bug | **Mức độ:** High | **Trạng thái:** Confirmed + Test Defect
-- **Phạm vi ảnh hưởng:** `FE/staff/js/staff.js`, `BE/staff/main.py`, `BE/mock_db.py`
-- **Preconditions:** Nhân viên bảo trì tiếp nhận phiếu bảo trì thiết bị đang hoạt động tại Hub.
-- **Steps to Reproduce:**
-  1. Chọn phương án kết quả `"Cần chuyển về xưởng"` (`ResolutionOutcome.TRANSFER_TO_WORKSHOP`) và gửi `POST /api/v1/staff/maintenance/resolve`.
-  2. Kiểm tra trạng thái thiết bị và `available_bikes` của Hub tương ứng trong `MockDatabaseStore`.
-- **Expected Result:** Thiết bị được chuyển sang trạng thái khóa/bảo trì và `available_bikes` của Hub giảm đi 1 (TC-S02, BTL3 trang 73).
-- **Actual Result:** Backend luôn xử lý như đã sửa xong tại chỗ, không khóa thiết bị và không giảm `available_bikes`.
-- **Evidence:**
-  1. **Tầng API (`BE/staff/main.py::resolve_maintenance`):** Chỉ gọi `db.resolve_maintenance(req.task_code, req.technical_notes)`, bỏ rơi tham số `req.outcome`.
-  2. **Tầng Data (`BE/mock_db.py`):** Chưa có logic khóa xe và trừ `available_bikes` khi `outcome == TRANSFER_TO_WORKSHOP`; dữ liệu seed dùng `TICK-801..803` (`hub-03`, `XE-019`) lệch với đặc tả TC-S02 (`MT-102`, `BK-EB-018`, `Hub KTX Khu A`).
-  3. **Tầng FE (`FE/staff/js/staff.js::submitMaintResult`):** Hardcode `outcome: "FIXED_ON_SITE"` và gửi sai key `technician_notes` thay vì `technical_notes`.
-- **Root Cause:** Đứt gãy truyền tham số `outcome` và sai lệch schema xuyên suốt cả 3 tầng FE – API – State Management.
-- **Related Test & Lưu ý kiểm thử:** `test_tc_s02_send_to_workshop_locks_bike_and_decrements_available_bikes` ban đầu không truyền trường `"outcome": "Cần chuyển về xưởng"` (Test Defect — đã sửa trong kế hoạch cập nhật test); E2E `TC-S02` cũng cần kiểm tra trạng thái DB sau khi gửi kết quả thay vì chỉ đọc hộp thoại `alert`.
-
----
-
-## III. KHOẢNG TRỐNG PHI CHỨC NĂNG (5 NFR IMPLEMENTATION GAPS)
-
-### 🟠 BUG-FE-04: Chế độ "Dừng khẩn cấp" (Emergency Halt) chưa khóa đặt chỗ và UI User trong `< 2s`
-
-- **Phân loại:** NFR Gap (An toàn vận hành — NFR06) | **Mức độ:** High | **Trạng thái:** Confirmed + Test Defect
-- **Phạm vi ảnh hưởng:** `BE/operator/main.py::emergency_halt()`, `BE/mock_db.py`, `FE/operator`, `FE/user`
-- **Preconditions:** Cả phiên Operator Dashboard và phiên End-User đều đang mở song song.
-- **Steps to Reproduce:**
-  1. Operator nhấn nút "Dừng khẩn cấp" và xác nhận (`confirmEmergency`).
-  2. Đo thời gian phản hồi khóa giao diện bên User và thử gửi `POST /api/bookings`.
-- **Expected Result:** Giao diện End-User hiển thị trạng thái tạm dừng trong `< 2000ms` và mọi yêu cầu tạo booking mới đều bị Backend từ chối (`503 Service Unavailable`).
-- **Actual Result:** UI User không nhận tín hiệu khóa và Backend vẫn cho phép tạo booking mới bình thường.
-- **Evidence:** `emergency_halt()` chỉ chèn bản ghi `EMERGENCY_HALT` vào `db.telemetry_events`, không đặt cờ khóa toàn cục (`system_halted`). Ngoài ra, payload từ `FE/operator` gửi `{halt_reason, confirmation_code}` lệch schema `{reason, confirmation_token}` của Backend, nhưng lỗi contract này đang bị nhánh `try/except` fallback dữ liệu mặc định ở Backend che khuất.
-- **Root Cause:** Chưa triển khai cơ chế trạng thái khóa toàn cục ở Backend và kênh nhận tín hiệu dừng khẩn cấp ở Frontend User.
-- **Related Test & Lưu ý kiểm thử:** `test_nfr06_emergency_halt_locks_user_ui_under_2s` ban đầu đợi `alert` xong mới kiểm tra `timeout=2000` và chưa thử đặt booking sau halt; cần sửa để bấm giờ từ lúc kích hoạt và assert API booking bị từ chối.
+- **Phân loại:** Confirmed Functional & Integration Bug (TC-S02 / UC9)
+- **Severity:** High
+- **Verification Status:** Confirmed
+- **Phạm vi mã nguồn:** `BE/staff/main.py::resolve_maintenance()`, `BE/shared/memory_store.py::resolve_maintenance()`, `FE/staff/js/modules/maintenance-role.js::submitMaintResult()`
+- **Preconditions:** Store ở trạng thái seed; phiếu `TICK-801` thuộc `hub-03` (`Hub KTX Khu B`) đang ở trạng thái `ASSIGNED`.
+- **Steps to reproduce:**
+  1. Gửi `POST /api/v1/staff/maintenance/resolve` với `{"task_code": "TICK-801", "outcome": "Cần chuyển về xưởng", "technical_notes": "Cần chuyển về xưởng"}`.
+  2. Kiểm tra trạng thái thiết bị và `available_bikes` của `hub-03` trong `db.hubs`.
+- **Expected result:** Khi `outcome == "Cần chuyển về xưởng"`, thiết bị bị khóa trên store chung và `available_bikes` của Hub giảm đi 1 (theo đặc tả TC-S02).
+- **Actual result:** API trả `200 OK`, phiếu chuyển trạng thái `"RESOLVED"`, nhưng không khóa thiết bị và `available_bikes` của Hub giữ nguyên.
+- **Evidence:** Sau khi gọi `POST /api/v1/staff/maintenance/resolve`, `find_hub_in_db(db, "hub-03")["available_bikes"]` bằng nguyên giá trị `bikes_before` (`12 == 12`, không giảm xuống `11`).
+- **Root cause:** Tồn tại đồng thời ở 3 tầng:
+  1. `BE/staff/main.py::resolve_maintenance()` gọi `db.resolve_maintenance(req.task_code, req.technical_notes)` nhưng bỏ qua không truyền `req.outcome`.
+  2. `BE/shared/memory_store.py::resolve_maintenance()` chưa có nhánh xử lý `ResolutionOutcome.TRANSFER_TO_WORKSHOP` để khóa xe và giảm `available_bikes` (chỉ có nhánh khôi phục trụ sạc `S02`).
+  3. `FE/staff/js/modules/maintenance-role.js::submitMaintResult()` đang hardcode `outcome: "FIXED_ON_SITE"` và gửi sai tên trường `technician_notes` thay vì `technical_notes`; đồng thời dữ liệu seed dùng `TICK-801..803` chưa đồng nhất với mã tĩnh `MT-102` / `BK-EB-018` trên giao diện.
+- **Hướng khắc phục:** Truyền `req.outcome` xuống `db.resolve_maintenance()` để khóa thiết bị và trừ `available_bikes` khi chuyển xưởng; sửa FE đọc đúng giá trị radio `maintOutcome` đang chọn và gửi đúng key `technical_notes`.
+- **Related test:** `tests/unit/test_staff_maintenance.py::test_tc_s02_send_to_workshop_locks_bike_and_decrements_available_bikes` (`XFAIL`, `strict=True`).
 
 ---
 
-### 🟠 BUG-FE-03: Chưa áp đặt kiểm soát truy cập theo vai trò (RBAC) và xác thực 2FA cho phân hệ Operator
+## III. CÁC KHOẢNG TRỐNG PHI CHỨC NĂNG — NFR NHÓM 1 GAPS (5 GAPS / 7 XFAIL)
 
-- **Phân loại:** NFR Gap (Bảo mật — NFR05) | **Mức độ:** High | **Trạng thái:** Confirmed
-- **Phạm vi ảnh hưởng:** `FE/operator/js/operator.js`, các route trong `BE/operator/main.py`
-- **Preconditions:** Người dùng chưa đăng nhập Operator hoặc đang dùng phiên có vai trò Sinh viên (`student`).
-- **Steps to Reproduce:**
-  1. Truy cập trực tiếp URL `/operator/` hoặc gọi `GET /api/v1/operator/dashboard/kpis` không kèm token / kèm token của `student`.
-  2. Gọi `OperatorApp.completeLogin()` bỏ qua mã OTP 2FA.
-- **Expected Result:** API Operator trả `401 Unauthorized` (thiếu token) hoặc `403 Forbidden` (sai vai trò / chưa qua 2FA); giao diện chặn truy cập Dashboard khi chưa xác thực 2FA thành công (NFR05, BTL3 trang 75).
-- **Actual Result:** Trang `/operator/` tải thẳng KPI mà không yêu cầu đăng nhập; `completeLogin()` chỉ ẩn `#operatorLoginView` và bật `alert`, không gọi `/api/v1/operator/auth/verify-2fa`; các API Backend trả `200 OK` cho mọi request.
-- **Evidence:** Khối `#operatorLoginView` mặc định `display: none`; `OperatorApp.init()` gọi `loadKpis()` ngay khi tải trang; các route trong `BE/operator/main.py` không có middleware kiểm tra token/role.
-- **Root Cause:** Lớp bảo mật RBAC và xác thực 2FA mới dừng ở mức giao diện minh họa trên bản Prototype.
-- **Related Test & Biện pháp khắc phục:** Bổ sung test tầng API (`test_nfr05_operator_api_enforces_rbac_and_2fa`) kiểm tra `401`/`403` song song với E2E `test_nfr05_student_role_blocked_from_operator_and_2fa_enforced`. *(Ghi chú phạm vi: yêu cầu ngưỡng chi tiết RBAC/2FA được nhóm cụ thể hóa trong BTL3/test_spec.)*
+### 3. `BUG-FE-04` — Lệnh "Dừng khẩn cấp" chưa khóa UI End-User và chưa chặn đặt chỗ mới trong `< 2s` (NFR06)
 
----
-
-### 🟡 BUG-FE-02: Thiếu kiểm tra độ tươi dữ liệu (`> 30s`) và đồng bộ User → Operator `<= 1s`
-
-- **Phân loại:** NFR Gap (Nhất quán dữ liệu — NFR04) | **Mức độ:** Medium | **Trạng thái:** Confirmed + Test Defect
-- **Phạm vi ảnh hưởng:** `BE/mock_db.py`, `BE/user/main.py`, `FE/operator/js/operator.js`
-- **Preconditions:** Operator Dashboard đã mở sẵn hiển thị KPI xe khả dụng; hoặc dữ liệu cảm biến của Hub có mốc cập nhật cũ hơn 30 giây.
-- **Steps to Reproduce:**
-  1. **(Stale data):** Thiết lập dữ liệu trạng thái `hub-01` quá hạn `> 30s` rồi gửi yêu cầu đặt xe.
-  2. **(Sync `<= 1s`):** Mở sẵn Operator Dashboard, sau đó User hoàn tất đặt 1 xe tại `hub-01` và quan sát KPI trên Dashboard không tải lại trang.
-- **Expected Result:** (1) Từ chối đặt xe khi dữ liệu cũ `> 30s`; (2) KPI số xe khả dụng trên Operator Dashboard tự động giảm trong `<= 1000ms` (NFR04, BTL3 trang 74).
-- **Actual Result:** (1) Hệ thống vẫn cho đặt xe do không lưu/kiểm tra `last_updated_at`; (2) Operator Dashboard giữ nguyên số liệu cũ cho tới khi tải lại trang.
-- **Evidence:** `FE/operator/js/operator.js` chỉ gọi `loadKpis()` một lần trong `init()`, không có SSE/WebSocket hoặc short-polling; cấu trúc Hub trong `BE/mock_db.py` chưa có trường `last_updated_at`.
-- **Root Cause:** Chưa cài đặt timestamp kiểm tra độ tươi dữ liệu ở Backend và cơ chế đẩy/kéo dữ liệu thời gian thực ở Frontend Operator.
-- **Related Test & Lưu ý kiểm thử:** Test gộp cũ chỉ tua đồng hồ trình duyệt (`fast_forward(31000)`) và mở trang Operator *sau* khi User đã đặt xe (Test Defect); cần tách thành 2 test độc lập `NFR04-A` và `NFR04-B`.
+- **Phân loại:** Confirmed NFR Gap (An toàn vận hành – NFR06)
+- **Severity:** High
+- **Verification Status:** Confirmed
+- **Phạm vi mã nguồn:** `BE/operator/handlers/dashboard.py::emergency_halt()`, `BE/shared/memory_store.py`, `FE/operator/js/api.js::emergencyHalt()`, `FE/user/`
+- **Preconditions:** Mở song song 2 browser context: Operator Dashboard và End-User đã đăng nhập.
+- **Steps to reproduce:**
+  1. Ghi nhận `t0 = time.perf_counter()` và kích hoạt `OperatorApp.openEmergencyModal(); OperatorApp.confirmEmergency()`.
+  2. Kiểm tra giao diện End-User hiển thị cảnh báo khóa trong `2000ms`.
+  3. Gửi thử `POST /api/bookings` đặt xe `XE-031` tại `hub-01`.
+- **Expected result:** Giao diện End-User bị khóa đặt mới trong `< 2000ms`; Backend từ chối yêu cầu `POST /api/bookings` (`403`/`423`/`503`) và không phát sinh booking mới.
+- **Actual result:** Giao diện Operator đổi `#kpiAlerts` thành `"DỪNG TOÀN BỘ"`, nhưng giao diện End-User không có tín hiệu khóa sau `2000ms` và Backend vẫn cho phép tạo booking mới (`200 OK`).
+- **Evidence:** Playwright timeout `2000ms` khi chờ trạng thái `"Tạm dừng khẩn cấp"` trên `user_page`; đồng thời payload FE gửi lên `/dashboard/emergency-halt` bị Backend từ chối `422`.
+- **Root cause:**
+  1. `BE/operator/handlers/dashboard.py::emergency_halt()` chỉ chèn sự kiện `EMERGENCY_HALT` vào `db.telemetry_events`, chưa đặt cờ `system_halted` toàn cục trên store để chặn `create_booking()`.
+  2. `FE/operator/js/api.js::emergencyHalt()` gửi `{halt_reason, operator_id, confirmation_code}`, lệch tên trường so với `EmergencyHaltRequest` (`{reason, operator_id, confirmation_token}`), khiến Backend trả `422` và Frontend rơi vào nhánh fallback trả `{success: true}` giả.
+  3. `FE/user/` chưa có cơ chế nhận trạng thái dừng khẩn cấp để khóa thao tác đặt chỗ.
+- **Hướng khắc phục:** Chuẩn hóa payload FE gửi đúng `{reason, operator_id, confirmation_token}`; bổ sung cờ `system_halted` trong `MockDatabaseStore` chặn `POST /api/bookings` (trả `503`); đẩy tín hiệu khóa về `FE/user/` qua SSE/WebSocket hoặc polling `< 1s`.
+- **Related test:** `tests/e2e/test_operator_dashboard.py::test_nfr06_emergency_halt_locks_user_ui_and_blocks_booking_under_2s` (`XFAIL`, `strict=True`).
 
 ---
 
-### 🟢 BUG-BE-03: Giao dịch thanh toán hóa đơn của User chưa ghi nhận vào kho Audit Log
+### 4. `BUG-FE-03` — Chưa áp đặt kiểm soát truy cập RBAC và xác thực 2FA thực tế cho phân hệ Operator (NFR05)
 
-- **Phân loại:** NFR Gap (Kiểm toán — NFR07) | **Mức độ:** Low | **Trạng thái:** Confirmed + Test Defect
-- **Phạm vi ảnh hưởng:** `BE/user/main.py::api_pay_invoice()`
-- **Preconditions:** User có hóa đơn chờ thanh toán hợp lệ.
-- **Steps to Reproduce:**
-  1. Gửi yêu cầu thanh toán tới `POST /api/invoices/pay`.
-  2. Truy vấn `GET /api/v1/operator/dashboard/telemetry` để kiểm tra bản ghi Audit Log tương ứng.
-- **Expected Result:** Phát sinh bản ghi Audit Log chứa đủ 4 trường hợp lệ: `actor`, `timestamp`, `action`, `result` (NFR07, BTL3 trang 75).
-- **Actual Result:** API trả `{"success": True, "transaction_id": ...}` nhưng không có bản ghi nào được thêm vào kho nhật ký.
-- **Evidence:** Thân hàm `api_pay_invoice()` trong `BE/user/main.py` trả JSON trực tiếp mà không gọi ghi nhận vào `db.telemetry_events` hay bảng audit riêng.
-- **Root Cause:** Thiếu bước ghi nhận Audit Log trong handler xử lý thanh toán.
-- **Related Test & Lưu ý kiểm thử:** `test_nfr07_user_payment_creates_audit_log_entry` ban đầu chỉ kiểm tra `len(payment_logs) > 0`; cần bổ sung kiểm tra đủ 4 khóa bắt buộc và giá trị khác rỗng.
-
----
-
-### 🟢 BUG-BE-04: Nhật ký sự kiện can thiệp của Operator thiếu 3 trường chuẩn Audit Log
-
-- **Phân loại:** NFR Gap (Kiểm toán — NFR07) | **Mức độ:** Low | **Trạng thái:** Confirmed + Test Defect
-- **Phạm vi ảnh hưởng:** `BE/operator/main.py` (`emergency_halt`, `/dashboard/telemetry`)
-- **Preconditions:** Operator thực hiện một thao tác can thiệp vận hành (dừng khẩn cấp, điều phối, cấu hình Hub).
-- **Steps to Reproduce:**
-  1. Kích hoạt `POST /api/v1/operator/dashboard/emergency-halt`.
-  2. Truy vấn `GET /api/v1/operator/dashboard/telemetry` và kiểm tra schema bản ghi mới nhất.
-- **Expected Result:** Bản ghi tuân thủ hợp đồng Audit Log thống nhất gồm 4 trường: `{"actor": "OP-01", "timestamp": "<ISO-8601>", "action": "EMERGENCY_HALT", "result": "SUCCESS"}`.
-- **Actual Result:** Bản ghi hiện chỉ có `id`, `timestamp`, `hub_name`, `event_type`, `message`, `level`; thiếu hoàn toàn `actor`, `action`, `result`.
-- **Evidence:** Đối chiếu trực tiếp object chèn vào `db.telemetry_events` trong `BE/operator/main.py::emergency_halt()`.
-- **Root Cause:** Cấu trúc `TelemetryEvent` hiện thiết kế cho bảng tin cảnh báo UI, chưa mở rộng sang schema kiểm toán 4 trường.
-- **Related Test & Lưu ý kiểm thử:** `test_nfr07_operator_intervention_writes_complete_audit_log` trước đây kiểm tra tên trường `timestamp_iso` do test tự đặt trong khi NFR07 không ép tên trường này; đã thống nhất lại hợp đồng chung dùng khóa `timestamp`.
+- **Phân loại:** Confirmed Security / NFR Gap (Bảo mật phân quyền & 2FA – NFR05)
+- **Severity:** High *(đánh giá theo chuẩn Broken Access Control; hiện ở phạm vi Prototype cục bộ chưa có auth middleware)*
+- **Verification Status:** Confirmed
+- **Phạm vi mã nguồn:** `BE/operator/handlers/*.py`, `FE/operator/partials/layout/login-2fa.html`, `FE/operator/js/operator.js`, `FE/operator/js/modules/overview.js`
+- **Preconditions:** Tài khoản End-User (Sinh viên) đã đăng nhập; hoặc client gọi trực tiếp API Operator không kèm token Operator/2FA.
+- **Steps to reproduce:**
+  1. (E2E) Đăng nhập vai trò End-User, sau đó điều hướng trực tiếp sang `http://127.0.0.1:3000/operator/`, chờ nạp xong toàn bộ `[data-include]`.
+  2. (Unit) Gọi trực tiếp `GET /api/v1/operator/dashboard/kpis` và `PUT /api/v1/operator/hubs/hub-01/config` không có header xác thực Operator/2FA.
+- **Expected result:** Trang `/operator/` từ chối phiên Sinh viên hoặc khóa sau màn hình 2FA (không hiển thị `#kpiTotalHubs`); API Operator trả `401 Unauthorized` hoặc `403 Forbidden`.
+- **Actual result:** `#kpiTotalHubs` hiển thị trực tiếp trên trình duyệt; mọi API Operator trả `200 OK` không yêu cầu token hay xác thực 2FA.
+- **Evidence:** `page.locator("#kpiTotalHubs").is_visible()` trả `True` trong phiên Sinh viên; `TestClient` gọi `GET /api/v1/operator/dashboard/kpis` không kèm token trả `HTTP 200`.
+- **Root cause:** `#operatorLoginView` không có class `show` mặc định; `OperatorApp.init()` tự tải toàn bộ KPI khi vừa mở trang; `completeLogin()` chỉ ẩn overlay mà không gọi `/api/v1/operator/auth/verify-2fa`; các route trong `BE/operator/handlers/` chưa có middleware kiểm tra JWT, vai trò và cờ 2FA.
+- **Hướng khắc phục:** Bổ sung Auth/RBAC middleware cho nhóm route `/api/v1/operator/*` xác thực token đã qua bước `verify-2fa`; trên FE mặc định bật `#operatorLoginView.show` và chỉ gọi `loadKpis()` sau khi xác thực 2FA thành công.
+- **Related tests:**
+  - `tests/e2e/test_user_flow.py::test_nfr05_student_role_blocked_from_operator_and_2fa_enforced` (`XFAIL`, `strict=True`)
+  - `tests/unit/test_auth.py::test_nfr05_operator_api_enforces_rbac_and_2fa` (`XFAIL`, `strict=True`)
 
 ---
 
-## IV. KẾ HOẠCH KHẮC PHỤC & MỞ RỘNG ĐỘ BAO PHỦ KIỂM THỬ
+### 5. `BUG-FE-02` — Chưa từ chối đặt chỗ khi dữ liệu cảm biến cũ `> 30s` và chưa đồng bộ KPI Operator trong `≤ 1s` (NFR04)
 
-### 4.1. Thứ tự ưu tiên xử lý
+- **Phân loại:** Confirmed NFR Gap (Nhất quán dữ liệu – NFR04-A & NFR04-B)
+- **Severity:** Medium
+- **Verification Status:** Confirmed
+- **Phạm vi mã nguồn:** `BE/data/mock_seed.json`, `BE/shared/memory_store.py`, `FE/operator/js/operator.js`, `FE/shared/js/config.js`
+- **Preconditions:** Hệ thống đang chạy trên Gateway dùng chung; kiểm chứng tách làm 2 kịch bản độc lập (NFR04-A và NFR04-B).
+- **Steps to reproduce:**
+  1. **NFR04-A:** Cài đặt đồng hồ ảo / mô phỏng Hub ngừng cập nhật quá 30 giây (`> 30s`), sau đó gửi yêu cầu đặt xe.
+  2. **NFR04-B:** Mở sẵn Operator Dashboard và chờ `#kpiAvailableBikes` cập nhật từ placeholder `120` về giá trị thật `33`. Mở phiên End-User đặt xe `XE-031` tại `hub-01` qua `POST /api/bookings`. Theo dõi `#kpiAvailableBikes` trong `1000ms` (không tải lại trang).
+- **Expected result:** (NFR04-A) Hệ thống từ chối đặt chỗ khi dữ liệu trạng thái cũ `> 30s`; (NFR04-B) `#kpiAvailableBikes` tự động giảm từ `33` xuống `32` trong `≤ 1000ms`.
+- **Actual result:** (NFR04-A) Hệ thống vẫn xác nhận đặt chỗ bình thường; (NFR04-B) `#kpiAvailableBikes` giữ nguyên `33` sau `1000ms`.
+- **Evidence:** Playwright báo `AssertionError: Locator expected not to have text '33' (Actual value: 33)` sau timeout `1000ms` dù `POST /api/bookings` đã trả `200 OK` và giảm `available_bikes` trong `db`.
+- **Root cause:** Dữ liệu Hub trong `mock_seed.json`/`memory_store.py` chưa có trường `last_updated_at` để kiểm tra ngưỡng tươi `30s`; `FE/operator/js/operator.js` chỉ gọi `loadKpis()` một lần trong `init()`, còn `autoSyncTimer` có chu kỳ `8000ms` (`POLLING.operatorSyncMs`) và chỉ làm mới `loadRelocations()`, chưa có WebSocket/SSE hoặc short-polling KPI `≤ 1s`.
+- **Hướng khắc phục:** Gắn `last_updated_at` cho dữ liệu Hub và kiểm tra điều kiện `now - last_updated_at <= 30s` trước khi đặt chỗ; bổ sung kênh đẩy thời gian thực (WebSocket/SSE) hoặc polling KPI `≤ 1000ms` trên Operator Dashboard.
+- **Related tests:**
+  - `tests/e2e/test_user_flow.py::test_nfr04_a_rejects_booking_when_hub_sensor_data_stale_over_30s` (`XFAIL`, `strict=True`)
+  - `tests/e2e/test_user_flow.py::test_nfr04_b_cross_actor_sync_updates_operator_kpi_under_1s` (`XFAIL`, `strict=True`)
 
-1. **Ưu tiên 1 — Vá lỗi ảnh hưởng trực tiếp nghiệp vụ cốt lõi:**
-   - `BUG-FE-01` (chặn fallback giả khi nhận `409 Conflict`).
-   - `BUG-FE-05` (đồng bộ contract đọc/tạo lệnh điều phối).
-   - `BUG-BE-01` (trừ chỗ đỗ & khóa cổng sạc cho gói `personal`).
-   - `BUG-BE-02` (khóa thiết bị & trừ `available_bikes` khi chuyển xưởng trên cả 3 tầng FE–API–BE).
-2. **Ưu tiên 2 — Chuẩn hóa & chống PASS giả trong bộ kiểm thử:**
-   - Áp dụng `strict=True` cho toàn bộ 9 decorator `xfail`.
-   - Vá lỗi PASS giả ở `TC-S03` E2E (`assert slots_after == slots_before - 1`), bổ sung kiểm tra DB cho `TC-O03` & `TC-S02` E2E, hoàn thiện luồng E2E combo cho `TC-U03`.
-   - Tách `NFR03` (`A`/`B`), tách `NFR04` (`A`/`B`), sửa đo thời gian thực cho `NFR06`, sửa thứ tự mở trang cho `NFR10`, thiết lập tải `>= 90%` cho `NFR13`, chạy đủ `NFR11_RUNS=20` và xóa hàm khai báo trùng trong `test_user_booking_service.py`.
-3. **Ưu tiên 3 — Hoàn thiện NFR cho giai đoạn nghiệm thu / Production:**
-   - Triển khai cờ dừng khẩn cấp (`BUG-FE-04`), middleware RBAC/2FA (`BUG-FE-03`), đồng bộ thời gian thực & kiểm tra `last_updated_at` (`BUG-FE-02`) và chuẩn hóa Audit Log 4 trường (`BUG-BE-03`, `BUG-BE-04`).
+---
 
-### 4.2. Các kịch bản biên & toàn vẹn tài nguyên cần bổ sung ở Sprint kế tiếp
+### 6. `BUG-BE-03` — Giao dịch thanh toán hóa đơn của User chưa ghi nhận vào Audit Log (NFR07)
 
-- **Toàn vẹn tài nguyên đa mục (Resource Consistency):** Đảm bảo rollback chỗ đỗ nếu bước khóa cổng sạc trong combo thất bại; ngăn số lượng tài nguyên (`available_bikes`, `available_parking`) giảm xuống giá trị âm.
-- **Đặt trùng tài nguyên đồng thời:** Bổ sung kiểm thử concurrent cho đặt trùng 1 chỗ đỗ và đặt trùng 1 cổng sạc (tương tự `NFR03-A` của xe thuê).
-- **Biên nghiệp vụ điều phối & bảo trì:** Điều chuyển vượt số xe khả dụng tại Hub nguồn; phân biệt rõ trạng thái kết thúc giữa `FIXED_ON_SITE` và `TRANSFER_TO_WORKSHOP`.
-- **Biên kiểm toán:** Xác minh Audit Log vẫn được ghi nhận với `result: "FAILED"` khi thao tác thanh toán hoặc can thiệp thất bại.
+- **Phân loại:** Confirmed Audit / NFR Gap (Kiểm toán – NFR07)
+- **Severity:** Low
+- **Verification Status:** Confirmed
+- **Phạm vi mã nguồn:** `BE/user/payments.py::pay_invoice()`, `BE/user/main.py::api_pay_invoice()`
+- **Preconditions:** Chuyến đi seed `TRIP-8821` đã được trả tại `hub-04` để sinh hóa đơn `rental_invoice` trạng thái `unpaid`.
+- **Steps to reproduce:**
+  1. Lấy `invoice_id` thật từ `GET /api/invoices/current?type=rental&trip_id=TRIP-8821`.
+  2. Gửi `POST /api/invoices/pay` với `{"invoice_id": invoice_id, "method": "wallet"}` (trả `200 OK`).
+  3. Gọi `GET /api/v1/operator/dashboard/telemetry` để kiểm tra nhật ký kiểm toán.
+- **Expected result:** Xuất hiện bản ghi Audit Log cho giao dịch thanh toán chứa đủ 4 trường không rỗng: `actor`, `timestamp`, `action`, `result`.
+- **Actual result:** Thanh toán thành công (`status="paid"`), nhưng danh sách nhật ký không có bất kỳ bản ghi thanh toán nào.
+- **Evidence:** `payment_logs` lọc từ `GET /api/v1/operator/dashboard/telemetry` có độ dài bằng `0` sau giao dịch `POST /api/invoices/pay` trả `200 OK`.
+- **Root cause:** `BE/user/payments.py::pay_invoice()` mới cập nhật trạng thái hóa đơn và trả `PaymentProcessResult`, chưa ghi nhận sự kiện kiểm toán vào `db.telemetry_events` hoặc kho Audit Log chung.
+- **Hướng khắc phục:** Ghi bổ sung bản ghi kiểm toán đủ 4 trường (`actor`, `timestamp`, `action`, `result`) vào store dùng chung sau mỗi lần xử lý thanh toán (cả thành công lẫn thất bại).
+- **Related test:** `tests/e2e/test_user_flow.py::test_nfr07_user_payment_creates_complete_audit_log_entry` (`XFAIL`, `strict=True`).
+
+---
+
+### 7. `BUG-BE-04` — Nhật ký can thiệp của Operator thiếu 3 trường chuẩn Audit Log (`actor`, `action`, `result`) (NFR07)
+
+- **Phân loại:** Confirmed Audit / NFR Gap (Kiểm toán – NFR07)
+- **Severity:** Low
+- **Verification Status:** Confirmed
+- **Phạm vi mã nguồn:** `BE/operator/handlers/dashboard.py::emergency_halt()`, `BE/operator/handlers/dashboard.py::get_telemetry_feed()`, `BE/operator/schemas/dashboard.py::TelemetryEvent`
+- **Preconditions:** Operator Dashboard đã sẵn sàng kết nối Backend.
+- **Steps to reproduce:**
+  1. Kích hoạt thao tác can thiệp dừng khẩn cấp.
+  2. Gọi `GET /api/v1/operator/dashboard/telemetry` và kiểm tra bản ghi mới nhất.
+- **Expected result:** Bản ghi sự kiện chứa đầy đủ 4 trường kiểm toán khác rỗng: `actor`, `timestamp`, `action`, `result`.
+- **Actual result:** Bản ghi trả về chỉ gồm `id`, `hub_id`, `hub_name`, `level`, `title`, `message`, `created_at_relative`, `timestamp_iso` — thiếu 3 trường `actor`, `action`, `result` và chưa thống nhất tên trường `timestamp`.
+- **Evidence:** Kiểm tra JSON trả về từ `GET /api/v1/operator/dashboard/telemetry` không tồn tại khóa `actor`, `action`, `result` và `timestamp`.
+- **Root cause:** `emergency_halt()` không lưu `operator_id` hay kết quả thực thi vào bản ghi trong `db.telemetry_events`, đồng thời schema `TelemetryEvent` chưa định nghĩa các trường chuẩn Audit Log.
+- **Hướng khắc phục:** Mở rộng cấu trúc bản ghi sự kiện và schema `TelemetryEvent` (hoặc tạo endpoint `/audit-logs` riêng) để lưu và trả về đầy đủ 4 trường `actor`, `timestamp`, `action`, `result`.
+- **Related test:** `tests/e2e/test_operator_dashboard.py::test_nfr07_operator_intervention_writes_complete_audit_log` (`XFAIL`, `strict=True`).
+
+---
+
+## IV. CÁC LỖI ĐÃ KHẮC PHỤC & XÁC MINH HỒI QUY (2 RESOLVED BUGS)
+
+### 8. `BUG-FE-01` [Resolved] — Frontend không còn tự tạo booking giả `'Đã xác nhận'` khi Backend trả `409 Conflict` (NFR03)
+
+- **Mức độ trước khi vá:** Critical
+- **Tình trạng hiện tại:** **Resolved** — Đã sửa trong `FE/user/js/api.js::createBooking()` (khi `isBackendAvailable` là `true` và `!res.ok`, hàm ném ngoại lệ `Error` thay vì rơi xuống nhánh fallback mock `'Đã xác nhận'`).
+- **Kết quả kiểm thử hồi quy:**
+  - `tests/unit/test_user_booking_service.py::test_nfr03_a_backend_concurrent_double_booking_allows_only_one_success` — **PASSED**
+  - `tests/e2e/test_user_flow.py::test_nfr03_b_frontend_rejects_409_conflict_without_fake_confirmation` — **PASSED**
+
+### 9. `BUG-FE-05` [Resolved] — Khắc phục lỗi `TypeError: list.map is not a function` và lệch payload khi tạo lệnh điều phối (TC-O03 / UC8)
+
+- **Mức độ trước khi vá:** High
+- **Tình trạng hiện tại:** **Resolved** — Đã sửa trong `FE/operator/js/modules/relocation.js`: `loadRelocations()` đã tách mảng từ `raw.items`, và `submitRelocation()` đã gửi đúng schema `RelocationCommandCreate` (`{source_hub_id, target_hub_id, bike_count, assigned_staff_id, priority, notes}`) tới `POST /api/v1/operator/relocation/commands`.
+- **Kết quả kiểm thử hồi quy:**
+  - `tests/e2e/test_operator_dashboard.py::test_tc_o03_create_relocation_command_via_dashboard_ui` — **PASSED** (xác minh thành công cả thông báo UI, bảng danh sách và bản ghi mới trong `db.relocations`).
+
+---
+
+## V. LỘ TRÌNH ƯU TIÊN XỬ LÝ TIẾP THEO
+
+1. **Ưu tiên 1 — Hoàn thiện nghiệp vụ tài nguyên Backend/Staff:**
+   - Vá `BUG-BE-01` (gói ghép `personal` trừ chỗ đỗ + khóa cổng sạc nguyên tử).
+   - Vá `BUG-BE-02` (truyền `outcome` qua 3 tầng FE → API → store để khóa xe khi chuyển xưởng).
+2. **Ưu tiên 2 — Bảo mật & An toàn vận hành (NFR05, NFR06):**
+   - Vá `BUG-FE-04` (sửa payload `emergencyHalt()`, thêm cờ `system_halted` chặn đặt chỗ và khóa UI User `< 2s`).
+   - Vá `BUG-FE-03` (bắt buộc 2FA trên FE và gắn middleware kiểm tra quyền/token trên `BE/operator`).
+3. **Ưu tiên 3 — Đồng bộ thời gian thực & Audit Log (NFR04, NFR07):**
+   - Vá `BUG-FE-02` (thêm `last_updated_at` kiểm tra ngưỡng `30s` và cơ chế SSE/WebSocket đồng bộ KPI `≤ 1s`).
+   - Vá `BUG-BE-03` và `BUG-BE-04` (ghi nhận đầy đủ 4 trường `actor`, `timestamp`, `action`, `result` cho thanh toán và can thiệp Operator).

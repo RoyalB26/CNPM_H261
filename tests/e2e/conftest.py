@@ -71,6 +71,11 @@ class _QuietHandler(SimpleHTTPRequestHandler):
     def log_message(self, format: str, *args) -> None:  # noqa: A002
         return
 
+class _HighBacklogHTTPServer(ThreadingHTTPServer):
+    """Tăng backlog TCP tránh rớt kết nối khi HtmlInclude nạp 50+ partials song song."""
+    request_queue_size = 128
+    allow_reuse_address = True
+    daemon_threads = True
 
 @pytest.fixture(scope="session", autouse=True)
 def live_servers() -> Iterator[None]:
@@ -93,7 +98,7 @@ def live_servers() -> Iterator[None]:
 
     if not _is_port_open(FRONTEND_HOST, FRONTEND_PORT):
         handler_cls = partial(_QuietHandler, directory=str(FE_DIR))
-        http_server = ThreadingHTTPServer((FRONTEND_HOST, FRONTEND_PORT), handler_cls)
+        http_server = _HighBacklogHTTPServer((FRONTEND_HOST, FRONTEND_PORT), handler_cls)
         fe_thread = threading.Thread(target=http_server.serve_forever, daemon=True)
         fe_thread.start()
         _wait_for_port(FRONTEND_HOST, FRONTEND_PORT)
@@ -158,6 +163,10 @@ def login_end_user(page: Page) -> None:
     """Đăng nhập End-User bằng tài khoản seed hợp lệ và đợi vào màn hình chính."""
     block_external_requests(page)
     page.goto(USER_URL, wait_until="domcontentloaded")
+    page.wait_for_function(
+        "() => document.querySelectorAll('[data-include]').length === 0 && Boolean(window.App)",
+        timeout=10000,
+    )
     page.wait_for_selector("#screen-login.active", timeout=10000)
 
     if page.locator("#loginPhone").count():
@@ -174,6 +183,10 @@ def open_operator_dashboard(page: Page) -> list[str]:
     block_external_requests(page)
     dialogs = attach_dialog_collector(page)
     page.goto(OPERATOR_URL, wait_until="domcontentloaded")
+    page.wait_for_function(
+        "() => document.querySelectorAll('[data-include]').length === 0 && Boolean(window.OperatorApp)",
+        timeout=10000,
+    )
     page.wait_for_selector("#kpiTotalHubs", state="attached", timeout=10000)
 
     login_overlay = page.locator("#operatorLoginView.show")

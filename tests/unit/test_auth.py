@@ -35,15 +35,16 @@ def test_user_login_valid_credentials_returns_token(api_client: TestClient) -> N
 
 def test_operator_login_and_2fa_flow(api_client: TestClient) -> None:
     """Kiểm thử luồng đăng nhập Operator kết hợp bước xác thực OTP 2FA."""
+    email = "admin@e-mobility.com"
     login_res = api_client.post(
         f"{OPERATOR_API}/auth/login",
-        json={"username": "admin_dhqg", "password": "password123"},
+        json={"email": email, "password": "operator123"},
     )
     assert login_res.status_code in (200, 201)
 
     otp_res = api_client.post(
         f"{OPERATOR_API}/auth/verify-2fa",
-        json={"otp_code": "123456"},
+        json={"email": email, "otp_code": "123456"},
     )
     assert otp_res.status_code == 200
     assert any(key in otp_res.json() for key in ("access_token", "token", "operator"))

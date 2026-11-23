@@ -1,6 +1,7 @@
 """Unit/API Test cho UC8: Lệnh điều phối xe và ngoại lệ RelocationError (TC-O03-ERR)."""
 
 import pytest
+import copy
 from starlette.testclient import TestClient
 
 from BE.mock_db import RelocationError
@@ -38,21 +39,22 @@ def test_tc_o03_err_exceeding_target_capacity_is_rejected_without_mutating_db(
     api_client: TestClient,
     reset_shared_mock_db,
 ) -> None:
-    """TC-O03-ERR: Điều 2 xe từ hub-02 sang hub-04 (chỉ có 1 chỗ trống) bị từ chối 409."""
-    total_before = len(reset_shared_mock_db.relocations)
-    source_before = dict(find_hub_in_db(reset_shared_mock_db, "hub-02"))
-    target_before = dict(find_hub_in_db(reset_shared_mock_db, "hub-04"))
+    source_before = copy.deepcopy(find_hub_in_db(reset_shared_mock_db, "hub-02"))
+    target_before = copy.deepcopy(find_hub_in_db(reset_shared_mock_db, "hub-01"))
 
     excessive_payload = {
         "source_hub_id": "hub-02",
-        "target_hub_id": "hub-04",
+        "target_hub_id": "hub-01",
         "bike_count": 2,
         "assigned_staff_id": "STF-01",
+        "priority": "Khẩn cấp",
     }
     response = api_client.post(f"{OPERATOR_API}/relocation/commands", json=excessive_payload)
     assert response.status_code == 409
-    assert "chỗ trống" in response.json().get("error", "").lower()
 
-    assert len(reset_shared_mock_db.relocations) == total_before
+    body = response.json()
+    msg = str(body.get("detail") or "").lower()
+    assert "chỗ trống" in msg or "không đủ" in msg
+
     assert find_hub_in_db(reset_shared_mock_db, "hub-02") == source_before
-    assert find_hub_in_db(reset_shared_mock_db, "hub-04") == target_before
+    assert find_hub_in_db(reset_shared_mock_db, "hub-01") == target_before

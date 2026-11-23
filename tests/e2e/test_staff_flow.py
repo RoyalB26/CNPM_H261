@@ -18,7 +18,11 @@ def _open_staff_app(page: Page) -> list[str]:
     block_external_requests(page)
     dialogs = attach_dialog_collector(page)
     page.goto(STAFF_URL, wait_until="domcontentloaded")
-    page.wait_for_selector("#staffRoleSelect", timeout=10000)
+    page.wait_for_function(
+        "() => document.querySelectorAll('[data-include]').length === 0",
+        timeout=10000,
+    )
+    page.wait_for_selector("#screen-reloc-route.active", timeout=10000)
     return dialogs
 
 
