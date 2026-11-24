@@ -7,6 +7,11 @@ const API_BASE_URL = "http://127.0.0.1:8000/api";
 const ApiService = {
   isBackendAvailable: false,
 
+  _authHeaders(extra = {}) {
+    const token = sessionStorage.getItem("user_access_token") || "";
+    return token ? { ...extra, Authorization: "Bearer " + token } : { ...extra };
+  },
+
   async checkBackend() {
     try {
       const res = await fetch(`${API_BASE_URL}/health`, { method: "GET" });
@@ -25,28 +30,43 @@ const ApiService = {
 
   async login(phone, password) {
     if (this.isBackendAvailable) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/auth/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone, password })
-        });
-        if (res.ok) {
-          const result = await res.json();
-          sessionStorage.setItem("user_access_token", result.token);
-          return result;
-        }
-      } catch (e) {
-        console.warn("Login API error, fallback to local:", e);
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, password })
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(result.detail || result.error || "Sai tài khoản hoặc mật khẩu");
       }
+      if (result.token) {
+        sessionStorage.setItem("user_access_token", result.token);
+      }
+      return { success: true, ...result };
     }
     return { success: true, user: AppState.user };
+  },
+
+  async register(payload) {
+    if (this.isBackendAvailable) {
+      const res = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(result.detail || result.error || "Đăng ký thất bại");
+      }
+      return result;
+    }
+    return { success: true };
   },
 
   async getProfile() {
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/user/profile`);
+        const res = await fetch(`${API_BASE_URL}/user/profile`, { headers: this._authHeaders() });
         if (res.ok) return await res.json();
       } catch (e) {
         console.warn("GetProfile API error:", e);
@@ -60,7 +80,7 @@ const ApiService = {
       try {
         const res = await fetch(`${API_BASE_URL}/user/profile`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: this._authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(profileData)
         });
         if (res.ok) return await res.json();
@@ -74,7 +94,7 @@ const ApiService = {
   async getUserVehicles() {
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/user/vehicles`);
+        const res = await fetch(`${API_BASE_URL}/user/vehicles`, { headers: this._authHeaders() });
         if (res.ok) return await res.json();
       } catch (e) {
         console.warn("GetUserVehicles API error:", e);
@@ -92,7 +112,7 @@ const ApiService = {
       try {
         const res = await fetch(`${API_BASE_URL}/hubs/suggest-route`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: this._authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(payload)
         });
         if (res.ok) return await res.json();
@@ -106,7 +126,7 @@ const ApiService = {
   async getHubs() {
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/hubs`);
+        const res = await fetch(`${API_BASE_URL}/hubs`, { headers: this._authHeaders() });
         if (res.ok) {
           const data = await res.json();
           return Array.isArray(data) ? data : (data && (data.items || data.hubs)) || [];
@@ -121,7 +141,7 @@ const ApiService = {
   async getHubDetail(hubId) {
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/hubs/${hubId}`);
+        const res = await fetch(`${API_BASE_URL}/hubs/${hubId}`, { headers: this._authHeaders() });
         if (res.ok) return await res.json();
       } catch (e) {
         console.warn("GetHubDetail API error:", e);
@@ -133,7 +153,7 @@ const ApiService = {
   async getBookings() {
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/bookings`);
+        const res = await fetch(`${API_BASE_URL}/bookings`, { headers: this._authHeaders() });
         if (res.ok) return await res.json();
       } catch (e) {
         console.warn("GetBookings API error:", e);
@@ -146,7 +166,7 @@ const ApiService = {
     if (this.isBackendAvailable) {
       const res = await fetch(`${API_BASE_URL}/bookings`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(bookingPayload)
       });
       const data = await res.json().catch(() => ({}));
@@ -171,13 +191,13 @@ const ApiService = {
 
     const res = await fetch(
       `${API_BASE_URL}/bookings/${encodeURIComponent(bookingId)}/start`,
-      { method: "POST" }
+      { method: "POST", headers: this._authHeaders() }
     );
 
     const data = await res.json();
 
     if (!res.ok || !data.success) {
-      throw new Error(data.error || "Không thể bắt đầu chuyến đi");
+      throw new Error(data.error || data.detail || "Không thể bắt đầu chuyến đi");
     }
 
     return data;
@@ -187,7 +207,8 @@ const ApiService = {
     if (this.isBackendAvailable) {
       try {
         const res = await fetch(`${API_BASE_URL}/bookings/${bookingId}/cancel`, {
-          method: "POST"
+          method: "POST",
+          headers: this._authHeaders()
         });
         if (res.ok) return await res.json();
       } catch (e) {
@@ -200,7 +221,7 @@ const ApiService = {
   async getActiveServices() {
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/services/active`);
+        const res = await fetch(`${API_BASE_URL}/services/active`, { headers: this._authHeaders() });
         if (res.ok) return await res.json();
       } catch (e) {
         console.warn("GetActiveServices API error:", e);
@@ -219,7 +240,7 @@ const ApiService = {
       try {
         const res = await fetch(`${API_BASE_URL}/services/return-vehicle`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: this._authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(payload)
         });
         if (res.ok) return await res.json();
@@ -233,7 +254,7 @@ const ApiService = {
   async getIncidents() {
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/incidents`);
+        const res = await fetch(`${API_BASE_URL}/incidents`, { headers: this._authHeaders() });
         if (res.ok) return await res.json();
       } catch (e) {
         console.warn("GetIncidents API error:", e);
@@ -247,7 +268,7 @@ const ApiService = {
       try {
         const res = await fetch(`${API_BASE_URL}/incidents`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: this._authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(reportPayload)
         });
         if (res.ok) return await res.json();

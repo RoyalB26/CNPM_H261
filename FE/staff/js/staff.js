@@ -40,6 +40,41 @@ const StaffApp = {
     }
     this.updateBottomNavLabels();
 
+    if (!sessionStorage.getItem("staff_access_token")) {
+      this.showLoginView();
+      return;
+    }
+
+    await this.loadInitialData();
+  },
+
+  showLoginView() {
+    const view = document.getElementById("staffLoginView");
+    if (view) view.style.display = "flex";
+  },
+
+  async submitLogin(e) {
+    if (e) e.preventDefault();
+    const errEl = document.getElementById("staffLoginError");
+    if (errEl) errEl.style.display = "none";
+    const username = document.getElementById("staffLoginUsername")?.value?.trim() || "staff_b";
+    const password = document.getElementById("staffLoginPassword")?.value || "";
+    try {
+      await StaffApi.login(username, password);
+      const view = document.getElementById("staffLoginView");
+      if (view) view.style.display = "none";
+      await this.loadInitialData();
+    } catch (err) {
+      if (errEl) {
+        errEl.innerText = err.message || "Đăng nhập thất bại";
+        errEl.style.display = "block";
+      } else {
+        alert(err.message || "Đăng nhập thất bại");
+      }
+    }
+  },
+
+  async loadInitialData() {
     await Promise.allSettled([
       this.loadProfile(),
       this.loadRelocationTask(),

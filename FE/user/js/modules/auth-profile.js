@@ -78,14 +78,18 @@
       const phone = document.getElementById("loginPhone").value;
       const pass = document.getElementById("loginPassword").value;
 
-      const res = await ApiService.login(phone, pass);
-      if (res.success) {
-        if (res.user) {
-          AppState.user = { ...AppState.user, ...res.user };
+      try {
+        const res = await ApiService.login(phone, pass);
+        if (res && (res.success || res.token)) {
+          if (res.user) {
+            AppState.user = { ...AppState.user, ...res.user };
+          }
+          await this.loadInitialDataFromBE();
+          this.showToast("Đăng nhập thành công!");
+          this.navigateTo("screen-map-home");
         }
-        await this.loadInitialDataFromBE();
-        this.showToast("Đăng nhập thành công!");
-        this.navigateTo("screen-map-home");
+      } catch (err) {
+        this.showToast(err.message || "Sai tài khoản hoặc mật khẩu");
       }
     },
 
@@ -98,8 +102,19 @@
      */
     async handleRegister(e) {
       if (e) e.preventDefault();
-      this.showToast("Tạo tài khoản thành công!");
-      this.navigateTo("screen-login");
+      const full_name = document.getElementById("regFullName")?.value?.trim() || "";
+      const phone = document.getElementById("regPhone")?.value?.trim() || "";
+      const email = document.getElementById("regEmail")?.value?.trim() || "";
+      const password = document.getElementById("regPassword")?.value || "";
+      const confirm_password = document.getElementById("regConfirmPassword")?.value || "";
+
+      try {
+        await ApiService.register({ full_name, phone, email, password, confirm_password });
+        this.showToast("Tạo tài khoản thành công! Vui lòng đăng nhập.");
+        this.navigateTo("screen-login");
+      } catch (err) {
+        this.showToast(err.message || "Không thể đăng ký tài khoản.");
+      }
     },
 
     /**
@@ -108,6 +123,7 @@
      * @returns {void}
      */
     handleLogout() {
+      sessionStorage.removeItem("user_access_token");
       this.showToast("Đã đăng xuất tài khoản.");
       this.navigateTo("screen-login");
     },

@@ -47,8 +47,11 @@ const App = {
     this.initMapLibre();
     this.renderSearchList();
 
-    // Tự động đồng bộ dữ liệu động từ Backend
-    await this.loadInitialDataFromBE();
+    // Kiểm tra kết nối Backend; chỉ tải dữ liệu bảo vệ nếu đã có phiên đăng nhập
+    await ApiService.checkBackend();
+    if (sessionStorage.getItem("user_access_token")) {
+      await this.loadInitialDataFromBE();
+    }
 
     // Tự động co giãn kích thước khung bản đồ khi xoay màn hình hoặc thay đổi kích thước cửa sổ
     window.addEventListener("resize", () => {

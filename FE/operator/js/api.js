@@ -10,9 +10,43 @@
   const OperatorApi = {
     isBackendAvailable: false,
 
+    _authHeaders(extra = {}) {
+      const token = sessionStorage.getItem("operator_access_token") || "";
+      return token ? { ...extra, Authorization: "Bearer " + token } : { ...extra };
+    },
+
+    async login(email, password) {
+      const res = await fetch(`${OPERATOR_API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || "Sai tài khoản hoặc mật khẩu");
+      }
+      return data;
+    },
+
+    async verify2fa(email, challenge_id, otp_code) {
+      const res = await fetch(`${OPERATOR_API_BASE}/auth/verify-2fa`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, challenge_id, otp_code })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || "Mã OTP không hợp lệ");
+      }
+      if (data.access_token) {
+        sessionStorage.setItem("operator_access_token", data.access_token);
+      }
+      return data;
+    },
+
     async checkBackend() {
       try {
-        const res = await fetch(`${OPERATOR_API_BASE}/dashboard/kpis`);
+        const res = await fetch(`${OPERATOR_API_BASE}/dashboard/kpis`, { headers: this._authHeaders() });
         if (res.ok) {
           this.isBackendAvailable = true;
           return true;
@@ -25,7 +59,7 @@
 
     async getKpis() {
       try {
-        const res = await fetch(`${OPERATOR_API_BASE}/dashboard/kpis`);
+        const res = await fetch(`${OPERATOR_API_BASE}/dashboard/kpis`, { headers: this._authHeaders() });
         if (res.ok) return await res.json();
       } catch (e) {
         console.warn("OperatorApi getKpis fallback:", e);
@@ -41,7 +75,7 @@
 
     async getTelemetry() {
       try {
-        const res = await fetch(`${OPERATOR_API_BASE}/dashboard/telemetry`);
+        const res = await fetch(`${OPERATOR_API_BASE}/dashboard/telemetry`, { headers: this._authHeaders() });
         if (res.ok) {
           const data = await res.json();
           return Array.isArray(data) ? data : (data && (data.items || data.events)) || [];
@@ -59,7 +93,7 @@
 
     async getHubsLive() {
       try {
-        const res = await fetch(`${OPERATOR_API_BASE}/dashboard/hubs-live`);
+        const res = await fetch(`${OPERATOR_API_BASE}/dashboard/hubs-live`, { headers: this._authHeaders() });
         if (res.ok) {
           const data = await res.json();
           const items = Array.isArray(data) ? data : (data && (data.items || data.hubs)) || [];
@@ -89,7 +123,7 @@
       try {
         const res = await fetch(`${OPERATOR_API_BASE}/dashboard/emergency-halt`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: this._authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({ halt_reason: reason, operator_id: "OP-01", confirmation_code: "HALT-ALL" })
         });
         if (res.ok) return await res.json();
@@ -101,7 +135,7 @@
 
     async getRelocations() {
       try {
-        const res = await fetch(`${OPERATOR_API_BASE}/relocation/commands`);
+        const res = await fetch(`${OPERATOR_API_BASE}/relocation/commands`, { headers: this._authHeaders() });
         if (res.ok) {
           const data = await res.json();
           return Array.isArray(data) ? data : (data && (data.items || data.commands)) || [];
@@ -118,7 +152,7 @@
     async createRelocation(payload) {
       const res = await fetch(`${OPERATOR_API_BASE}/relocation/commands`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload)
       });
       const data = await res.json().catch(() => ({}));
@@ -130,7 +164,7 @@
 
     async getMaintenanceTickets() {
       try {
-        const res = await fetch(`${OPERATOR_API_BASE}/maintenance/tickets`);
+        const res = await fetch(`${OPERATOR_API_BASE}/maintenance/tickets`, { headers: this._authHeaders() });
         if (res.ok) {
           const data = await res.json();
           const items = Array.isArray(data) ? data : (data && (data.items || data.tickets)) || [];
@@ -159,7 +193,7 @@
     async assignMaintenance(payload) {
       const res = await fetch(`${OPERATOR_API_BASE}/maintenance/assign`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload)
       });
       const data = await res.json().catch(() => ({}));
@@ -171,7 +205,7 @@
 
     async getHubsConfig() {
       try {
-        const res = await fetch(`${OPERATOR_API_BASE}/hubs`);
+        const res = await fetch(`${OPERATOR_API_BASE}/hubs`, { headers: this._authHeaders() });
         if (res.ok) {
           const data = await res.json();
           const items = Array.isArray(data) ? data : (data && data.items) || [];
@@ -199,7 +233,7 @@
     async updateHubCapacity(hubId, parkingCap, chargerCap) {
       const res = await fetch(`${OPERATOR_API_BASE}/hubs/${hubId}/config`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ hub_id: hubId, parking_capacity: parkingCap, charger_capacity: chargerCap })
       });
       const data = await res.json().catch(() => ({}));
@@ -213,7 +247,7 @@
       try {
         const res = await fetch(`${OPERATOR_API_BASE}/hubs/${hubId}/deactivate`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: this._authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({
             hub_id: hubId,
             reason,
@@ -230,7 +264,7 @@
 
     async getSimStateSource() {
       try {
-        const res = await fetch(`${OPERATOR_API_BASE}/simulation/source-state`);
+        const res = await fetch(`${OPERATOR_API_BASE}/simulation/source-state`, { headers: this._authHeaders() });
         if (res.ok) {
           const data = await res.json();
           const items = Array.isArray(data)
@@ -272,7 +306,7 @@
       try {
         const res = await fetch(`${OPERATOR_API_BASE}/simulation/run`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: this._authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(payload)
         });
         if (res.ok) return await res.json();
@@ -284,7 +318,7 @@
 
     async getSimHistory() {
       try {
-        const res = await fetch(`${OPERATOR_API_BASE}/simulation/history`);
+        const res = await fetch(`${OPERATOR_API_BASE}/simulation/history`, { headers: this._authHeaders() });
         if (res.ok) {
           const data = await res.json();
           const items = Array.isArray(data) ? data : (data && data.items) || [];
@@ -315,7 +349,7 @@
       try {
         const res = await fetch(`${OPERATOR_API_BASE}/simulation/save-rule`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: this._authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(payload)
         });
         if (res.ok) return await res.json();

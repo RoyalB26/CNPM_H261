@@ -44,6 +44,15 @@ const OperatorApp = {
     }
     this.initOtpInputs();
 
+    if (!sessionStorage.getItem("operator_access_token")) {
+      this.showLoginView();
+      return;
+    }
+
+    await this.loadDashboardData();
+  },
+
+  async loadDashboardData() {
     // Tải song song toàn bộ dữ liệu khởi đầu từ Backend API
     await Promise.allSettled([
       this.loadKpis(),

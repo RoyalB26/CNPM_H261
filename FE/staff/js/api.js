@@ -10,6 +10,11 @@
 const StaffApi = {
   isBackendAvailable: false,
 
+  _authHeaders(extra = {}) {
+    const token = sessionStorage.getItem("staff_access_token") || "";
+    return token ? { ...extra, Authorization: "Bearer " + token } : { ...extra };
+  },
+
   async login(username, password) {
     const response = await fetch(`${STAFF_API_BASE}/auth/login`, {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -55,7 +60,7 @@ const StaffApi = {
 
   async getRelocationTask() {
     try {
-      const res = await fetch(`${STAFF_API_BASE}/relocation/task`);
+      const res = await fetch(`${STAFF_API_BASE}/relocation/task`, { headers: this._authHeaders() });
       if (res.ok) return await res.json();
     } catch (e) {
       console.warn("StaffApi getRelocationTask fallback:", e);
@@ -84,7 +89,7 @@ const StaffApi = {
     try {
       const res = await fetch(`${STAFF_API_BASE}/relocation/scan-bike`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ task_id: taskId, bike_code: bikeCode, dock_number: dockNumber })
       });
       if (res.ok) return await res.json();
@@ -98,7 +103,7 @@ const StaffApi = {
     try {
       const res = await fetch(`${STAFF_API_BASE}/relocation/handover`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ task_id: taskId, completed_bikes_count: completedCount, target_hub_name: targetHub })
       });
       if (res.ok) return await res.json();
@@ -112,7 +117,7 @@ const StaffApi = {
     try {
       const res = await fetch(`${STAFF_API_BASE}/relocation/incident`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload)
       });
       if (res.ok) return await res.json();
@@ -164,7 +169,7 @@ const StaffApi = {
     try {
       const res = await fetch(`${STAFF_API_BASE}/maintenance/verify-device`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ task_code: taskCode, scanned_code: scannedCode })
       });
       if (res.ok) return await res.json();
@@ -177,10 +182,7 @@ const StaffApi = {
   async resolveMaintenance(payload) {
     const response = await fetch(`${STAFF_API_BASE}/maintenance/resolve`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + (sessionStorage.getItem("staff_access_token") || "")
-      },
+      headers: this._authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(payload)
     });
     const result = await response.json();
@@ -192,7 +194,7 @@ const StaffApi = {
     try {
       const res = await fetch(`${STAFF_API_BASE}/maintenance/incident`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload)
       });
       if (res.ok) return await res.json();
@@ -206,7 +208,7 @@ const StaffApi = {
     try {
       const res = await fetch(`${STAFF_API_BASE}/parking/checkin`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload)
       });
       if (res.ok) return await res.json();
@@ -247,7 +249,7 @@ const StaffApi = {
 
   async getShiftSummary() {
     try {
-      const res = await fetch(`${STAFF_API_BASE}/parking/shift-summary`);
+      const res = await fetch(`${STAFF_API_BASE}/parking/shift-summary`, { headers: this._authHeaders() });
       if (res.ok) return await res.json();
     } catch (e) {
       console.warn("StaffApi getShiftSummary fallback:", e);
@@ -270,7 +272,7 @@ const StaffApi = {
     try {
       const res = await fetch(`${STAFF_API_BASE}/parking/shift-close`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ guard_id: guardId, total_cash_deposited_vnd: cash })
       });
       if (res.ok) return await res.json();

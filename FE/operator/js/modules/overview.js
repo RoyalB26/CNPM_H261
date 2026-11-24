@@ -29,11 +29,53 @@
       if (v) v.classList.add("show");
     },
 
+    async requestOtp() {
+      const email = document.getElementById("loginEmail")?.value?.trim() || "admin@e-mobility.com";
+      const password = document.getElementById("loginPassword")?.value || "";
+      const statusEl = document.getElementById("loginChallengeStatus");
+      try {
+        const res = await OperatorApi.login(email, password);
+        this.pendingChallengeId = res.challenge_id;
+        if (statusEl) {
+          statusEl.style.color = "#059669";
+          statusEl.innerText = res.message || "Đã tạo phiên 2FA. Nhập mã TOTP từ ứng dụng Authenticator.";
+        }
+        return res.challenge_id;
+      } catch (err) {
+        if (statusEl) {
+          statusEl.style.color = "#dc2626";
+          statusEl.innerText = err.message || "Đăng nhập thất bại";
+        }
+        throw err;
+      }
+    },
+
     async completeLogin() {
-      const v = document.getElementById("operatorLoginView");
-      if (v) v.classList.remove("show");
-      alert("Xác thực 2FA thành công! Chào mừng Điều phối viên (admin@e-mobility.com).");
-      await this.loadKpis();
+      const email = document.getElementById("loginEmail")?.value?.trim() || "admin@e-mobility.com";
+      const otpCode = Array.from(document.querySelectorAll(".otp-digit")).map(i => i.value.trim()).join("");
+      const statusEl = document.getElementById("loginChallengeStatus");
+
+      try {
+        if (!this.pendingChallengeId) {
+          await this.requestOtp();
+        }
+        await OperatorApi.verify2fa(email, this.pendingChallengeId, otpCode);
+        this.pendingChallengeId = null;
+        const v = document.getElementById("operatorLoginView");
+        if (v) v.classList.remove("show");
+        if (typeof this.loadDashboardData === "function") {
+          await this.loadDashboardData();
+        } else {
+          await this.loadKpis();
+        }
+      } catch (err) {
+        if (statusEl) {
+          statusEl.style.color = "#dc2626";
+          statusEl.innerText = err.message || "Xác thực 2FA thất bại";
+        } else {
+          alert(err.message || "Xác thực 2FA thất bại");
+        }
+      }
     },
 
     switchTab(tabId) {
