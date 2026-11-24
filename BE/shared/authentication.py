@@ -52,10 +52,27 @@ def initialize_accounts(store):
              profile={}),
     ]
 
+    add_staff_accounts(store)
+
+
+def add_staff_accounts(store):
+    existing = {a["id"] for a in accounts(store)}
+    for person in store.staff:
+        if person["id"] not in existing:
+            store.operator_mock["accounts"].append(dict(
+                id=person["id"], role="staff",
+                username="staff_" + person["id"].split("-")[-1].lower(),
+                password_hash=password_hash(os.environ.get("STAFF_PASSWORD", "staff123")),
+                profile={},
+            ))
+
 
 def ensure_accounts():
     if "accounts" not in db.operator_mock:
         return persist_change(initialize_accounts)
+    existing = {a["id"] for a in accounts()}
+    if any(person["id"] not in existing for person in db.staff):
+        return persist_change(add_staff_accounts)
 
 
 def find_account(identifier, role):

@@ -54,18 +54,14 @@ class OperatorCases(unittest.TestCase):
         self.assertEqual(response.status_code, 409, response.text)
         self.assertEqual(storage.snapshot(), before)
 
-    @unittest.skip("C3 chưa triển khai thuật toán; thực hiện khi đến C3")
-    def test_TC_O01_calculation_and_resimulation(self):
-        pass
-
     @unittest.skip("E2E trình duyệt, phụ thuộc TC-O01 và nối FE")
     def test_TC_O02_what_if_dashboard(self):
         pass
 
-    @unittest.skip("E2E gửi thông báo cho Staff chưa triển khai")
+    @unittest.skip("E2E trình duyệt chờ ghép FE; API/thông báo được test trong test_features")
     def test_TC_O03_dispatch_notification(self):
         pass
 
-    @unittest.skip("E2E tạo phiếu và gửi phân công còn thiếu nghiệp vụ")
+    @unittest.skip("E2E trình duyệt chờ ghép FE; API tạo phiếu/phân công đã có test")
     def test_TC_O04_maintenance_notification(self):
         pass

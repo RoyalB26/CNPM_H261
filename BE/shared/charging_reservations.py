@@ -4,8 +4,21 @@ from .parking_reservations import plate_key
 
 
 def charging_port_blocked(db, hub: dict, port_id: str, ignore_booking_id: str | None = None,
-                          ignore_session_id: str | None = None) -> bool:
+                          ignore_session_id: str | None = None, check_schedule: bool = True) -> bool:
     """Xét phiên đang sạc, phiếu bảo trì và booking giữ cổng trong store chung."""
+    from .charging_schedule import scheduled_blocked
+    if check_schedule and scheduled_blocked(db, hub["id"], port_id):
+        return True
+    profiles = [db.__dict__["user"]] + [
+        a["profile"] for a in db.operator_mock.get("accounts", [])
+        if a["role"] == "user" and a["id"] != db.__dict__["user"]["id"]
+    ]
+    for profile in profiles:
+        active_session = profile.get("active_services", {}).get("charging")
+        if (active_session and active_session.get("session_id") != ignore_session_id
+                and active_session.get("port_id") == port_id
+                and active_session.get("hub_id", hub["id"]) == hub["id"]):
+            return True
     active = db.user.get('active_services', {}).get('charging')
     if active and active.get('session_id') != ignore_session_id and active.get('port_id') == port_id:
         if not active.get('hub_id') or active['hub_id'] == hub['id']:

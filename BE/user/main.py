@@ -208,7 +208,7 @@ async def api_suggest_route(request: Request) -> JSONResponse:
     except ValidationError:
         return JSONResponse({"success": False, "error": "Dữ liệu lộ trình không hợp lệ"}, status_code=422)
     try:
-        response = suggest_route(db, query)
+        response = await suggest_route(db, query)
     except ValueError:
         return JSONResponse({"success": False, "error": "Không có Hub lấy/trả xe khả dụng"}, status_code=409)
     return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
@@ -585,16 +585,21 @@ routes = [
 Route("/api/v1/user/bookings/{booking_id}/start", api_start_ride, methods=["POST"]),
 ]
 
+from shared.operations_api import user_routes as operation_routes
+routes.extend(operation_routes)
+
+from starlette.exceptions import HTTPException
+from shared.operations_api import http_error
 from shared.authentication import AuthenticationMiddleware
 from shared.middleware import SharedPersistenceMiddleware
 
 middleware = [
     Middleware(SharedPersistenceMiddleware),
-    Middleware(AuthenticationMiddleware),
-    Middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+    Middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]),
+    Middleware(AuthenticationMiddleware)
 ]
 
-app = Starlette(debug=True, routes=routes, middleware=middleware)
+app = Starlette(debug=True, routes=routes, middleware=middleware, exception_handlers={HTTPException: http_error})
 
 if __name__ == "__main__":
     import uvicorn

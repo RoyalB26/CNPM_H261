@@ -63,6 +63,7 @@
   },
 
   selectMaintOutcome(card, outcomeType) {
+    this.maintOutcome = outcomeType === "workshop" ? "TRANSFER_TO_WORKSHOP" : "FIXED_ON_SITE";
     document.querySelectorAll(".radio-card-select").forEach(c => c.classList.remove("active"));
     card.classList.add("active");
     const radio = card.querySelector("input[type='radio']");
@@ -71,13 +72,17 @@
 
   async submitMaintResult() {
     const notes = document.getElementById("maintTechNotes") ? document.getElementById("maintTechNotes").value : "";
-    await StaffApi.resolveMaintenance({
+    const result = await StaffApi.resolveMaintenance({
       task_code: this.currentMaintTaskCode || "MT-102",
-      outcome: "FIXED_ON_SITE",
-      technician_notes: notes
+      outcome: this.maintOutcome || "FIXED_ON_SITE",
+      technical_notes: notes
     });
 
-    alert("GỬI KẾT QUẢ BẢO TRÌ THÀNH CÔNG!\nThiết bị đã được mở khóa và chuyển về trạng thái 'Sẵn sàng hoạt động'.");
+    if (!result || !result.success) {
+      alert((result && result.detail) || "Gửi kết quả bảo trì thất bại.");
+      return;
+    }
+    alert(result.message);
     await this.loadMaintenanceTasks();
     this.goToScreen("screen-maint-list");
   },

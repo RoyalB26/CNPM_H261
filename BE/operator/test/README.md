@@ -15,4 +15,12 @@ Test API gọi trực tiếp Gateway ASGI bằng runtime tạm. Event loop trong
 | TC-O04 | Operator đăng nhập. Chọn thiết bị, mô tả lỗi và nhân viên bảo trì, tạo phiếu | Báo thành công, đọc lại đúng phiếu/phân công, nhân viên nhận thông báo |
 | TC-O05 | Operator đăng nhập. Mở Hub tồn tại, sửa sức chứa/trạng thái, lưu và tải lại trang | Báo lưu thành công, màn hình phản ánh đúng dữ liệu đã lưu. Dữ liệu lỗi bị từ chối |
 
-TC-O01–TC-O04 có phần chờ được đánh dấu skip trong bộ chạy. TC-O05 API readback và TCO03-ERR có test tự động. Toàn bộ ca UI cần chạy qua trình duyệt khi ghép FE.
+TC-O01 có phép tính kiểm chứng trong test_features.py. TC-O03/04 có test API và thông báo lưu bền. TC-O02/03/04 phần UI đánh dấu skip, cần ghép FE. TC-O05 API readback và TCO03-ERR có test tự động.
+
+## Test B–C
+
+test_features.py dùng Gateway ASGI và runtime tạm để kiểm tra OSRM response/lỗi nguồn, xe dùng chung/xe cá nhân, lịch giao nhau/liền nhau, hủy lịch, pin thấp, cổng thay đổi trạng thái, nhận/trả cổng theo lịch, quyền sở hữu, tạo Hub/thiết bị, nhóm pin, quy tắc tải cao/chống trùng/can thiệp, điều chuyển tự động, snapshot/retry/lịch sử/phương án, upload và đọc ảnh, chuyển xưởng đúng thiết bị và tính lặp an toàn.
+
+OSRM được mock trong test để kết quả ổn định. Kết nối OSRM thực và các ca E2E trình duyệt cần kiểm chứng khi ghép FE. Hai file JS Staff được kiểm tra cú pháp bằng node --check.
+
+Phép tính TC-O01 dùng cổng 10 kW, tải nền 5 kW. Nhu cầu +50% cho tải yêu cầu 7,5 kW. +300% cho tải yêu cầu 20 kW, phục vụ 10 kW, chưa phục vụ 10 kW.

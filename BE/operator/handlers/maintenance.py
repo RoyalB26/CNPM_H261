@@ -88,7 +88,8 @@ def maintenance_response(ticket: dict[str, Any],
         status=status_map[ticket["status"]],
         reported_at=ticket.get("reported_time") or ticket["created_at"],
         description=ticket.get("description"),
-        photo_url=ticket.get("photo_url"),
+        photo_url=(f"/api/v1/operator/attachments/{ticket['attachment_id']}"
+                   if ticket.get("attachment_id") else ticket.get("photo_url")),
     )
 
 
@@ -222,6 +223,12 @@ async def assign_maintenance(request: Request) -> JSONResponse:
             if item["code"] == req.ticket_code
         )
         candidate_ticket.update(updated_ticket)
+        from shared.notifications import notify
+        notify(candidate, ticket["code"] + ":assigned:" + technician["id"], technician["id"],
+               "Có nhiệm vụ bảo trì mới", ticket["code"])
+        if ticket.get("user_id"):
+            notify(candidate, ticket["code"] + ":assigned:" + technician["id"] + ":user",
+                   ticket["user_id"], "Sự cố đã được phân công xử lý", ticket["code"])
 
         return JSONResponse(
             content=content,
@@ -235,3 +242,37 @@ routes = [
     Route("/api/v1/operator/maintenance/tickets", list_maintenance, methods=["GET"]),
     Route("/api/v1/operator/maintenance/assign", assign_maintenance, methods=["POST"]),
 ]
+async def create_maintenance(request):
+    from shared.operations_api import read_model
+    from shared.devices import COLLECTIONS
+    from shared.notifications import notify
+    from starlette.exceptions import HTTPException
+    req = await read_model(request, MaintenanceCreateRequest)
+    def change(candidate):
+        hub = next((h for h in candidate.hubs if h["name"] == req.hub_name), None)
+        if hub is None:
+            raise HTTPException(404, "Hub không tồn tại")
+        matches = [kind for kind, collection in COLLECTIONS.items()
+                   if any(d.get("id", d.get("battery_type")) == req.device_code for d in hub.get(collection, []))]
+        if len(matches) != 1:
+            raise HTTPException(422, "Cần mã thiết bị xác định duy nhất")
+        person = next((p for p in candidate.staff if p["id"] == req.assigned_staff_id), None)
+        if req.assigned_staff_id and (person is None or person["role"] != "MAINTENANCE"):
+            raise HTTPException(422, "Nhân viên phải có vai trò bảo trì")
+        severity = {"Thường": "LOW", "Cảnh báo": "MEDIUM", "Khẩn cấp": "URGENT"}[req.severity.value]
+        ticket = candidate.create_maintenance_ticket({
+            "title": req.fault_category, "hub_id": hub["id"], "hub_name": hub["name"],
+            "device_code": req.device_code, "device_type": matches[0],
+            "description": req.description, "severity": severity,
+        })
+        ticket["source"] = req.source
+        if person:
+            ticket.update(status="ASSIGNED", assigned_staff_id=person["id"],
+                          assigned_staff_name=person["full_name"], assigned_to=person["full_name"])
+            notify(candidate, ticket["code"] + ":assigned:" + person["id"], person["id"],
+                   "Có nhiệm vụ bảo trì mới", ticket["code"])
+        return JSONResponse({"success": True, "ticket": maintenance_response(ticket).model_dump(mode="json")}, status_code=201)
+    return persist_change(change)
+
+
+routes.append(Route("/api/v1/operator/maintenance/tickets", create_maintenance, methods=["POST"]))

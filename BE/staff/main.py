@@ -160,22 +160,26 @@ async def login(request):
     if account is None or not password_matches(req.password, account["password_hash"]):
         return JSONResponse({"detail": "Sai tài khoản hoặc mật khẩu"}, status_code=401)
     return JSONResponse(StaffTokenResponse(
-        access_token=issue_session(account), staff=DB["staff_profile"],
+        access_token=issue_session(account), staff=profile_for_staff(account["id"]),
     ).model_dump(mode="json"))
 
 
+def profile_for_staff(account_id):
+    person = next(p for p in db.staff if p["id"] == account_id)
+    roles = {"MAINTENANCE": StaffRole.MAINTENANCE,
+             "RELOCATION": StaffRole.RELOCATION, "SECURITY_GUARD": StaffRole.SECURITY_GUARD}
+    tasks_count = sum(t.get("assigned_staff_id") == account_id and
+                      t.get("status") in ("ASSIGNED", "IN_PROGRESS")
+                      for t in db.maintenance_tickets)
+    tasks_count += sum(t.get("assigned_staff_id") == account_id and
+                       t.get("status") in ("PENDING", "IN_PROGRESS", "IN_TRANSIT")
+                       for t in db.relocations)
+    return StaffProfile(id=account_id, full_name=person["full_name"],
+                        role=roles[person["role"]], tasks_count=tasks_count)
+
+
 async def get_profile(request):
-    tasks_count = len([t for t in db.maintenance_tickets if t.get("status") in ["PENDING", "ASSIGNED", "IN_PROGRESS"]])
-    profile = StaffProfile(
-        id="STF-02",
-        full_name="Nguyen Van B",
-        role=StaffRole.MAINTENANCE,
-        shift_title="Ca chiều · 13:00 - 17:00",
-        assigned_hub="Hub KTX Khu B",
-        avatar_initials="MT",
-        tasks_count=tasks_count or 4,
-    )
-    return JSONResponse(profile.dict())
+    return JSONResponse(profile_for_staff(request.state.account["id"]).model_dump(mode="json"))
 
 
 # Relocation Handlers
@@ -308,7 +312,9 @@ async def get_maintenance_tasks(request):
 
 async def get_maintenance_detail(request):
     task_code = request.path_params.get("task_code", "TICK-801")
-    t = next((m for m in db.maintenance_tickets if m["code"] == task_code), db.maintenance_tickets[0])
+    t = next((m for m in db.maintenance_tickets if m["code"] == task_code), None)
+    if t is None:
+        return JSONResponse({"detail": "Phiếu không tồn tại"}, status_code=404)
     detail = MaintenanceTaskDetail(
         task_code=t["code"],
         priority=MaintenancePriority.URGENT if t.get("severity") in ["HIGH", "URGENT"] else MaintenancePriority.NORMAL,
@@ -318,7 +324,8 @@ async def get_maintenance_detail(request):
         device_code=t.get("device_code", "DEV-01"),
         exact_location=f"{t['hub_name']} · Khu vực kỹ thuật",
         reporter_notes=t.get("description", "Cần kiểm tra và khắc phục."),
-        attachment_filename="anh-hien-trang-01.jpg",
+        attachment_filename=t.get("attachment_id"),
+        photo_url=(f"/api/v1/staff/attachments/{t['attachment_id']}" if t.get("attachment_id") else None),
         last_maintenance_info="Kiểm tra gần nhất · 12/10/2026 · NVKT Tran Minh A · Hoàn tất",
     )
     return JSONResponse(detail.dict())
@@ -341,46 +348,52 @@ async def verify_device(request):
 
 
 async def resolve_maintenance(request):
-    try:
-        body = await request.json()
-        req = MaintenanceResolveRequest(**body)
-    except Exception:
-        req = MaintenanceResolveRequest(
-            task_code="TICK-801",
-            outcome=ResolutionOutcome.FIXED_ON_SITE,
-            technical_notes="Đã sửa tại chỗ",
-        )
-
-    db.resolve_maintenance(req.task_code, req.technical_notes)
-    return JSONResponse({
-        "success": True,
-        "task_code": req.task_code,
-        "outcome": req.outcome.value if hasattr(req.outcome, "value") else str(req.outcome),
-        "message": "Đã gửi kết quả bảo trì thành công! Thiết bị đã được mở khóa và đưa vào sử dụng.",
-    })
+    from shared.operations_api import read_model
+    from shared.database import persist_change
+    from starlette.exceptions import HTTPException
+    req = await read_model(request, MaintenanceResolveRequest)
+    if not req.technical_notes.strip():
+        raise HTTPException(422, "Cần ghi chú kỹ thuật")
+    outcome = req.outcome.name
+    def change(candidate):
+        ticket = next((t for t in candidate.maintenance_tickets if t["code"] == req.task_code), None)
+        if ticket is None:
+            raise HTTPException(404, "Phiếu không tồn tại")
+        if ticket.get("assigned_staff_id") != request.state.account["id"]:
+            raise HTTPException(403, "Phiếu chưa được giao cho tài khoản này")
+        if req.photo_attachment_url and req.photo_attachment_url != ticket.get("photo_url"):
+            raise HTTPException(422, "Ảnh phải được tải lên đúng phiếu trước")
+        candidate.resolve_maintenance(req.task_code, req.technical_notes.strip(), outcome, req.photo_attachment_url)
+        return JSONResponse({
+            "success": True, "task_code": req.task_code, "outcome": outcome,
+            "message": "Đã chuyển thiết bị về xưởng" if outcome == "TRANSFER_TO_WORKSHOP" else "Đã hoàn tất sửa chữa",
+        })
+    return persist_change(change)
 
 
 async def report_maintenance_incident(request):
-    try:
-        body = await request.json()
-        req = MaintenanceIncidentRequest(**body)
-    except Exception:
-        req = MaintenanceIncidentRequest(
-            task_code="TICK-801",
-            incident_type="Lỗi linh kiện thay thế",
-            location_text="Hub KTX Khu B",
-            description="Cần cấp thêm bộ bo mạch điều khiển mới",
-        )
+    from shared.operations_api import read_model
+    from shared.database import persist_change
+    from shared.notifications import notify
+    from starlette.exceptions import HTTPException
+    req = await read_model(request, MaintenanceIncidentRequest)
+    def change(candidate):
+        parent = next((t for t in candidate.maintenance_tickets if t["code"] == req.task_code), None)
+        if parent is None:
+            raise HTTPException(404, "Phiếu gốc không tồn tại")
+        if parent.get("assigned_staff_id") != request.state.account["id"]:
+            raise HTTPException(403, "Phiếu chưa được giao cho tài khoản này")
+        ticket = candidate.create_maintenance_ticket({
+            "title": req.incident_type, "description": req.description,
+            "hub_id": parent["hub_id"], "hub_name": parent["hub_name"],
+            "device_code": parent["device_code"], "device_type": parent["device_type"],
+        })
+        ticket["source"] = "Staff"
+        notify(candidate, ticket["code"] + ":created", "operator", "Staff báo sự cố mới", ticket["code"])
+        return JSONResponse({"success": True, "incident_id": ticket["code"]}, status_code=201)
+    return persist_change(change)
 
-    return JSONResponse({
-        "success": True,
-        "incident_id": f"INC-MT-{int(datetime.utcnow().timestamp())}",
-        "message": "Đã ghi nhận sự cố mới. Đội vận hành sẽ hỗ trợ kịp thời.",
-        "report": req.dict(),
-    })
 
-
-# Security Guard / Hub Parking Handlers (Screens 11, 12, 13)
 async def parking_checkin(request):
     try:
         body = await request.json()
@@ -508,21 +521,26 @@ routes = [
     Route("/api/v1/staff/parking/shift-close", close_shift, methods=["POST"]),
 ]
 
+from shared.operations_api import staff_routes as operation_routes
+routes.extend(operation_routes)
+
+from starlette.exceptions import HTTPException
+from shared.operations_api import http_error
 from shared.authentication import AuthenticationMiddleware
 from shared.middleware import SharedPersistenceMiddleware
 
 middleware = [
     Middleware(SharedPersistenceMiddleware),
-    Middleware(AuthenticationMiddleware),
     Middleware(
         CORSMiddleware,
         allow_origins=["*"],
         allow_methods=["*"],
         allow_headers=["*"],
-    )
+    ),
+    Middleware(AuthenticationMiddleware)
 ]
 
-app = Starlette(debug=True, routes=routes, middleware=middleware)
+app = Starlette(debug=True, routes=routes, middleware=middleware, exception_handlers={HTTPException: http_error})
 
 if __name__ == "__main__":
     import uvicorn

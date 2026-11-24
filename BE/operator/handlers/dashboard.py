@@ -159,6 +159,7 @@ async def emergency_halt(request: Request) -> JSONResponse:
     content = response_data.model_dump(mode="json")
 
     def change(candidate):
+        candidate.operator_mock["emergency_halt"] = True
         candidate.telemetry_events.insert(
             0,
             {

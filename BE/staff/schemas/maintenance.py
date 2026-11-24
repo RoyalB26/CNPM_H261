@@ -5,7 +5,7 @@ Smart E-Mobility Hub - ĐHQG-HCM
 
 from typing import List, Optional
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class MaintenancePriority(str, Enum):
@@ -31,6 +31,7 @@ class MaintenanceTaskSummary(BaseModel):
 
 
 class MaintenanceTaskDetail(BaseModel):
+    photo_url: Optional[str] = None
     task_code: str = Field(..., example="MT-102")
     priority: MaintenancePriority = Field(MaintenancePriority.URGENT)
     category_label: str = Field(..., example="XE ĐẠP ĐIỆN · HƯ HỎNG")
@@ -53,6 +54,13 @@ class DeviceVerifyRequest(BaseModel):
 
 
 class MaintenanceResolveRequest(BaseModel):
+    @field_validator("outcome", mode="before")
+    @classmethod
+    def accept_enum_name(cls, value):
+        if isinstance(value, str) and value in ResolutionOutcome.__members__:
+            return ResolutionOutcome[value]
+        return value
+
     task_code: str = Field(..., example="MT-102")
     outcome: ResolutionOutcome = Field(default=ResolutionOutcome.FIXED_ON_SITE)
     technical_notes: str = Field(

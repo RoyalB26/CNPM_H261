@@ -95,7 +95,7 @@ class MockDatabaseStore:
         """Chỉ đọc báo cáo thuộc tài khoản hiện tại."""
         return [report for report in self.incidents if self.owns_user_record(report)]
 
-    def _rental_bike_blocked(self, bike_id: str, *, ignore_active_ride: bool = False) -> bool:
+    def _rental_bike_blocked(self, bike_id: str, *, ignore_active_ride: bool = False, ignore_maintenance: bool = False) -> bool:
         """Kiểm tra xe đang phục vụ chuyến đi, điều chuyển hoặc bảo trì."""
         profiles = [self.__dict__["user"]] + [
             a["profile"] for a in self.operator_mock.get("accounts", [])
@@ -113,11 +113,11 @@ class MockDatabaseStore:
                 and any(b.get("bike_id") == bike_id for b in task.get("bikes", []))
                 for task in self.relocations
             )
-            or any(
+            or (not ignore_maintenance and any(
                 ticket.get("status") in ("PENDING", "ASSIGNED", "IN_PROGRESS")
                 and ticket.get("device_code") == bike_id
                 for ticket in self.maintenance_tickets
-            )
+            ))
         )
 
     def _rental_hold_owned(self, booking: dict, bike: dict | None) -> bool:
@@ -806,6 +806,9 @@ class MockDatabaseStore:
         }
 
         # Đây là chỗ duy nhất ghi vào store, sau toàn bộ kiểm tra.
+        from .notifications import notify
+        notify(self, task["task_id"] + ":assigned", staff["id"],
+               "Có nhiệm vụ điều chuyển mới", task["task_id"])
         self.relocations.insert(0, task)
         self.next_relocation_number += 1
         return task
@@ -840,7 +843,9 @@ class MockDatabaseStore:
         return {"task": task, "status": "COMPLETED"}
 
     def create_maintenance_ticket(self, payload: dict):
-        new_code = f"TICK-{800 + len(self.maintenance_tickets) + 1}"
+        numbers = [int(t["code"][5:]) for t in self.maintenance_tickets
+                   if t.get("code", "").startswith("TICK-") and t["code"][5:].isdigit()]
+        new_code = f"TICK-{max(numbers, default=800) + 1}"
         ticket = {
             "code": new_code,
             "title": payload.get("title", "Sự cố thiết bị mới"),
@@ -862,20 +867,10 @@ class MockDatabaseStore:
         self.maintenance_tickets.insert(0, ticket)
         return ticket
 
-    def resolve_maintenance(self, task_code: str, resolution_notes: str):
-        ticket = next((t for t in self.maintenance_tickets if t["code"] == task_code), None)
-        if ticket:
-            ticket["status"] = "RESOLVED"
-            ticket["resolution_notes"] = resolution_notes
-            # If related to a hub port or bike, restore it
-            if "S02" in ticket.get("device_code", ""):
-                h = self.get_hub("hub-01")
-                if h:
-                    for p in h.get("ports", []):
-                        if p["id"] == "S02":
-                            p["is_available"] = True
-                            p["status"] = "Sẵn sàng"
-        return ticket
+    def resolve_maintenance(self, task_code: str, resolution_notes: str,
+                            outcome: str = "FIXED_ON_SITE", photo_url=None):
+        from .devices import resolve_ticket
+        return resolve_ticket(self, task_code, resolution_notes, outcome, photo_url)
 
     def parking_checkin(self, payload: dict):
         """Dùng chỗ giữ của User khi có booking; giữ nhánh walk-in cũ của Staff."""
