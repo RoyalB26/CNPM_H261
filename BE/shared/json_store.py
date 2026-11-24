@@ -29,7 +29,7 @@ class JsonStateStore:
         """Lấy bản sao dữ liệu, không lấy các thuộc tính kỹ thuật."""
         with self._lock:
             return copy.deepcopy({
-                key: getattr(self.db, key)
+                key: self.db.__dict__["user"] if key == "user" else getattr(self.db, key)
                 for key in SEED_TYPES
             })
 
@@ -114,7 +114,7 @@ class JsonStateStore:
             result = change(candidate)
 
             state = {
-                key: getattr(candidate, key)
+                key: candidate.__dict__["user"] if key == "user" else getattr(candidate, key)
                 for key in SEED_TYPES
             }
 

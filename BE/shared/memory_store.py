@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import copy
 from uuid import uuid4
 
+from .identity import current_user_id
 from .seed_loader import load_seed
 from .rental_pricing import rental_charge
 from .booking_expiry import booking_expired
@@ -62,6 +63,20 @@ class MockDatabaseStore:
     def get_hub(self, hub_id):
         return next((h for h in self.hubs if h["id"] == hub_id), None)
 
+    @property
+    def user(self):
+        user_id = current_user_id.get()
+        seed_user = self.__dict__["user"]
+        if user_id is None or user_id == seed_user["id"]:
+            return seed_user
+        account = next(a for a in self.operator_mock.get("accounts", [])
+                       if a["id"] == user_id and a["role"] == "user")
+        return account["profile"]
+
+    @user.setter
+    def user(self, value):
+        self.__dict__["user"] = value
+
     def get_user_profile(self):
         return self.user
 
@@ -82,9 +97,17 @@ class MockDatabaseStore:
 
     def _rental_bike_blocked(self, bike_id: str, *, ignore_active_ride: bool = False) -> bool:
         """Kiểm tra xe đang phục vụ chuyến đi, điều chuyển hoặc bảo trì."""
-        ride = self.user.get("active_services", {}).get("ride")
+        profiles = [self.__dict__["user"]] + [
+            a["profile"] for a in self.operator_mock.get("accounts", [])
+            if a["role"] == "user" and a["id"] != self.__dict__["user"]["id"]
+        ]
+        active_ride = any(
+            profile.get("active_services", {}).get("ride")
+            and profile["active_services"]["ride"].get("vehicle_id") == bike_id
+            for profile in profiles
+        )
         return bool(
-            (not ignore_active_ride and ride and ride.get("vehicle_id") == bike_id)
+            (not ignore_active_ride and active_ride)
             or any(
                 task.get("status") in ("PENDING", "IN_PROGRESS", "IN_TRANSIT")
                 and any(b.get("bike_id") == bike_id for b in task.get("bikes", []))

@@ -63,7 +63,10 @@ async def root_status(request):
 
 all_routes = [Route("/", root_status)] + user_mod.routes + op_mod.routes + staff_mod.routes
 
+from shared.authentication import AuthenticationMiddleware
+
 middleware = [
+    Middleware(AuthenticationMiddleware),
     Middleware(SharedPersistenceMiddleware),
     Middleware(
         CORSMiddleware,

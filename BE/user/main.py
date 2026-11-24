@@ -48,64 +48,74 @@ from user.schemas import (
 async def api_health(request):
     return JSONResponse({"status": "ok", "app": "Smart E-Mobility Hub Backend"})
 
-async def api_login(request: Request) -> JSONResponse:
-    """Kiểm tra dữ liệu đăng nhập và xác thực tài khoản mock, không đổi store.
+from shared.authentication import (
+    ensure_accounts, find_account, issue_session, password_matches,
+    password_hash, accounts,
+)
+from shared.database import persist_change
+from uuid import uuid4
+import re
 
-    Trả 400 nếu JSON lỗi, 422 nếu sai schema, 401 nếu sai tài khoản hoặc
-    mật khẩu; trả 200 kèm token và hồ sơ khi đăng nhập thành công.
-    """
+
+async def api_login(request):
     try:
         data = await request.json()
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return JSONResponse(
-            UserLoginErrorResponse(message="Dữ liệu JSON không hợp lệ").model_dump(mode="json"),
-            status_code=400
-        )
-
+    except (ValueError, UnicodeError):
+        return JSONResponse({"detail": "JSON không hợp lệ"}, status_code=400)
     try:
         credentials = UserLoginRequest.model_validate(data)
     except ValidationError:
-        # Không đính kèm dữ liệu lỗi vì có thể chứa mật khẩu người dùng.
-        return JSONResponse(
-            UserLoginErrorResponse(
-                message="Cần cung cấp số điện thoại hoặc email và mật khẩu không rỗng, đúng kiểu dữ liệu"
-            ).model_dump(mode="json"),
-            status_code=422
-        )
+        return JSONResponse({"detail": "Thông tin đăng nhập không hợp lệ"}, status_code=422)
+    failure = ensure_accounts()
+    if failure is not None:
+        return failure
+    account = find_account(credentials.email or credentials.phone, "user")
+    if account is None or not password_matches(credentials.password, account["password_hash"]):
+        return JSONResponse({"detail": "Sai tài khoản hoặc mật khẩu"}, status_code=401)
+    profile = db.__dict__["user"] if account["id"] == db.__dict__["user"]["id"] else account["profile"]
+    return JSONResponse(UserLoginResponse(
+        token=issue_session(account),
+        user=UserProfileResponse.model_validate(profile),
+    ).model_dump(mode="json"))
 
-    valid_user = (
-        (credentials.phone is not None and credentials.phone == db.user["phone"])
-        or (credentials.email is not None and credentials.email == db.user["email"])
-    )
-
-    if not valid_user or credentials.password != "123456":
-        return JSONResponse(
-            UserLoginErrorResponse(message="Sai tài khoản hoặc mật khẩu").model_dump(mode="json"),
-            status_code=401
-        )
-
-    response = UserLoginResponse(
-        token="jwt-token-sample-mock-123456",
-        user=UserProfileResponse.model_validate(db.user)
-    )
-    return JSONResponse(response.model_dump(mode="json"))
 
 async def api_register(request):
     try:
         data = await request.json()
-    except Exception:
-        data = {}
-    return JSONResponse({
-        "success": True,
-        "message": "Đăng ký tài khoản thành công",
-        "user": {
-            "id": "USR-002",
-            "full_name": data.get("full_name", "Người dùng mới"),
-            "email": data.get("email"),
-            "phone": data.get("phone"),
-            "role": "End-User"
-        }
-    })
+    except (ValueError, UnicodeError):
+        return JSONResponse({"detail": "JSON không hợp lệ"}, status_code=400)
+    required = ("full_name", "email", "phone", "password", "confirm_password")
+    if not isinstance(data, dict) or any(
+        not isinstance(data.get(k), str) or not data[k].strip() for k in required
+    ):
+        return JSONResponse({"detail": "Thiếu thông tin đăng ký"}, status_code=422)
+    email = data["email"].strip().lower()
+    phone = data["phone"].strip()
+    if (not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email)
+            or not re.fullmatch(r"\+?[0-9]{9,15}", phone)
+            or len(data["password"]) < 8
+            or data["password"] != data["confirm_password"]):
+        return JSONResponse({"detail": "Email, số điện thoại hoặc mật khẩu không hợp lệ"}, status_code=422)
+    failure = ensure_accounts()
+    if failure is not None:
+        return failure
+    encoded = password_hash(data["password"])
+
+    def change(candidate):
+        if any(a.get("email") == email or a.get("phone") == phone for a in accounts(candidate)):
+            return JSONResponse({"detail": "Email hoặc số điện thoại đã tồn tại"}, status_code=409)
+        profile = UserProfileResponse(
+            id="USR-" + uuid4().hex, full_name=data["full_name"].strip(),
+            email=email, phone=phone, vehicles=[], active_services={},
+        ).model_dump(mode="json")
+        candidate.operator_mock["accounts"].append(dict(
+            id=profile["id"], role="user", email=email, phone=phone,
+            password_hash=encoded, profile=profile,
+        ))
+        return JSONResponse({"success": True, "message": "Đăng ký thành công", "user": profile}, status_code=201)
+
+    return persist_change(change)
+
 
 async def api_get_profile(request: Request) -> JSONResponse:
     """Trả hồ sơ người dùng mock sau khi kiểm tra qua schema.
@@ -139,11 +149,22 @@ async def api_update_profile(request: Request) -> JSONResponse:
         )
 
     changes = profile_request.model_dump(exclude_unset=True)
+    if "email" in changes:
+        changes["email"] = changes["email"].lower()
+    if any(a["id"] != db.user["id"] and (
+        ("email" in changes and a.get("email") == changes["email"])
+        or ("phone" in changes and a.get("phone") == changes["phone"])
+    ) for a in accounts()):
+        return JSONResponse({"detail": "Email hoặc số điện thoại đã tồn tại"}, status_code=409)
+
     # Kiểm tra và tạo phản hồi trước khi ghi để tránh cập nhật dở dang.
     updated_user = UserProfileResponse.model_validate({**db.user, **changes})
     response = UpdateProfileResponse(success=True, user=updated_user)
     result = JSONResponse(response.model_dump(mode="json", exclude_unset=True))
     db.user.update(changes)
+    for account in accounts():
+        if account["id"] == db.user["id"]:
+            account.update(email=db.user["email"], phone=db.user["phone"])
     return result
 
 async def api_get_user_vehicles(request: Request) -> JSONResponse:
@@ -564,7 +585,12 @@ routes = [
 Route("/api/v1/user/bookings/{booking_id}/start", api_start_ride, methods=["POST"]),
 ]
 
+from shared.authentication import AuthenticationMiddleware
+from shared.middleware import SharedPersistenceMiddleware
+
 middleware = [
+    Middleware(SharedPersistenceMiddleware),
+    Middleware(AuthenticationMiddleware),
     Middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 ]
 

@@ -53,7 +53,10 @@ routes = [
 
 
 
+from shared.authentication import AuthenticationMiddleware
+
 middleware = [
+    Middleware(AuthenticationMiddleware),
     Middleware(
         CORSMiddleware,
         allow_origins=["*"],

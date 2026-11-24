@@ -141,19 +141,27 @@ DB = {
 
 # ================= ROUTE HANDLERS =================
 
+from shared.authentication import ensure_accounts, find_account, issue_session, password_matches
+
+
 async def login(request):
     try:
         body = await request.json()
+    except (ValueError, UnicodeError):
+        return JSONResponse({"detail": "JSON không hợp lệ"}, status_code=400)
+    try:
         req = StaffLoginRequest(**body)
-    except Exception:
-        req = StaffLoginRequest(username_or_phone="staff_b", password="password123")
-
-    token_resp = StaffTokenResponse(
-        access_token="mock-jwt-staff-session-token-4455",
-        token_type="bearer",
-        staff=DB["staff_profile"],
-    )
-    return JSONResponse(token_resp.dict())
+    except (ValueError, TypeError):
+        return JSONResponse({"detail": "Thông tin đăng nhập không hợp lệ"}, status_code=422)
+    failure = ensure_accounts()
+    if failure is not None:
+        return failure
+    account = find_account(req.username_or_phone, "staff")
+    if account is None or not password_matches(req.password, account["password_hash"]):
+        return JSONResponse({"detail": "Sai tài khoản hoặc mật khẩu"}, status_code=401)
+    return JSONResponse(StaffTokenResponse(
+        access_token=issue_session(account), staff=DB["staff_profile"],
+    ).model_dump(mode="json"))
 
 
 async def get_profile(request):
@@ -500,7 +508,12 @@ routes = [
     Route("/api/v1/staff/parking/shift-close", close_shift, methods=["POST"]),
 ]
 
+from shared.authentication import AuthenticationMiddleware
+from shared.middleware import SharedPersistenceMiddleware
+
 middleware = [
+    Middleware(SharedPersistenceMiddleware),
+    Middleware(AuthenticationMiddleware),
     Middleware(
         CORSMiddleware,
         allow_origins=["*"],
