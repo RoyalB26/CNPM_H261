@@ -514,11 +514,12 @@ async def api_get_invoice(request: Request) -> JSONResponse:
     return JSONResponse(response.model_dump(mode="json", exclude_unset=True))
 
 async def api_pay_invoice(request: Request) -> JSONResponse:
-    """Ghi nhận thanh toán thuê xe/đổi pin/sạc; Gateway lưu JSON trước khi trả thành công.
+    """Tạo phiên VNPAY cho hóa đơn thuê xe/đổi pin/sạc.
 
     Trả 400 khi JSON lỗi, 422 khi sai schema, 404 khi không có hóa đơn,
     409 khi xung đột nghiệp vụ. Thanh toán lặp không tạo giao dịch mới.
     """
+    request.scope["persistence_managed"] = True
     try:
         data = await request.json()
     except (json.JSONDecodeError, UnicodeDecodeError):
@@ -528,10 +529,12 @@ async def api_pay_invoice(request: Request) -> JSONResponse:
     except ValidationError:
         return JSONResponse(PaymentErrorResponse(error="Dữ liệu thanh toán không hợp lệ").model_dump(mode="json"), status_code=422)
     try:
-        response = pay_invoice(db, payment)
+        def change(candidate):
+            response = pay_invoice(candidate, payment, request.client.host if request.client else "127.0.0.1")
+            return JSONResponse(response.model_dump(mode="json"))
+        return persist_change(change)
     except PaymentError as exc:
         return JSONResponse(PaymentErrorResponse(error=str(exc)).model_dump(mode="json"), status_code=exc.status_code)
-    return JSONResponse(response.model_dump(mode="json"))
 
 # Routes support both /api/... and /api/v1/user/...
 routes = [
@@ -584,6 +587,9 @@ routes = [
     Route("/api/v1/user/invoices/pay", api_pay_invoice, methods=["POST"]),
 Route("/api/v1/user/bookings/{booking_id}/start", api_start_ride, methods=["POST"]),
 ]
+
+from user.payment_gateway import routes as payment_routes
+routes.extend(payment_routes)
 
 from shared.operations_api import user_routes as operation_routes
 routes.extend(operation_routes)

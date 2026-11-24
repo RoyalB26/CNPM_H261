@@ -224,36 +224,25 @@ const StaffApi = {
   },
 
   async parkingCheckoutPreview(plateOrTicket) {
-    try {
-      const res = await fetch(`${STAFF_API_BASE}/parking/checkout/${encodeURIComponent(plateOrTicket)}`);
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn("StaffApi parkingCheckoutPreview fallback:", e);
-    }
-    return {
-      ticket_code: "SG-20261022-018",
-      license_plate: plateOrTicket,
-      checkin_time: "22/10/2026 · 14:36",
-      checkout_time: "22/10/2026 · 16:42",
-      duration_str: "2 giờ 06 phút",
-      total_fee_vnd: 25000,
-      payment_method: "Thanh toán bằng tiền mặt tại quầy",
-      is_paid: false
-    };
+    const response = await fetch(`${STAFF_API_BASE}/parking/checkout/${encodeURIComponent(plateOrTicket)}`, {
+      headers: { Authorization: "Bearer " + (sessionStorage.getItem("staff_access_token") || "") }
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || "Không lấy được báo giá gửi xe");
+    return result;
   },
 
-  async parkingCheckoutConfirm(ticketCode, cashReceived = 25000) {
-    try {
-      const res = await fetch(`${STAFF_API_BASE}/parking/checkout/confirm`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticket_code: ticketCode, cash_received: cashReceived })
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn("StaffApi parkingCheckoutConfirm fallback:", e);
-    }
-    return { success: true, message: "Xác nhận đã thu tiền mặt thành công. Mở barrier cho xe ra." };
+  async parkingCheckoutConfirm(ticketCode, cashReceived, quoteToken) {
+    const response = await fetch(`${STAFF_API_BASE}/parking/checkout/confirm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json",
+        Authorization: "Bearer " + (sessionStorage.getItem("staff_access_token") || "") },
+      body: JSON.stringify({ ticket_code: ticketCode, cash_received: cashReceived,
+        payment_method: "TIỀN MẶT", quote_token: quoteToken })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || "Xác nhận thu phí thất bại");
+    return result;
   },
 
   async getShiftSummary() {

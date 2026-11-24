@@ -24,3 +24,9 @@ test_features.py dùng Gateway ASGI và runtime tạm để kiểm tra OSRM resp
 OSRM được mock trong test để kết quả ổn định. Kết nối OSRM thực và các ca E2E trình duyệt cần kiểm chứng khi ghép FE. Hai file JS Staff được kiểm tra cú pháp bằng node --check.
 
 Phép tính TC-O01 dùng cổng 10 kW, tải nền 5 kW. Nhu cầu +50% cho tải yêu cầu 7,5 kW. +300% cho tải yêu cầu 20 kW, phục vụ 10 kW, chưa phục vụ 10 kW.
+
+## Test D1–D2
+
+test_payments_parking.py có 15 ca qua Gateway ASGI. D1 dùng cấu hình thử riêng, tạo URL, gửi IPN có chữ ký, kiểm tra số tiền/merchant/chủ sở hữu, callback trùng, mã giao dịch dùng cho hai hóa đơn, lỗi lưu, thất bại rồi thử lại, cấu hình thiếu và hóa đơn 0đ. D2 kiểm tra xem trước–xác nhận–hóa đơn khớp, báo giá sai/hết hạn, tiền nhận thiếu, làm tròn giờ, dữ liệu thời gian legacy, giá Hub thay đổi, luồng User đặt bãi → Staff vào/ra và vé walk-in.
+
+Các test dùng runtime tạm. Bộ test IPN xác minh logic nội bộ, giao dịch VNPAY Sandbox thực cần merchant/IPN của nhóm.

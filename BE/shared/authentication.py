@@ -118,6 +118,7 @@ class AuthenticationMiddleware:
         if role is None and path.startswith("/api/"):
             role = "user"
         public = path.endswith("/auth/login") or path.endswith("/health")
+        public = public or path == "/api/v1/payments/vnpay/ipn"
         public = public or (role == "user" and path.endswith("/auth/register"))
         public = public or (role == "operator" and path.endswith("/auth/verify-2fa"))
         if not role or public:

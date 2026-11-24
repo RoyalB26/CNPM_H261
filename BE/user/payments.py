@@ -60,32 +60,7 @@ def validate_final_invoice(booking: dict, key: str, invoice: dict) -> None:
         raise PaymentError('Hóa đơn không khớp kết quả dịch vụ đã chốt, chưa thể thanh toán', 409) from exc
 
 
-def pay_invoice(db: MockDatabaseStore, payment: PaymentSubmitRequest) -> PaymentProcessResult:
-    """Kiểm tra toàn bộ điều kiện rồi ghi giao dịch một lần, không gọi cổng tiền thật."""
-    matches = [(booking, key, booking[key]) for booking in db.get_bookings()
-               for key in ("rental_invoice", "battery_swap_invoice", "charging_invoice")
-               if (booking.get(key) or {}).get("id") == payment.invoice_id
-               and db.owns_user_record(booking[key])]
-    if not matches:
-        raise PaymentError("Không tìm thấy hóa đơn dịch vụ", 404)
-    if len(matches) != 1:
-        raise PaymentError("Mã hóa đơn không duy nhất", 409)
-    booking, key, invoice = matches[0]
-    personal_charge_finished = (booking.get('personal_bundle') is True and key == 'charging_invoice'
-                                and booking.get('status') == 'Đang sử dụng'
-                                and (booking.get('charging_session') or {}).get('status') == 'Hoàn thành')
-    if (booking.get("status") != "Hoàn thành" and not personal_charge_finished) or invoice.get("status") != "unpaid":
-        raise PaymentError("Hóa đơn đã thanh toán hoặc chưa đủ điều kiện thanh toán", 409)
-    if invoice.get("service_type") not in ("rental", "battery_swap", "charging") or invoice.get("payment_channel") != "online":
-        raise PaymentError("Hóa đơn không hỗ trợ thanh toán trực tuyến", 409)
-    validate_final_invoice(booking, key, invoice)
-    if payment.method == "cash_guard":
-        raise PaymentError("Dịch vụ này chỉ hỗ trợ ví điện tử hoặc chuyển khoản", 409)
-    if payment.amount is not None and payment.amount != invoice["total_amount"]:
-        raise PaymentError("Số tiền không khớp hóa đơn", 409)
-
-    transaction_id = f"TXN-{uuid4().hex}"
-    result = PaymentProcessResult(transaction_id=transaction_id, message="Thanh toán mô phỏng thành công")
-    invoice.update(status="paid", transaction_id=transaction_id,
-                   paid_at=datetime.now(timezone.utc).isoformat(), payment_method=payment.method)
-    return result
+def pay_invoice(db: MockDatabaseStore, payment: PaymentSubmitRequest, ip_address="127.0.0.1") -> PaymentProcessResult:
+    """Tạo phiên VNPAY; trạng thái paid được xác nhận tại IPN."""
+    from .payment_gateway import create_payment
+    return create_payment(db, payment, ip_address)

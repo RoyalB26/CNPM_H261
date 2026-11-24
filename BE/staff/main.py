@@ -395,21 +395,13 @@ async def report_maintenance_incident(request):
 
 
 async def parking_checkin(request):
-    try:
-        body = await request.json()
-        req = VehicleCheckInRequest(**body)
-    except Exception:
-        req = VehicleCheckInRequest(
-            license_plate="59-X1 123.45",
-            parking_bay="Dãy A",
-            parking_slot="Ô số 018",
-            hub_name="Hub Ga Metro ĐHQG",
-        )
-
+    from shared.operations_api import read_model
+    req = await read_model(request, VehicleCheckInRequest)
     rec = db.parking_checkin({
         "plate_number": req.license_plate,
         "hub_name": req.hub_name or "Hub Ga Metro ĐHQG",
-        "slot_id": f"{req.parking_bay} · {req.parking_slot}"
+        "slot_id": f"{req.parking_bay} · {req.parking_slot}",
+        "guard_id": request.state.account["id"]
     })
     resp = VehicleCheckInResponse(
         success=True,
@@ -419,68 +411,62 @@ async def parking_checkin(request):
         checkin_time=rec["checkin_time"],
         status_message="Thông tin đã sẵn sàng · Kiểm tra lại trước khi xác nhận vào bãi.",
     )
-    return JSONResponse(resp.dict())
+    return JSONResponse(resp.model_dump(mode="json"))
 
 
 async def parking_checkout_preview(request):
-    plate = request.path_params.get("plate_or_ticket", "59-X1 123.45")
-    rec = next((r for r in db.parking_records if r["plate_number"] == plate or r["ticket_code"] == plate), None)
-    ticket_code = rec["ticket_code"] if rec else f"PRK-{int(datetime.utcnow().timestamp())%1000}"
-    checkin_t = rec["checkin_time"] if rec else "18/10/2026 · 10:00"
-    fee = rec["parking_fee"] if rec else 5000
-
-    resp = VehicleCheckOutResponse(
-        ticket_code=ticket_code,
-        license_plate=plate,
-        checkin_time=checkin_t,
-        checkout_time=datetime.utcnow().strftime("%d/%m/%Y · %H:%M"),
-        duration_str="2 giờ 06 phút",
-        total_fee_vnd=fee,
-        payment_method="Thanh toán bằng tiền mặt tại quầy",
-        is_paid=False,
-    )
-    return JSONResponse(resp.dict())
+    from shared.parking_pricing import find_ticket, checkout_quote
+    record = find_ticket(db, request.path_params["plate_or_ticket"])
+    quote = checkout_quote(db, record)
+    return JSONResponse(VehicleCheckOutResponse(
+        ticket_code=record["ticket_code"], license_plate=record["plate_number"],
+        checkin_time=record["checkin_time"], checkout_time=quote["checkout_time"],
+        duration_str=quote["duration_display"], total_fee_vnd=quote["parking_fee"],
+        payment_method="Tiền mặt tại quầy", is_paid=record.get("payment_status") == "PAID",
+        quote_token=quote.get("quote_token"), expires_at=quote.get("expires_at"),
+    ).model_dump(mode="json"))
 
 
 async def parking_checkout_confirm(request):
+    request.scope["persistence_managed"] = True
+    from starlette.exceptions import HTTPException
+    from shared.database import persist_change
     try:
         body = await request.json()
-        ticket_code = body.get("ticket_code", "PRK-901")
-        method = body.get("payment_method", "TIỀN MẶT")
-    except Exception:
-        ticket_code = "PRK-901"
-        method = "TIỀN MẶT"
-    db.parking_checkout_confirm(ticket_code, method)
-    return JSONResponse({
-        "success": True,
-        "ticket_code": ticket_code,
-        "paid_amount": 5000,
-        "message": "Xác nhận đã thu 5.000 VNĐ tiền mặt thành công. Mở barrier cho xe ra.",
-    })
+    except (ValueError, UnicodeError):
+        raise HTTPException(400, "JSON không hợp lệ")
+    if not isinstance(body, dict) or not isinstance(body.get("ticket_code"), str):
+        raise HTTPException(422, "Cần mã vé")
+    token = body.get("quote_token")
+    if token is not None and (not isinstance(token, str) or len(token) > 4096):
+        raise HTTPException(422, "Báo giá không hợp lệ")
+    method = body.get("payment_method", "TIỀN MẶT")
+    if method not in ("TIỀN MẶT", "cash_guard", "Tiền mặt tại quầy"):
+        raise HTTPException(422, "Luồng này xác nhận thu tiền mặt tại quầy")
+    def change(candidate):
+        record = candidate.parking_checkout_confirm(body["ticket_code"], method, token, body.get("cash_received"))
+        return JSONResponse({"success": True, "ticket_code": record["ticket_code"],
+            "paid_amount": record["parking_fee"], "checkout_time": record["checkout_time"],
+            "message": f"Đã thu {record['parking_fee']:,} VNĐ tiền mặt"})
+    return persist_change(change)
 
 
 async def get_shift_summary(request):
-    records = db.parking_records
-    cash = sum(r.get("parking_fee", 5000) for r in records if r.get("payment_method") == "TIỀN MẶT") or 65000
-    tx_items = [
-        ParkingTransactionItem(
-            seq_number=f"{i+1:02d}",
-            license_plate=r["plate_number"],
-            time_info=f"{r['checkin_time']} · 45 phút",
-            amount_vnd=r.get("parking_fee", 5000)
-        )
-        for i, r in enumerate(records[:5])
-    ]
+    cash_methods = {"TIỀN MẶT", "cash_guard", "Tiền mặt tại quầy"}
+    records = [r for r in db.parking_records if r.get("payment_status") == "PAID"
+               and r.get("payment_method") in cash_methods
+               and r.get("guard_id") == request.state.account["id"]]
+    items = [ParkingTransactionItem(
+        seq_number=str(i + 1), license_plate=r["plate_number"],
+        time_info=f"{r['checkin_time']} · {r.get('duration_display', '')}",
+        amount_vnd=r["parking_fee"],
+    ) for i, r in enumerate(records)]
     summary = ShiftReconciliationSummary(
-        shift_code="SHIFT-CA-CHIEU",
-        guard_name="Nguyen Van B",
-        hub_name="Hub Ga Metro ĐHQG",
-        total_vehicles_served=len(records) + 40,
-        total_cash_collected_vnd=cash,
-        transactions=tx_items,
-        is_closed=False,
+        hub_name=records[0]["hub_name"] if records else "",
+        total_vehicles_served=len(records), total_cash_collected_vnd=sum(r["parking_fee"] for r in records),
+        transactions=items, is_closed=False,
     )
-    return JSONResponse(summary.dict())
+    return JSONResponse(summary.model_dump(mode="json"))
 
 
 async def close_shift(request):

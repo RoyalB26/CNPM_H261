@@ -69,7 +69,9 @@ class PaymentProcessResult(BaseModel):
 
     success: Literal[True] = True
     transaction_id: str
-    status: Literal["completed"] = "completed"
+    status: Literal["completed", "pending"] = "completed"
+    payment_url: Optional[str] = None
+    expires_at: Optional[str] = None
     message: str
 
 class PaymentErrorResponse(BaseModel):
