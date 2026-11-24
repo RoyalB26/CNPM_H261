@@ -11,7 +11,6 @@ unified under a single API Gateway on port 8000:
 
 import os
 import sys
-import importlib.util
 import asyncio
 from contextlib import asynccontextmanager, suppress
 from starlette.applications import Starlette
@@ -23,31 +22,17 @@ from starlette.middleware.cors import CORSMiddleware
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
+PROJECT_DIR = os.path.dirname(BASE_DIR)
+if PROJECT_DIR not in sys.path:
+    sys.path.insert(0, PROJECT_DIR)
 
 from shared.middleware import SharedPersistenceMiddleware
 from shared.database import storage
 from user.expiry_worker import expiry_interval, run_expiry_worker
-
-
-
-def load_backend_submodule(subfolder, module_name):
-    folder_path = os.path.join(BASE_DIR, subfolder)
-    for k in list(sys.modules.keys()):
-        if k == "schemas" or k.startswith("schemas."):
-            del sys.modules[k]
-    if folder_path in sys.path:
-        sys.path.remove(folder_path)
-    sys.path.insert(0, folder_path)
-    
-    spec = importlib.util.spec_from_file_location(module_name, os.path.join(folder_path, "main.py"))
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = mod
-    spec.loader.exec_module(mod)
-    return mod
-
-user_mod = load_backend_submodule("user", "be_user_main")
-op_mod = load_backend_submodule("operator", "be_operator_main")
-staff_mod = load_backend_submodule("staff", "be_staff_main")
+# Import theo package để mỗi role dùng đúng schemas, không xóa module cache.
+from BE.user import main as user_mod
+from BE.operator import main as op_mod
+from BE.staff import main as staff_mod
 
 async def root_status(request):
     return JSONResponse({

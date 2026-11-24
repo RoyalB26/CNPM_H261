@@ -8,6 +8,28 @@ import unittest
 
 
 class GatewayIntegrationTests(unittest.TestCase):
+    def test_qualified_package_imports_preserve_singleton_paths_and_other_schemas(self):
+        """Cấu trúc mới không đổi db, đường dẫn JSON hoặc module schemas khác."""
+        scenario = Path(__file__).with_name('package_import_scenario.py')
+        with tempfile.TemporaryDirectory(prefix='be-import-cwd-') as directory:
+            result = subprocess.run([sys.executable, '-B', str(scenario)], cwd=directory,
+                                    capture_output=True, text=True, timeout=15)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_user_candidate_writes_with_gateway_and_versioned_urls(self):
+        """Gateway không ghi lại transaction User và không sửa RAM trước JSON."""
+        self.run_write_contract('gateway')
+
+    def test_user_candidate_writes_without_gateway_using_legacy_aliases(self):
+        """Handler tự lưu và rollback được khi không có middleware Gateway."""
+        self.run_write_contract('standalone')
+
+    def run_write_contract(self, mode):
+        scenario = Path(__file__).with_name('user_persistence_scenario.py')
+        result = subprocess.run([sys.executable, '-B', str(scenario), mode],
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_personal_bundle_checkin_charge_checkout_and_restart(self):
         """Gói ghép phải dùng được qua API User/Staff và lưu cả hai hóa đơn."""
         scenario = Path(__file__).with_name('gateway_scenarios.py')

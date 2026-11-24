@@ -17,10 +17,13 @@ from starlette.middleware.cors import CORSMiddleware
 PARENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PARENT_DIR not in sys.path:
     sys.path.insert(0, PARENT_DIR)
+PROJECT_DIR = os.path.dirname(PARENT_DIR)
+if PROJECT_DIR not in sys.path:
+    sys.path.insert(0, PROJECT_DIR)
 
 from mock_db import db
 
-from schemas import (
+from BE.staff.schemas import (
     StaffRole,
     StaffLoginRequest,
     StaffProfile,

@@ -35,16 +35,16 @@ class RentalPricingTests(unittest.TestCase):
         db = MockDatabaseStore()
         db.user['active_services']['ride'] = None
         confirmed = datetime(2026, 11, 21, 8, 0, tzinfo=timezone.utc)
-        with patch('shared.memory_store.datetime') as clock:
+        with patch('shared.persistence.memory_store.datetime') as clock:
             clock.now.return_value = confirmed
             booking = db.create_booking({'plan_type': 'rental', 'hub_id': 'hub-02', 'resource_name': 'XE-052'})
         db.get_hub('hub-02')['pricing']['rental_bike_hourly'] = 20000
         start = confirmed + timedelta(minutes=8)
-        with patch('shared.memory_store.datetime') as clock:
+        with patch('shared.persistence.memory_store.datetime') as clock:
             clock.now.return_value = start
             ride = db.start_ride(booking['id'])['ride']
         db.get_hub('hub-02')['pricing']['rental_bike_hourly'] = 20000
-        with patch('shared.memory_store.datetime') as clock:
+        with patch('shared.persistence.memory_store.datetime') as clock:
             clock.now.return_value = confirmed + timedelta(minutes=30)
             result = db.return_vehicle(ride['trip_id'], 'Hub Đại học Quốc Tế')
         self.assertTrue(result['success'])

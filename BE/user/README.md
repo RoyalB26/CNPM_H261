@@ -563,3 +563,75 @@ Chuyến mới có `booking_id` chỉ được trả khi booking vẫn `Đang s�
 trong danh sách xe tại một Hub, hoặc xe legacy xuất hiện ở nhiều Hub, trả xe
 bị từ chối thay vì tự xóa/chuyển các bản ghi mâu thuẫn. Seed một chuyến cũ
 chưa có `booking_id` vẫn nối booking duy nhất theo mã xe như quy tắc tương thích.
+
+## Phân chia handler BE User theo sơ đồ module
+
+`main.py` ghép routes và tạo app Starlette. Các handler HTTP được tách vào
+`handlers/`; giữ nguyên URL, phương thức HTTP, request/response và nghiệp vụ.
+
+| Module | Trách nhiệm |
+| --- | --- |
+| `handlers/auth.py` | Health, đăng nhập/đăng ký mock, hồ sơ, xe cá nhân |
+| `handlers/hub.py` | Danh sách, chi tiết và gợi ý Hub |
+| `handlers/booking.py` | Liệt kê, tạo, hủy và xử lý hết hạn booking |
+| `handlers/service.py` | Trạng thái dịch vụ, nhận/trả xe, bắt đầu/kết thúc sạc, đổi pin |
+| `handlers/incident.py` | Tạo và xem báo cáo sự cố |
+| `handlers/payment.py` | Tra cứu hóa đơn, thanh toán mock |
+
+`schemas/` tiếp tục kiểm tra dữ liệu. Các module nghiệp vụ như `charging.py`,
+`swaps.py`, `payments.py`, `incidents.py` không bị chuyển vào handler: handler
+nhận HTTP và gọi các hàm đó. Tên hàm handler vẫn được import ở `main.py` để
+giữ cách ghép routes và tương thích với Gateway hiện có.
+
+Handler User đọc `db` qua đầu mối công khai `shared.database`. Các thao tác
+ghi (hồ sơ, booking, sử dụng dịch vụ, báo cáo, thanh toán) gọi callback đồng
+bộ `change(candidate)` rồi `return persist_change(change)`. Callback chỉ
+đổi candidate và chuẩn bị response; không sửa singleton thật hoặc dùng await.
+
+`persist_change()` yêu cầu ghi JSON thành công trước khi áp dụng candidate
+vào RAM. Response lỗi HTTP từ callback bị bỏ toàn bộ thay đổi; exception cũng
+không áp dụng candidate. Lỗi ghi trả 503 và giữ RAM/file cũ. Callback không
+đổi dữ liệu không ghi lại file (ví dụ hết hạn không có kết quả, cập nhật hồ sơ
+cùng giá trị). Đăng nhập/đăng ký mock và các GET không ghi dữ liệu.
+
+Middleware Gateway vẫn khóa chung mọi request cùng worker hết hạn. Chỉ
+Staff còn dùng nhánh lưu tự động của middleware; User/Operator tự commit ở
+handler nên không lưu hai lần. Handler User cũng lưu được khi chạy app User
+riêng, nhưng demo toàn hệ thống vẫn chạy `BE/run_all.py` để có khóa chung,
+quét hết hạn và các API Operator/Staff.
+
+Kiểm thử trong tiến trình con với runtime tạm kiểm tra cả 11 thao tác ghi
+qua app User độc lập (`/api/...`) và Gateway (`/api/v1/user/...`): lỗi ghi
+không đổi RAM/file, tại thời điểm `_write` RAM vẫn là trạng thái trước request,
+request thành công chỉ ghi đúng một lần. Lỗi nghiệp vụ sau khi sửa candidate
+cũng bị bỏ, không tạo giao dịch một phần.
+
+Phần triển khai lưu trữ đã chuyển vào thư mục nội bộ:
+
+```text
+BE/shared/
+├── database.py              # Đầu mối db, persist_change và lỗi dùng chung
+├── persistence/
+│   ├── memory_store.py      # Store RAM, nghiệp vụ hiện có, một singleton db
+│   ├── json_store.py        # Snapshot, ghi JSON an toàn, áp dụng RAM
+│   └── seed_loader.py       # Đọc/kiểm tra seed và runtime JSON
+├── memory_store.py          # Giữ tương thích đường import cũ
+├── json_store.py            # Giữ tương thích đường import cũ
+└── seed_loader.py           # Giữ tương thích đường import cũ
+```
+
+Các module tương thích chỉ re-export lớp/hàm từ `persistence`, không tạo
+store hoặc singleton riêng. `mock_db.py` và adapter Operator cũng lấy db/lỗi
+qua `shared.database`. Seed vẫn là `BE/data/mock_seed.json`; runtime mặc định
+vẫn là `BE/data/runtime_db.json`, cấu hình `BE_RUNTIME_PATH` giữ nguyên.
+
+`run_all.py` ghép routes bằng import theo package `BE.user.main`,
+`BE.operator.main`, `BE.staff.main`; không nạp main bằng tên giả và không
+xóa cache `schemas`. Staff dùng `BE.staff.schemas` để chọn đúng schema khi
+chạy Gateway hoặc nạp độc lập; chỉ đổi import/bootstrap, không đổi nghiệp vụ
+Staff. Chưa tách các handler Staff ra khỏi `staff/main.py` vì phần đó thuộc
+phạm vi nhóm Staff. Operator đã có thư mục handlers riêng.
+
+Kiểm thử import từ thư mục làm việc bên ngoài repository xác nhận cả ba
+role dùng chung db, các import cũ trỏ về cùng lớp/hàm mới, đường dẫn JSON
+không đổi và module `schemas` không liên quan không bị xóa hoặc thay thế.
