@@ -1,5 +1,30 @@
 # Backend Mock Service - Smart E-Mobility Hub (End-User)
 
+## Lưu ý sau khi ghép `feature/operator`
+
+Giữ cấu trúc `handlers/` và `shared/persistence/` đã tách. Các thay đổi chức
+năng mới của nhóm đã được nối vào cấu trúc đó, không chép đè `main.py` cũ.
+
+- API bảo vệ cần `Authorization: Bearer <token>` từ login; User seed vẫn dùng
+  mật khẩu `123456`. Đăng ký lưu tài khoản mới, mật khẩu tối thiểu 8 ký tự và
+  cần `confirm_password`. Session lưu trong RAM nên khởi động lại phải login lại.
+- Gợi ý đường bộ dùng OSRM bất đồng bộ, hỗ trợ `vehicle_type=personal` và
+  `service=parking|charging`. Mất kết nối/không có tuyến OSRM trả 503; kết quả
+  không tự giữ tài nguyên. `OSRM_BASE_URL`/`OSRM_PROFILE` có thể cấu hình.
+- Thanh toán online tạo URL VNPAY và trạng thái `pending`, chưa phải `paid`.
+  Cần `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL`; thiếu cấu hình
+  trả 503. IPN có chữ ký tại `/api/v1/payments/vnpay/ipn` mới chốt thanh toán
+  (hóa đơn 0đ được tất toán ngay). Lặp request đang chờ dùng lại cùng phiên.
+- Gửi xe tính theo giờ bắt đầu từ thời điểm vào bãi, xem trước/thu tiền mặt
+  qua Staff. `price` trên booking vẫn là ước tính, không phải phí đã thu.
+- Có API lịch sạc, upload ảnh và thông báo trong `shared.operations_api`.
+  Phiếu sự cố cần Operator phân công cho đúng Staff trước khi Staff giải quyết.
+- Cài dependency bằng `.venv/bin/python -m pip install -r requirements.txt`;
+  branch mới thêm Pillow để kiểm tra ảnh. Không cần reset runtime khi ghép code.
+
+Kiểm thử tự động dùng runtime tạm, OSRM giả lập và IPN ký bằng cấu hình thử;
+chưa chứng minh giao dịch VNPAY Sandbox thật hoặc toàn bộ luồng trình duyệt.
+
 ## Đối chiếu đặc tả và phạm vi bản demo
 
 Đối chiếu ba tài liệu nhóm đã gửi: `Đặc tả CNPM (1) (1).docx` (mô tả),
@@ -10,20 +35,20 @@ phần trăm khi nhóm chưa thống nhất trọng số nghiệm thu.
 
 | Spec / use case | Đã có trong Backend User | Giới hạn còn lại |
 | --- | --- | --- |
-| FR-I01 / UC1 – Tài khoản | Đăng nhập tài khoản seed bằng email/điện thoại; đọc/sửa hồ sơ; xem xe cá nhân | Đăng ký chỉ là stub trả thành công, không lưu tài khoản; chưa có xác thực token, phân quyền hoặc nhiều tài khoản |
-| FR-I02 / UC2 – Tra cứu Hub | Tìm tên/địa chỉ không dấu; chi tiết tài nguyên; gợi ý Hub lấy/trả xe dùng chung từ tọa độ | Khoảng cách đường chim bay; chưa định tuyến đường bộ hoặc gợi ý riêng theo nhu cầu xe cá nhân |
-| FR-I03 / UC3 – Đặt trước | Thuê xe, giữ ô đỗ, giữ cổng sạc ngay, giữ pin; gói ghép đỗ + sạc `personal`; xem/hủy booking; tối đa 3 gợi ý khi đặt thất bại | Chưa có lịch sạc theo giờ; gợi ý chỉ đổi nơi/tài nguyên nhận, giữ nguyên Hub trả xe |
+| FR-I01 / UC1 – Tài khoản | Đăng ký, mật khẩu băm, session Bearer theo role, hồ sơ riêng từng User; đồng bộ email/phone đăng nhập khi sửa hồ sơ | Session trong RAM, mất khi khởi động lại; chưa xác nhận OTP/SMS hoặc khôi phục mật khẩu |
+| FR-I02 / UC2 – Tra cứu Hub | Tìm Hub không dấu; tài nguyên; tuyến OSRM cho xe thuê/xe cá nhân, lọc nhu cầu đỗ/sạc | Phụ thuộc dịch vụ OSRM; kiểm thử dùng response giả lập, chưa xác nhận tuyến thực tế |
+| FR-I03 / UC3 – Đặt trước | Thuê xe, giữ ô đỗ, giữ cổng sạc ngay, giữ pin; gói ghép đỗ + sạc `personal`; xem/hủy booking; tối đa 3 gợi ý khi đặt thất bại | Có lịch sạc qua API riêng, chưa xác nhận FE; gợi ý khi đặt thất bại chỉ đổi nơi/tài nguyên nhận, giữ nguyên Hub trả xe |
 | FR-I04 / UC4 – Sử dụng dịch vụ | Nhận/trả xe; trạng thái đang sử dụng; bắt đầu/kết thúc sạc; xác nhận đổi pin; gửi xe liên thông bảo vệ | Chưa có khóa xe/thiết bị thật; kWh nhập mô phỏng; giữ chỗ và phiên sạc không phải lịch sạc tối ưu |
-| FR-I05 / UC5 – Báo sự cố | Tạo báo cáo và phiếu bảo trì liên kết; đọc lại trạng thái/kết quả Staff | Chưa có push/SMS; chưa kiểm chứng tải ảnh thực tế; phân quyền theo tài khoản chưa triển khai |
-| FR-I11 / UC6 – Thu phí | Hóa đơn thuê theo phút, sạc theo kWh, đổi pin theo số lượng; thanh toán mock một lần; hóa đơn gửi xe từ vé bãi | Chưa có cổng thanh toán thật/đối soát; phí gửi xe vẫn theo mock Staff, chưa tính thời gian đỗ thực |
+| FR-I05 / UC5 – Báo sự cố | Tạo báo cáo và phiếu bảo trì liên kết; đọc lại trạng thái/kết quả Staff | Có upload/đọc ảnh và thông báo lưu trong JSON; chưa có push/SMS hoặc kiểm thử giao diện |
+| FR-I11 / UC6 – Thu phí | Hóa đơn thuê/sạc/đổi pin; tạo URL và xử lý IPN VNPAY; phí gửi xe theo thời gian, báo giá có chữ ký | Chưa kiểm tra VNPAY Sandbox thực; test dùng merchant/signature thử |
 | FR-N01, N02, N03 – Trạng thái và giữ tài nguyên | Cập nhật RAM/JSON dùng chung; chặn đặt trùng, xe đang đi, bảo trì/điều chuyển; tự quét hết hạn qua Gateway và hoàn tài nguyên một lần | Thời hạn 10/15 phút còn cố định; chưa xử lý nhiều tiến trình hoặc khóa phân tán |
 | FR-N08, N09, N10 – Liên thông và lịch sử | Báo cáo nối phiếu bảo trì; User đọc thay đổi Hub từ Operator; lưu lịch sử booking/chuyến/phiên và hóa đơn | Chưa chứng minh mọi nhánh điều chuyển; chưa có audit log đầy đủ hoặc thời hạn lưu trữ theo NFR |
 | FR-N12 – Dữ liệu mô phỏng | Seed JSON, runtime JSON, kiểm thử độc lập không dùng runtime demo | Chưa thay thế nguồn mock bằng IoT chỉ qua cấu hình |
 
 FR-I06–I10, I12 và các yêu cầu điều phối/mô phỏng toàn mạng do phần Operator,
 Staff hoặc hệ thống chung phụ trách; không lấy các phần đó làm chức năng
-BE User đã hoàn thành. FR-N04 (lịch sạc), N11 (thông báo), N14 (IoT thời gian
-thực), N15 (tác vụ nền khi ngừng thiết bị) chưa được coi là đáp ứng trong BE User.
+BE User đã hoàn thành. Nhánh mới bổ sung lịch sạc/thông báo và tác vụ vận hành
+chung; việc đáp ứng đầy đủ NFR/IoT vẫn cần nghiệm thu riêng.
 Các chỉ tiêu tải, SLA, bảo mật và triển khai của NFR chưa được đo/nghiệm thu
 bằng bộ test chức năng hiện tại.
 
@@ -91,13 +116,13 @@ Không đoán ngày đặt từ `created_at`/`hold_until` chỉ có giờ và kh
 các hóa đơn đã tạo/thanh toán. Request client không được quyết định mốc hay
 đơn giá tính phí. Booking mới có đơn giá hoặc mốc thời gian sai bị từ chối
 trước khi chuyển xe hoặc thay đổi tài nguyên.
-`POST /api/invoices/pay` ghi nhận thanh toán mô phỏng cho hóa đơn thuê xe đã
+`POST /api/invoices/pay` tạo phiên thanh toán VNPAY cho hóa đơn thuê xe đã
 hoàn tất. Body gồm `invoice_id`, `method` (`wallet` hoặc `bank_transfer`), và
 `amount` tùy chọn để đối chiếu. Chấp nhận tên FE `Ví điện tử`/`Thẻ ngân hàng`.
-Số tiền chính thức lấy từ hóa đơn Backend. Thành công lưu `paid`, `paid_at`,
-`transaction_id`, `payment_method`; chưa tích hợp cổng thanh toán thật.
-Thanh toán lặp/sai số tiền/tiền mặt trả 409; không tìm thấy hóa đơn trả 404;
-sai schema trả 422. Gateway ghi JSON lỗi trả 503 và phục hồi trạng thái cũ.
+Số tiền chính thức lấy từ hóa đơn Backend. API trả `payment_url` và `pending`;
+IPN hợp lệ mới lưu `paid`, `paid_at`, `transaction_id`, `payment_method`.
+Request lặp khi pending trả lại phiên cũ; hóa đơn đã paid/sai số tiền/tiền mặt
+trả 409; không tìm thấy trả 404; sai schema trả 422. Lỗi ghi trả 503, giữ dữ liệu cũ.
 Endpoint thanh toán nhận hóa đơn thuê xe, đổi pin và sạc đã lưu. Gửi xe cá
 nhân thanh toán trực tiếp cho bảo vệ; hóa đơn gửi xe không được thanh toán
 qua endpoint trực tuyến này.
@@ -113,9 +138,10 @@ thì API trả toàn bộ Hub, bao gồm trạng thái ngừng hoạt động.
 
 `POST /api/hubs/suggest-route` nhận `origin_lat`, `origin_lng`, `dest_lat`,
 `dest_lng`, `vehicle_type=bike` (mặc định). Gợi ý loại xe đã đặt, đang đi,
-điều chuyển hoặc bảo trì và Hub trả hết chỗ/ngừng hoạt động. Khoảng cách là
-đường chim bay, thời gian là ước tính demo. Không có phương án trả 409;
-tọa độ sai trả 422. Kết quả gợi ý chưa giữ tài nguyên, lúc đặt phải kiểm tra lại.
+điều chuyển hoặc bảo trì và Hub trả hết chỗ/ngừng hoạt động. Khoảng cách/thời
+gian lấy từ OSRM, response có geometry. Có thể chọn `personal` và nhu cầu
+`parking`/`charging`. Không có Hub phù hợp trả 409; OSRM không có tuyến hoặc
+lỗi kết nối trả 503; tọa độ sai trả 422. Gợi ý chưa giữ tài nguyên, lúc đặt kiểm tra lại.
 
 ## Tự động xử lý booking hết hạn
 
@@ -191,10 +217,10 @@ bãi và kết thúc lượt gửi, nhưng ô đó không được cộng vào s
 UTC; booking liên kết lưu `completed_at`. Chưa có điều khiển barrier vật lý.
 
 `price` khi đặt là ước tính đơn giá giờ × số giờ dự kiến (mặc định 2).
-Chưa tính phí theo thời gian đỗ thực; response thu phí Staff vẫn là mock cũ.
-Nhánh Staff walk-in không có booking đã được bảo vệ khỏi tạo/hoàn vé lặp;
-việc chọn ô lúc tạo vé mới vẫn theo logic mock cũ, chưa hoàn thiện toàn bộ
-kiểm tra đầu vào walk-in hoặc lỗi JSON fallback trong handler Staff.
+Vé mới lưu đơn giá lúc vào bãi; phí thực tế tính theo số giờ bắt đầu. Staff
+xem trước để lấy báo giá có chữ ký (hiệu lực 5 phút) rồi xác nhận thu tiền.
+Walk-in cũng chọn ô khả dụng, ghi quyền chiếm ô và thời điểm ISO; checkout
+liên kết đúng vé, không hoàn chỗ hai lần.
 
 Cung cấp REST API Mock mô phỏng toàn bộ dữ liệu cho ứng dụng User của hệ thống điều phối phương tiện điện Thông minh ĐHQG-HCM.
 
@@ -380,9 +406,9 @@ Có thể chỉ chạy kiểm thử Gateway bằng:
 ```
 
 Các kiểm thử này chưa thay thế việc kiểm tra giao diện FE hoặc xác nhận toàn
-bộ đặc tả. Chưa triển khai nhiều tài khoản/phân quyền thật,
-lịch sạc theo giờ, IoT và thanh toán thực. Những phần đó nằm ngoài bản demo
-đã thống nhất; API và dữ liệu mock không được xem là hệ thống production.
+bộ đặc tả. Nhánh mới có auth, lịch sạc và VNPAY; chưa kiểm tra IoT, giao dịch
+cổng thật hoặc toàn bộ UI. Không coi kết quả unit/integration test là nghiệm
+thu production.
 
 ## Quy tắc chọn hóa đơn và Hub đích
 
@@ -420,7 +446,7 @@ trả xe. API vẫn chặn Hub không tồn tại/ngừng hoạt động và cá
 Danh sách `slots` trong seed chỉ là mẫu một phần của bãi; luồng thuê xe dùng
 bộ đếm tổng, chưa gắn xe đạp điện vào từng ô đỗ vật lý.
 
-## Chuẩn bị chủ sở hữu dữ liệu trước khi mở nhiều tài khoản
+## Chủ sở hữu dữ liệu và tài khoản
 
 Booking, chuyến đi, phiên sạc, hóa đơn trực tuyến và báo cáo User mới có
 `user_id` do Backend lấy từ hồ sơ hiện tại. Mã chủ gửi trong request không
@@ -447,11 +473,11 @@ Vé cũ chưa có chủ/liên kết vẫn theo quy tắc một tài khoản đ�
 vé đã có chủ khác không được xem chỉ vì trùng biển số. Việc chuẩn hóa xảy ra
 trong RAM, file seed không bị sửa; runtime lưu metadata ở lần cập nhật thành công.
 
-Đây là bước chuẩn bị dữ liệu, **chưa phải xác thực API hoặc hỗ trợ nhiều tài
-khoản hoàn chỉnh**. Backend vẫn dùng hồ sơ `db.user` của seed; đăng ký còn là
-stub, login còn token mock. Chưa có kiểm tra Bearer token, phiên hết hạn hay
-RBAC giữa User/Operator/Staff. Chỉ sau khi bổ sung kho tài khoản, mật khẩu băm
-và danh tính xác thực theo request mới có thể coi phần nhiều tài khoản hoàn tất.
+Auth mới lưu tài khoản trong runtime, xác định User hiện tại theo session và
+ContextVar của request. `db.user` trả hồ sơ của User đó; snapshot persistence
+luôn lưu hồ sơ seed gốc ở trường `user`, còn hồ sơ tài khoản mới nằm trong
+`operator_mock.accounts`. Mật khẩu được băm; middleware kiểm tra Bearer token,
+hạn session và role User/Operator/Staff. Session chưa được lưu qua restart.
 
 ## Bảo vệ xe đang đi và quyền giữ xe
 
@@ -563,3 +589,76 @@ Chuyến mới có `booking_id` chỉ được trả khi booking vẫn `Đang s�
 trong danh sách xe tại một Hub, hoặc xe legacy xuất hiện ở nhiều Hub, trả xe
 bị từ chối thay vì tự xóa/chuyển các bản ghi mâu thuẫn. Seed một chuyến cũ
 chưa có `booking_id` vẫn nối booking duy nhất theo mã xe như quy tắc tương thích.
+
+## Phân chia handler BE User theo sơ đồ module
+
+`main.py` ghép routes và tạo app Starlette. Các handler HTTP được tách vào
+`handlers/`; giữ nguyên URL, phương thức HTTP, request/response và nghiệp vụ.
+
+| Module | Trách nhiệm |
+| --- | --- |
+| `handlers/auth.py` | Health, đăng nhập/đăng ký, hồ sơ, xe cá nhân |
+| `handlers/hub.py` | Danh sách, chi tiết và gợi ý Hub |
+| `handlers/booking.py` | Liệt kê, tạo, hủy và xử lý hết hạn booking |
+| `handlers/service.py` | Trạng thái dịch vụ, nhận/trả xe, bắt đầu/kết thúc sạc, đổi pin |
+| `handlers/incident.py` | Tạo và xem báo cáo sự cố |
+| `handlers/payment.py` | Tra cứu hóa đơn, tạo phiên VNPAY |
+
+`schemas/` tiếp tục kiểm tra dữ liệu. Các module nghiệp vụ như `charging.py`,
+`swaps.py`, `payments.py`, `incidents.py` không bị chuyển vào handler: handler
+nhận HTTP và gọi các hàm đó. Tên hàm handler vẫn được import ở `main.py` để
+giữ cách ghép routes và tương thích với Gateway hiện có.
+
+Handler User đọc `db` qua đầu mối công khai `shared.database`. Các thao tác
+ghi (hồ sơ, booking, sử dụng dịch vụ, báo cáo, thanh toán) gọi callback đồng
+bộ `change(candidate)` rồi `return persist_change(change)`. Callback chỉ
+đổi candidate và chuẩn bị response; không sửa singleton thật hoặc dùng await.
+
+`persist_change()` yêu cầu ghi JSON thành công trước khi áp dụng candidate
+vào RAM. Response lỗi HTTP từ callback bị bỏ toàn bộ thay đổi; exception cũng
+không áp dụng candidate. Lỗi ghi trả 503 và giữ RAM/file cũ. Callback không
+đổi dữ liệu không ghi lại file (ví dụ hết hạn không có kết quả, cập nhật hồ sơ
+cùng giá trị). Đăng ký/khởi tạo tài khoản khi login lần đầu có lưu dữ liệu;
+GET nghiệp vụ không ghi, riêng callback IPN công khai ghi transaction có chữ ký.
+
+Middleware Gateway vẫn khóa chung mọi request cùng worker hết hạn. Chỉ
+Staff còn dùng nhánh lưu tự động của middleware; User/Operator tự commit ở
+handler nên không lưu hai lần. Handler User cũng lưu được khi chạy app User
+riêng, nhưng demo toàn hệ thống vẫn chạy `BE/run_all.py` để có khóa chung,
+quét hết hạn và các API Operator/Staff.
+
+Kiểm thử trong tiến trình con với runtime tạm kiểm tra cả 11 thao tác ghi
+qua app User độc lập (`/api/...`) và Gateway (`/api/v1/user/...`): lỗi ghi
+không đổi RAM/file, tại thời điểm `_write` RAM vẫn là trạng thái trước request,
+request thành công chỉ ghi đúng một lần. Lỗi nghiệp vụ sau khi sửa candidate
+cũng bị bỏ, không tạo giao dịch một phần.
+
+Phần triển khai lưu trữ đã chuyển vào thư mục nội bộ:
+
+```text
+BE/shared/
+├── database.py              # Đầu mối db, persist_change và lỗi dùng chung
+├── persistence/
+│   ├── memory_store.py      # Store RAM, nghiệp vụ hiện có, một singleton db
+│   ├── json_store.py        # Snapshot, ghi JSON an toàn, áp dụng RAM
+│   └── seed_loader.py       # Đọc/kiểm tra seed và runtime JSON
+├── memory_store.py          # Giữ tương thích đường import cũ
+├── json_store.py            # Giữ tương thích đường import cũ
+└── seed_loader.py           # Giữ tương thích đường import cũ
+```
+
+Các module tương thích chỉ re-export lớp/hàm từ `persistence`, không tạo
+store hoặc singleton riêng. `mock_db.py` và adapter Operator cũng lấy db/lỗi
+qua `shared.database`. Seed vẫn là `BE/data/mock_seed.json`; runtime mặc định
+vẫn là `BE/data/runtime_db.json`, cấu hình `BE_RUNTIME_PATH` giữ nguyên.
+
+`run_all.py` ghép routes bằng import theo package `BE.user.main`,
+`BE.operator.main`, `BE.staff.main`; không nạp main bằng tên giả và không
+xóa cache `schemas`. Staff dùng `BE.staff.schemas` để chọn đúng schema khi
+chạy Gateway hoặc nạp độc lập; chỉ đổi import/bootstrap, không đổi nghiệp vụ
+Staff. Chưa tách các handler Staff ra khỏi `staff/main.py` vì phần đó thuộc
+phạm vi nhóm Staff. Operator đã có thư mục handlers riêng.
+
+Kiểm thử import từ thư mục làm việc bên ngoài repository xác nhận cả ba
+role dùng chung db, các import cũ trỏ về cùng lớp/hàm mới, đường dẫn JSON
+không đổi và module `schemas` không liên quan không bị xóa hoặc thay thế.

@@ -1,6 +1,9 @@
 """Kiểm tra tồn kho pin, hoàn giữ và hóa đơn đổi pin theo số lượng."""
 
 import copy
+import os
+from unittest.mock import patch
+from integration_support import VNPAY_TEST_CONFIG
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
@@ -17,6 +20,9 @@ from user.hubs import hub_detail
 
 class BatterySwapTests(unittest.TestCase):
     def setUp(self):
+        config = patch.dict(os.environ, VNPAY_TEST_CONFIG)
+        config.start()
+        self.addCleanup(config.stop)
         self.db = MockDatabaseStore()
         self.payload = {'plan_type': 'swap', 'hub_id': 'hub-02', 'battery_type': 'B48', 'battery_quantity': 2}
 
@@ -50,11 +56,10 @@ class BatterySwapTests(unittest.TestCase):
         self.assertIn('error', self.db.cancel_booking(booking['id']))
         self.assertEqual(before, self.db.__dict__)
         payment = PaymentSubmitRequest(invoice_id=result.invoice.id, method='wallet', amount=50000)
-        pay_invoice(self.db, payment)
-        self.assertEqual(booking['battery_swap_invoice']['status'], 'paid')
+        pending = pay_invoice(self.db, payment)
+        self.assertEqual(booking['battery_swap_invoice']['status'], 'pending')
         before = copy.deepcopy(self.db.__dict__)
-        with self.assertRaises(PaymentError):
-            pay_invoice(self.db, payment)
+        self.assertEqual(pay_invoice(self.db, payment).transaction_id, pending.transaction_id)
         self.assertEqual(before, self.db.__dict__)
 
     def test_invalid_stock_type_vehicle_and_hub_do_not_mutate(self):

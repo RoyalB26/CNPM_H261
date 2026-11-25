@@ -4,6 +4,7 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 import json
 import os
+from integration_support import authorize_client, confirm_payment, VNPAY_TEST_CONFIG
 from pathlib import Path
 import sys
 import tempfile
@@ -14,6 +15,7 @@ def run():
     """Chỉ dùng runtime tạm, import Gateway sau khi đã đặt biến môi trường."""
     with tempfile.TemporaryDirectory(prefix='expiry-gateway-') as directory:
         runtime = Path(directory) / 'runtime.json'
+        os.environ.update(VNPAY_TEST_CONFIG)
         os.environ['BE_RUNTIME_PATH'] = str(runtime)
         os.environ['BE_BOOKING_EXPIRY_INTERVAL_SECONDS'] = '0.005'
         sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -41,6 +43,7 @@ def run():
 
         app.router.routes.append(Route('/_test-expiry-lock', blocking_request))
         with TestClient(app) as client:
+            authorize_client(client, db)
             worker = app.state.expiry_task
             assert not worker.done()
 

@@ -3,6 +3,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
+from integration_support import authorize_client, confirm_payment, VNPAY_TEST_CONFIG
 from pathlib import Path
 import sys
 from unittest.mock import patch
@@ -12,11 +13,14 @@ def run_scenario(mode: str, directory: str) -> None:
     """Kiểm tra HTTP, lưu JSON và khởi động lại mà không dùng runtime của nhóm."""
     runtime = Path(directory).resolve() / "gateway-test.json"
     # Gán trước mọi import Gateway để shared.database không mở runtime thật.
+    os.environ.update(VNPAY_TEST_CONFIG)
     os.environ["BE_RUNTIME_PATH"] = str(runtime)
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from starlette.testclient import TestClient
     from run_all import app
     from shared.database import db, storage
+    from shared.authentication import ensure_accounts
+    ensure_accounts()
     from shared.json_store import PersistenceError
 
     prefix = "/api/v1/user"
@@ -27,15 +31,27 @@ def run_scenario(mode: str, directory: str) -> None:
         db.get_hub('hub-04')['available_parking'] = 1
         storage.commit(lambda candidate: None)
     with TestClient(app) as client:
+        authorize_client(client, db)
         def post(path, payload=None, expected=200):
             response = client.post(prefix + path, **({"json": payload} if payload is not None else {}))
             assert response.status_code == expected, (path, response.status_code, response.text)
-            return response.json()
+            result = response.json()
+            if path == '/invoices/pay' and expected == 200:
+                confirm_payment(client, db, payload['invoice_id'], result)
+            return result
 
         def invoice(service, **selectors):
             response = client.get(prefix + "/invoices/current", params={"type": service, **selectors})
             assert response.status_code == 200, response.text
             return response.json()
+
+        def assign_report(report):
+            """Luồng mới yêu cầu Operator giao phiếu trước khi Staff xử lý."""
+            person = next(p for p in db.staff if p['id'] == 'STF-02')
+            response = client.post('/api/v1/operator/maintenance/assign', json={
+                'ticket_code': report['maintenance_ticket_code'], 'technician_id': person['id'],
+                'technician_name': person['full_name'], 'priority': 'Cảnh báo'})
+            assert response.status_code == 200, response.text
 
         if mode == 'personal':
             # Dùng HTTP thật qua Gateway, mọi thay đổi chỉ lưu vào runtime tạm.
@@ -72,7 +88,7 @@ def run_scenario(mode: str, directory: str) -> None:
                 'ticket_code': ticket, 'payment_method': 'TIỀN MẶT'})
             assert response.status_code == 200, response.text
             assert db.get_bookings()[0]['status'] == 'Hoàn thành'
-            assert invoice('parking', booking_id=booking['id'])['total_amount'] == booking['price']
+            assert invoice('parking', booking_id=booking['id'])['total_amount'] == response.json()['paid_amount']
             hub = db.get_hub('hub-02')
             assert (hub['available_parking'], hub['available_chargers']) == counts
             before, disk = storage.snapshot(), runtime.read_bytes()
@@ -112,6 +128,7 @@ def run_scenario(mode: str, directory: str) -> None:
             response = client.get(prefix + '/hubs/hub-02')
             assert response.status_code == 200, response.text
             assert response.json()['available_batteries'] == 0
+            assign_report(report)
             response = client.post('/api/v1/staff/maintenance/resolve', json={
                 'task_code': report['maintenance_ticket_code'], 'technical_notes': 'Đã kiểm tra nhóm pin B48',
             })
@@ -275,6 +292,7 @@ def run_scenario(mode: str, directory: str) -> None:
         response = client.get(staff_prefix + "/maintenance/tasks")
         assert response.status_code == 200, response.text
         assert report["maintenance_ticket_code"] in response.text
+        assign_report(report)
         response = client.post(staff_prefix + "/maintenance/resolve", json={
             "task_code": report["maintenance_ticket_code"], "technical_notes": "Đã sửa khóa kiểm thử",
         })

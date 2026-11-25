@@ -1,6 +1,9 @@
 """Kiểm tra phiên sạc, hóa đơn kWh và thao tác lặp trong môi trường mock."""
 
 import copy
+import os
+from unittest.mock import patch
+from integration_support import VNPAY_TEST_CONFIG
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
@@ -17,6 +20,9 @@ from user.schemas.payment import PaymentSubmitRequest
 
 class ChargingSessionTests(unittest.TestCase):
     def setUp(self):
+        config = patch.dict(os.environ, VNPAY_TEST_CONFIG)
+        config.start()
+        self.addCleanup(config.stop)
         self.db = MockDatabaseStore()
         self.db.user['active_services']['charging'] = None
         self.booking = self.db.create_booking({'plan_type': 'charging', 'hub_id': 'hub-01',
@@ -44,10 +50,11 @@ class ChargingSessionTests(unittest.TestCase):
             stop_charging(self.db, StopChargingRequest(session_id=session.session_id, power_consumed_kwh=2.4))
         self.assertEqual(before, self.db.__dict__)
         payment = PaymentSubmitRequest(invoice_id=result.invoice.id, method='wallet', amount=8400)
-        pay_invoice(self.db, payment)
-        self.assertEqual(self.booking['charging_invoice']['status'], 'paid')
-        with self.assertRaises(PaymentError):
-            pay_invoice(self.db, payment)
+        pending = pay_invoice(self.db, payment)
+        self.assertEqual(self.booking['charging_invoice']['status'], 'pending')
+        before = copy.deepcopy(self.db.__dict__)
+        self.assertEqual(pay_invoice(self.db, payment).transaction_id, pending.transaction_id)
+        self.assertEqual(before, self.db.__dict__)
 
     def test_invalid_energy_schema(self):
         for value in [-1, float('nan'), float('inf'), True, '2.4', None]:

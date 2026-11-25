@@ -7,7 +7,6 @@ from urllib.parse import urlencode
 from uuid import uuid4
 from starlette.responses import JSONResponse
 from starlette.routing import Route
-from shared.database import db, persist_change
 from shared.notifications import notify
 from .payments import PaymentError, validate_final_invoice
 from .schemas.payment import PaymentProcessResult
@@ -111,6 +110,8 @@ def ipn_result(code, message):
 
 
 async def vnpay_ipn(request):
+    # Hàm tạo URL thanh toán có thể kiểm thử độc lập, không khởi tạo runtime.
+    from shared.database import persist_change
     try:
         config = configuration()
     except PaymentError:

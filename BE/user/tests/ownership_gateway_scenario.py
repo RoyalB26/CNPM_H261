@@ -2,6 +2,7 @@
 
 import copy
 import os
+from integration_support import authorize_client, confirm_payment, VNPAY_TEST_CONFIG
 from pathlib import Path
 import sys
 import tempfile
@@ -9,6 +10,7 @@ import tempfile
 
 def run():
     with tempfile.TemporaryDirectory(prefix='ownership-gateway-') as directory:
+        os.environ.update(VNPAY_TEST_CONFIG)
         os.environ['BE_RUNTIME_PATH'] = str(Path(directory) / 'runtime.json')
         sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
         from starlette.testclient import TestClient
@@ -31,6 +33,9 @@ def run():
         disk = storage.path.read_bytes()
         prefix = '/api/v1/user'
         with TestClient(app) as client:
+            authorize_client(client, db)
+            client.get('/')  # Đợi tác vụ khởi tạo vận hành mới hoàn tất.
+            before, disk = storage.snapshot(), storage.path.read_bytes()
             response = client.get(prefix + '/bookings')
             assert response.status_code == 200, response.text
             assert not {rental['id'], charging['id'], swap['id']} & {b['id'] for b in response.json()}

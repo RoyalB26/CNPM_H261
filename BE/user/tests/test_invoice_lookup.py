@@ -45,6 +45,7 @@ class InvoiceLookupTests(unittest.TestCase):
             "ticket_code": "PRK-TEST", "plate_number": plate,
             "hub_name": "Hub kiểm thử", "slot_id": "P01", "parking_fee": 7000,
             "payment_status": "PAID", "checkin_time": "2026-11-22T10:00:00+07:00",
+            "checkout_time": "2026-11-22T11:00:00+07:00",
         }]
         before = copy.deepcopy(self.db.__dict__)
         invoice = current_invoice(self.db, InvoiceQuery(type="parking"))
