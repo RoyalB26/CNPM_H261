@@ -109,16 +109,16 @@ const ApiService = {
 
   async suggestRoute(payload) {
     if (this.isBackendAvailable) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/hubs/suggest-route`, {
-          method: "POST",
-          headers: this._authHeaders({ "Content-Type": "application/json" }),
-          body: JSON.stringify(payload)
-        });
-        if (res.ok) return await res.json();
-      } catch (e) {
-        console.warn("SuggestRoute API error:", e);
+      const res = await fetch(`${API_BASE_URL}/hubs/suggest-route`, {
+        method: "POST",
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || data.error || `HTTP ${res.status}`);
       }
+      return data;
     }
     return null;
   },
@@ -306,6 +306,98 @@ const ApiService = {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || result.detail || "Không tạo được phiên thanh toán");
     return result;
+  },
+
+  async completeSwap(bookingId) {
+    const res = await fetch(`${API_BASE_URL}/bookings/${encodeURIComponent(bookingId)}/swap`, {
+      method: "POST",
+      headers: this._authHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || data.detail || `HTTP ${res.status}`);
+    return data;
+  },
+
+  async startCharging(bookingId) {
+    const res = await fetch(`${API_BASE_URL}/bookings/${encodeURIComponent(bookingId)}/charging/start`, {
+      method: "POST",
+      headers: this._authHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || data.detail || `HTTP ${res.status}`);
+    return data;
+  },
+
+  async stopCharging(payload) {
+    const res = await fetch(`${API_BASE_URL}/services/charging/stop`, {
+      method: "POST",
+      headers: this._authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || data.detail || `HTTP ${res.status}`);
+    return data;
+  },
+
+  async getChargingSchedules() {
+    const res = await fetch(`${API_BASE_URL}/v1/user/charging/schedules`, {
+      headers: this._authHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+    return (data && data.items) || [];
+  },
+
+  async createChargingSchedule(payload) {
+    const res = await fetch(`${API_BASE_URL}/v1/user/charging/schedules`, {
+      method: "POST",
+      headers: this._authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+    return data;
+  },
+
+  async actionChargingSchedule(scheduleId, action) {
+    const res = await fetch(`${API_BASE_URL}/v1/user/charging/schedules/${encodeURIComponent(scheduleId)}/${encodeURIComponent(action)}`, {
+      method: "POST",
+      headers: this._authHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+    return data;
+  },
+
+  async uploadIncidentPhoto(incidentId, file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${API_BASE_URL}/v1/user/incidents/${encodeURIComponent(incidentId)}/photos`, {
+      method: "POST",
+      headers: this._authHeaders(),
+      body: formData
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+    return data;
+  },
+
+  async fetchAttachmentBlobUrl(photoUrl) {
+    const apiHost = (window.EMobilityConfig && window.EMobilityConfig.API_HOST) || "http://127.0.0.1:8000";
+    const url = photoUrl.startsWith("http") ? photoUrl : `${apiHost}${photoUrl}`;
+    const res = await fetch(url, { headers: this._authHeaders() });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  },
+
+  async getNotifications() {
+    const res = await fetch(`${API_BASE_URL}/v1/user/notifications`, {
+      headers: this._authHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+    return (data && data.items) || [];
   }
 
 };

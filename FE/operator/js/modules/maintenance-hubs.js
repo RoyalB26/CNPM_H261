@@ -19,6 +19,9 @@
         const staffDisplay = t.assigned_staff_name && t.assigned_staff_name !== "Chưa gán"
           ? t.assigned_staff_name
           : "<em>Chưa gán</em>";
+        const photoBtn = t.photo_url
+          ? `<button class="btn-secondary-light" style="padding: 5px 8px; font-size: 11.5px; margin-right: 4px;" onclick="OperatorApp.previewMaintenancePhoto('${t.photo_url}')"><i class="fa-regular fa-image"></i> Ảnh</button>`
+          : "";
         return `
           <tr>
             <td><strong>${t.ticket_code}</strong></td>
@@ -27,10 +30,55 @@
             <td>${t.issue_type}</td>
             <td>${staffDisplay}</td>
             <td><span class="badge ${isAssigned ? 'badge-info' : (isUrgent ? 'badge-danger' : 'badge-warning')}">${t.status}</span></td>
-            <td><button class="btn-primary-dark" style="padding: 5px 12px; font-size: 12px;" onclick="OperatorApp.openAssignMaintenanceModal('${t.ticket_code}')">${isAssigned ? 'Điều chỉnh NV' : 'Phân công'}</button></td>
+            <td>${photoBtn}<button class="btn-primary-dark" style="padding: 5px 12px; font-size: 12px;" onclick="OperatorApp.openAssignMaintenanceModal('${t.ticket_code}')">${isAssigned ? 'Điều chỉnh NV' : 'Phân công'}</button></td>
           </tr>
         `;
       }).join("");
+    },
+
+    async previewMaintenancePhoto(photoUrl) {
+      try {
+        const blobUrl = await OperatorApi.fetchAttachmentBlobUrl(photoUrl);
+        window.open(blobUrl, "_blank");
+      } catch (err) {
+        alert("Không thể tải ảnh đính kèm: " + (err.message || "Lỗi kết nối"));
+      }
+    },
+
+    openCreateMaintenanceModal() {
+      const m = document.getElementById("modalCreateMaintenance");
+      if (m) m.classList.add("show");
+    },
+
+    async submitCreateMaintenance() {
+      const hub_name = document.getElementById("createMaintHub")?.value || "Hub Ga Metro ĐHQG";
+      const device_code = document.getElementById("createMaintDevice")?.value?.trim() || "";
+      const fault_category = document.getElementById("createMaintFault")?.value?.trim() || "";
+      const severity = document.getElementById("createMaintSeverity")?.value || "Cảnh báo";
+      const assigned_staff_id = document.getElementById("createMaintStaff")?.value || null;
+      const description = document.getElementById("createMaintDesc")?.value?.trim() || fault_category;
+
+      if (!device_code || !fault_category) {
+        alert("Vui lòng nhập đầy đủ mã thiết bị và phân loại lỗi.");
+        return;
+      }
+
+      try {
+        await OperatorApi.createMaintenanceTicket({
+          device_code,
+          hub_name,
+          source: "Operator thủ công",
+          fault_category,
+          severity,
+          description: description || "Kiểm tra thiết bị",
+          assigned_staff_id: assigned_staff_id || null
+        });
+        this.closeModal("modalCreateMaintenance");
+        alert(`Đã tạo phiếu bảo trì cho thiết bị ${device_code} thành công!`);
+        await this.loadMaintenance();
+      } catch (err) {
+        alert("Không thể tạo phiếu bảo trì: " + (err.message || "Lỗi dữ liệu"));
+      }
     },
 
     openAssignMaintenanceModal(ticketCode) {
@@ -99,11 +147,119 @@
             <td><span class="badge ${isNormal ? 'badge-success' : 'badge-danger'}">${h.status}</span></td>
             <td>
               <button class="btn-secondary-light" style="padding: 4px 8px; font-size: 11.5px; margin-right: 4px;" onclick="OperatorApp.openHubConfigModal('${h.hub_id}', '${h.hub_name}', ${h.parking_capacity}, ${h.charger_capacity}, ${h.lat}, ${h.lng})">Chỉnh sửa</button>
+              <button class="btn-secondary-light" style="padding: 4px 8px; font-size: 11.5px; margin-right: 4px;" onclick="OperatorApp.openHubDevicesModal('${h.hub_id}', '${h.hub_name}')">Thiết bị</button>
               <button class="btn-secondary-light" style="padding: 4px 8px; font-size: 11.5px; color: var(--accent-red);" onclick="OperatorApp.openDeactivateModal('${h.hub_id}', '${h.hub_name}')">Tạm ngưng</button>
             </td>
           </tr>
         `;
       }).join("");
+    },
+
+    openCreateHubModal() {
+      const m = document.getElementById("modalCreateHub");
+      if (m) m.classList.add("show");
+    },
+
+    async submitCreateHub() {
+      const payload = {
+        hub_code: document.getElementById("newHubCode")?.value?.trim() || "",
+        name: document.getElementById("newHubName")?.value?.trim() || "",
+        address: document.getElementById("newHubAddress")?.value?.trim() || "",
+        lat: parseFloat(document.getElementById("newHubLat")?.value || "10.8765"),
+        lng: parseFloat(document.getElementById("newHubLng")?.value || "106.7985"),
+        parking_capacity: parseInt(document.getElementById("newHubParkingCap")?.value || "30", 10),
+        charger_capacity: parseInt(document.getElementById("newHubChargerCap")?.value || "6", 10),
+        max_power_kw: parseFloat(document.getElementById("newHubMaxPower")?.value || "120"),
+        load_warning_threshold_pct: parseInt(document.getElementById("newHubThreshold")?.value || "85", 10)
+      };
+      if (!payload.hub_code || !payload.name || !payload.address) {
+        alert("Vui lòng nhập đầy đủ mã Hub, tên Hub và địa chỉ.");
+        return;
+      }
+      try {
+        await OperatorApi.createHub(payload);
+        this.closeModal("modalCreateHub");
+        alert(`Đã tạo mới Hub "${payload.name}" thành công!`);
+        await this.loadHubsConfig();
+        if (typeof this.loadKpis === "function") await this.loadKpis();
+      } catch (err) {
+        alert("Không thể tạo Hub: " + (err.message || "Lỗi dữ liệu"));
+      }
+    },
+
+    async openHubDevicesModal(hubId, hubName) {
+      this.currentDevicesHubId = hubId;
+      const titleEl = document.getElementById("hubDevicesModalTitle");
+      if (titleEl) titleEl.innerText = `THIẾT BỊ · ${hubName}`;
+      const m = document.getElementById("modalHubDevices");
+      if (m) m.classList.add("show");
+      await this.loadHubDevicesList();
+    },
+
+    async loadHubDevicesList() {
+      const tbody = document.getElementById("hubDevicesTableBody");
+      if (!tbody || !this.currentDevicesHubId) return;
+      try {
+        const items = await OperatorApi.getHubDevices(this.currentDevicesHubId);
+        if (!items.length) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">Hub này chưa có thiết bị nào.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = items.map(d => {
+          const isEnabled = !d.disabled;
+          const label = d.name || d.battery_type || d.id;
+          return `
+            <tr>
+              <td><strong>${d.id}</strong></td>
+              <td>${d.kind}</td>
+              <td>${label}</td>
+              <td><span class="badge ${isEnabled ? 'badge-success' : 'badge-danger'}">${isEnabled ? (d.status || 'Bật') : 'Vô hiệu'}</span></td>
+              <td>
+                <button class="btn-secondary-light" style="padding: 3px 8px; font-size: 11px;" onclick="OperatorApp.toggleDeviceState('${d.kind}', '${d.id}', ${!isEnabled})">
+                  ${isEnabled ? 'Tắt' : 'Bật'}
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join("");
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #dc2626; padding: 16px;">${err.message || 'Lỗi tải thiết bị'}</td></tr>`;
+      }
+    },
+
+    async toggleDeviceState(kind, deviceId, enabled) {
+      try {
+        await OperatorApi.toggleHubDevice(this.currentDevicesHubId, kind, deviceId, enabled);
+        await this.loadHubDevicesList();
+      } catch (err) {
+        alert("Không thể cập nhật thiết bị: " + (err.message || "Lỗi kết nối"));
+      }
+    },
+
+    async submitCreateHubDevice() {
+      if (!this.currentDevicesHubId) return;
+      const kind = document.getElementById("newDeviceKind")?.value || "bike";
+      const id = document.getElementById("newDeviceId")?.value?.trim() || "";
+      const name = document.getElementById("newDeviceName")?.value?.trim() || "";
+      const param = parseFloat(document.getElementById("newDeviceParam")?.value || "100");
+      if (!id || !name) {
+        alert("Vui lòng nhập mã thiết bị và tên hiển thị.");
+        return;
+      }
+      const payload = { kind, id, name };
+      if (kind === "port") payload.power_kw = param;
+      else if (kind === "bike") payload.battery_level = Math.min(100, Math.max(0, Math.round(param)));
+      else if (kind === "battery") payload.available_count = Math.max(1, Math.round(param));
+
+      try {
+        await OperatorApi.createHubDevice(this.currentDevicesHubId, payload);
+        document.getElementById("newDeviceId").value = "";
+        document.getElementById("newDeviceName").value = "";
+        await this.loadHubDevicesList();
+        await this.loadHubsConfig();
+      } catch (err) {
+        alert("Không thể thêm thiết bị: " + (err.message || "Lỗi dữ liệu"));
+      }
     },
 
     openHubConfigModal(hubId, name, parkingCap, chargerCap, lat, lng) {

@@ -1,0 +1,56 @@
+<!-- Partial: operator/partials/modals/create-maintenance.html -->
+<div id="modalCreateMaintenance" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header-dark">
+      <span>TẠO PHIẾU BẢO TRÌ MỚI</span>
+      <i class="fa-solid fa-xmark" style="cursor: pointer;" onclick="OperatorApp.closeModal('modalCreateMaintenance')"></i>
+    </div>
+    <div class="modal-body">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label class="form-label">Hub *</label>
+          <select id="createMaintHub" class="form-input">
+            <option value="Hub Ga Metro ĐHQG">Hub Ga Metro ĐHQG</option>
+            <option value="Hub Đại học Bách khoa">Hub Đại học Bách khoa</option>
+            <option value="Hub KTX Khu B">Hub KTX Khu B</option>
+            <option value="Hub Đại học Quốc Tế">Hub Đại học Quốc Tế</option>
+            <option value="Hub Thư viện Trung tâm">Hub Thư viện Trung tâm</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Mã thiết bị *</label>
+          <input type="text" id="createMaintDevice" class="form-input" placeholder="VD: XE-024, S01, P08">
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1.3fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label class="form-label">Phân loại lỗi *</label>
+          <input type="text" id="createMaintFault" class="form-input" placeholder="VD: Không mở được khóa">
+        </div>
+        <div>
+          <label class="form-label">Mức độ</label>
+          <select id="createMaintSeverity" class="form-input">
+            <option value="Cảnh báo">Cảnh báo</option>
+            <option value="Khẩn cấp">Khẩn cấp</option>
+            <option value="Thường">Thường</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <label class="form-label">Phân công ngay cho kỹ thuật viên</label>
+        <select id="createMaintStaff" class="form-input">
+          <option value="">-- Chưa phân công --</option>
+          <option value="STF-02">Nguyen Van B (STF-02)</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Mô tả chi tiết *</label>
+        <textarea id="createMaintDesc" class="form-input" rows="2" placeholder="Mô tả tình trạng thiết bị cần kiểm tra..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary-light" onclick="OperatorApp.closeModal('modalCreateMaintenance')">Hủy</button>
+      <button class="btn-primary-dark" onclick="OperatorApp.submitCreateMaintenance()">Tạo phiếu bảo trì</button>
+    </div>
+  </div>
+</div>

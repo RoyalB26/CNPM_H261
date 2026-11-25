@@ -78,29 +78,6 @@
       }
     },
 
-    switchTab(tabId) {
-      document.querySelectorAll(".menu-item").forEach(el => el.classList.remove("active"));
-      document.querySelectorAll(".section-panel").forEach(el => el.classList.remove("active"));
-
-      const targetTab = document.getElementById(tabId);
-      if (targetTab) {
-        targetTab.classList.add("active");
-      }
-
-      const buttons = document.querySelectorAll(".menu-item");
-      buttons.forEach(btn => {
-        if (btn.getAttribute("onclick") && btn.getAttribute("onclick").includes(tabId)) {
-          btn.classList.add("active");
-        }
-      });
-
-      if (tabId === "tab-overview" && this.map) {
-        setTimeout(() => {
-          try { this.map.resize(); } catch (e) {}
-        }, 150);
-      }
-    },
-
     async loadKpis() {
       const data = await OperatorApi.getKpis();
       if (!data) return;

@@ -7,7 +7,11 @@
     <input type="text" placeholder="Tìm kiếm Hub, Phương tiện...">
   </div>
   <div style="display: flex; align-items: center; gap: 16px;">
-    <i class="fa-regular fa-bell" style="font-size: 18px; color: var(--text-muted); cursor: pointer;" onclick="OperatorApp.openTelemetryDrawer()" title="Xem tất cả nhật ký"></i>
+    <button onclick="OperatorApp.openNotificationsModal()" title="Thông báo Operator" style="background: none; border: none; position: relative; cursor: pointer; font-size: 18px; color: var(--text-muted);">
+      <i class="fa-regular fa-bell"></i>
+      <span id="operatorNotifBadge" style="display: none; position: absolute; top: -5px; right: -7px; background: #ef4444; color: #fff; font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 999px;">0</span>
+    </button>
+    <i class="fa-solid fa-list-ul" style="font-size: 17px; color: var(--text-muted); cursor: pointer;" onclick="OperatorApp.openTelemetryDrawer()" title="Xem tất cả nhật ký Telemetry"></i>
     <button class="btn-emergency" onclick="OperatorApp.openEmergencyModal()">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <span>Dừng khẩn cấp</span>

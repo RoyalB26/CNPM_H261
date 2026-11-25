@@ -1,0 +1,77 @@
+<!-- Partial: operator/partials/panels/automation.html -->
+<section id="tab-automation" class="section-panel">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div>
+      <h1 class="page-title">Vận hành tự động & Lịch sạc</h1>
+      <p class="page-subtitle" style="margin-bottom: 0;">Theo dõi phiên ứng phó tải cao tự động, điều chỉnh tải Hub và giám sát lịch sạc mạng lưới</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn-primary-dark" onclick="OperatorApp.triggerAutomationScan()">
+        <i class="fa-solid fa-radar" style="margin-right: 4px;"></i> Quét tải cao ngay
+      </button>
+    </div>
+  </div>
+
+  <div class="sim-card-box" style="margin-bottom: 20px;">
+    <div class="box-title">CẬP NHẬT TẢI CÔNG SUẤT HUB (SIMULATE LOAD)</div>
+    <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 200px;">
+        <label class="form-label">Chọn Hub</label>
+        <select id="autoLoadHubSelect" class="form-input">
+          <option value="hub-01">Hub Ga Metro ĐHQG (hub-01)</option>
+          <option value="hub-02">Hub Đại học Bách khoa (hub-02)</option>
+          <option value="hub-03">Hub KTX Khu B (hub-03)</option>
+          <option value="hub-04">Hub Đại học Quốc Tế (hub-04)</option>
+          <option value="hub-05">Hub Thư viện Trung tâm (hub-05)</option>
+        </select>
+      </div>
+      <div style="width: 180px;">
+        <label class="form-label">Công suất tải (kW)</label>
+        <input type="number" id="autoLoadPowerInput" class="form-input" value="95" min="0" step="5">
+      </div>
+      <button class="btn-secondary-light" onclick="OperatorApp.submitHubLoadUpdate()">Cập nhật tải & Quét</button>
+    </div>
+  </div>
+
+  <div class="data-table-container" style="margin-bottom: 22px;">
+    <div style="padding: 14px 18px; border-bottom: 1px solid var(--border-color); font-weight: 800; font-size: 14px;">
+      PHIÊN TỰ ĐỘNG ĐIỀU PHỐI KHI TẢI CAO
+    </div>
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Mã phiên</th>
+          <th>Hub</th>
+          <th>Mức tải</th>
+          <th>Quy tắc áp dụng</th>
+          <th>Trạng thái</th>
+          <th>Can thiệp</th>
+        </tr>
+      </thead>
+      <tbody id="automationRunsTableBody">
+        <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Chưa có phiên tự động nào.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="data-table-container">
+    <div style="padding: 14px 18px; border-bottom: 1px solid var(--border-color); font-weight: 800; font-size: 14px;">
+      LỊCH SẠC ĐẶT TRƯỚC TRÊN MẠNG LƯỚI
+    </div>
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Mã lịch</th>
+          <th>Hub / Cổng</th>
+          <th>Biển số xe</th>
+          <th>Khung giờ</th>
+          <th>Pin (%)</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody id="operatorChargingSchedulesBody">
+        <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Chưa có lịch sạc nào.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>

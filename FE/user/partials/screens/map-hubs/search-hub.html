@@ -17,6 +17,26 @@
     <button class="segmented-tab" id="filterTabAmenity" style="padding: 6px 14px; font-size: 12px; border-radius: 20px; white-space: nowrap;" onclick="App.setSearchCategory('amenity')">Tiện ích / Điểm đến</button>
   </div>
 
+  <div class="card-box" style="margin-bottom: 14px; padding: 12px 14px; background: #f8fafc;">
+    <div style="font-size: 12px; font-weight: 800; margin-bottom: 8px; color: var(--text-main);">
+      <i class="fa-solid fa-route" style="margin-right: 4px;"></i> GỢI Ý LỘ TRÌNH HUB TỐI ƯU
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+      <select id="routeOriginPreset" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 12px;">
+        <option value="10.8835,106.7820">Điểm đi: KTX Khu B</option>
+        <option value="10.8753,106.8005">Điểm đi: Ga Metro ĐHQG</option>
+        <option value="10.8778,106.8018">Điểm đi: ĐH Quốc Tế</option>
+      </select>
+      <select id="routeDestPreset" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 12px;">
+        <option value="10.8805,106.8055">Điểm đến: ĐH Bách khoa</option>
+        <option value="10.8753,106.8005">Điểm đến: Ga Metro ĐHQG</option>
+        <option value="10.8835,106.7820">Điểm đến: KTX Khu B</option>
+      </select>
+    </div>
+    <button type="button" class="btn-primary" style="padding: 8px 12px; font-size: 12.5px;" onclick="App.suggestOptimalRoute()">Tìm lộ trình Hub phù hợp</button>
+    <div id="routeSuggestResult" style="display: none; margin-top: 10px; font-size: 12.5px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
+  </div>
+
   <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
     <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;" id="searchHeaderLabel">Gợi ý Hub & Địa điểm ĐHQG</span>
     <span style="font-size: 11.5px; color: var(--text-muted);" id="searchResultCount">569 địa điểm</span>

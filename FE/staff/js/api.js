@@ -58,9 +58,10 @@ const StaffApi = {
     };
   },
 
-  async getRelocationTask() {
+  async getRelocationTask(taskId = "") {
+    const path = taskId ? `/relocation/task/${encodeURIComponent(taskId)}` : "/relocation/task";
     try {
-      const res = await fetch(`${STAFF_API_BASE}/relocation/task`, { headers: this._authHeaders() });
+      const res = await fetch(`${STAFF_API_BASE}${path}`, { headers: this._authHeaders() });
       if (res.ok) return await res.json();
     } catch (e) {
       console.warn("StaffApi getRelocationTask fallback:", e);
@@ -165,18 +166,44 @@ const StaffApi = {
     };
   },
 
-  async verifyDevice(taskCode, scannedCode) {
-    try {
-      const res = await fetch(`${STAFF_API_BASE}/maintenance/verify-device`, {
-        method: "POST",
-        headers: this._authHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ task_code: taskCode, scanned_code: scannedCode })
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn("StaffApi verifyDevice fallback:", e);
-    }
-    return { is_match: true, message: "Mã thiết bị trùng khớp 100% với phiếu sự cố." };
+  async verifyDevice(taskCode, scannedQrCode, confirmedSlot = "Ô số 018") {
+    const res = await fetch(`${STAFF_API_BASE}/maintenance/verify-device`, {
+      method: "POST",
+      headers: this._authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ task_code: taskCode, scanned_qr_code: scannedQrCode, confirmed_slot: confirmedSlot })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+    return data;
+  },
+
+  async uploadMaintenancePhoto(taskCode, file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${STAFF_API_BASE}/maintenance/${encodeURIComponent(taskCode)}/photos`, {
+      method: "POST",
+      headers: this._authHeaders(),
+      body: formData
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+    return data;
+  },
+
+  async fetchAttachmentBlobUrl(photoUrl) {
+    const apiHost = (window.EMobilityConfig && window.EMobilityConfig.API_HOST) || "http://127.0.0.1:8000";
+    const url = photoUrl.startsWith("http") ? photoUrl : `${apiHost}${photoUrl}`;
+    const res = await fetch(url, { headers: this._authHeaders() });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  },
+
+  async getNotifications() {
+    const res = await fetch(`${STAFF_API_BASE}/notifications`, { headers: this._authHeaders() });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+    return (data && data.items) || [];
   },
 
   async resolveMaintenance(payload) {

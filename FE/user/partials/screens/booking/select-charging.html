@@ -63,7 +63,23 @@
     Giỏ dịch vụ: chỗ đỗ + lịch sạc, cùng xe và cùng Hub. Có thể chỉnh trước khi đặt.
   </div>
 
-  <button class="btn-primary" style="width: 100%; font-weight: 700; padding: 13px;" onclick="App.navigateTo('screen-review-booking')">
+  <button class="btn-primary" style="width: 100%; font-weight: 700; padding: 13px; margin-bottom: 10px;" onclick="App.navigateTo('screen-review-booking')">
     Kiểm tra đặt chỗ (2)
   </button>
+
+  <div class="card-box" style="margin-top: 10px;">
+    <div style="font-size: 13px; font-weight: 800; margin-bottom: 10px;">Đặt lịch sạc theo khung giờ thực tế</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+      <div>
+        <label class="form-label" style="font-size: 11px;">Bắt đầu (sau N phút)</label>
+        <input type="number" id="schedStartOffsetMin" value="15" min="0" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 12.5px;">
+      </div>
+      <div>
+        <label class="form-label" style="font-size: 11px;">Pin hiện tại (%)</label>
+        <input type="number" id="schedBatteryPct" value="35" min="0" max="100" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 12.5px;">
+      </div>
+    </div>
+    <button type="button" class="btn-secondary" style="padding: 9px 12px; font-size: 12.5px; margin-bottom: 10px;" onclick="App.submitChargingSchedule()">Đặt lịch sạc theo giờ</button>
+    <div id="userChargingSchedulesList" style="font-size: 12px; color: var(--text-muted);">Chưa có lịch sạc nào.</div>
+  </div>
 </section>

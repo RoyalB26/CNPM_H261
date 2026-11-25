@@ -122,6 +122,20 @@
       const noteEl = document.getElementById("reportDetailOperatorNote");
       if (noteEl) noteEl.innerText = inc.operator_note || inc.operatorNote || "Đã tiếp nhận yêu cầu, kỹ thuật viên đang đến kiểm tra thiết bị.";
 
+      const photoWrap = document.getElementById("reportDetailPhotoWrap");
+      const photoImg = document.getElementById("reportDetailPhotoImg");
+      if (photoWrap && photoImg) {
+        if (inc.photo_url) {
+          photoWrap.style.display = "block";
+          ApiService.fetchAttachmentBlobUrl(inc.photo_url)
+            .then(url => { photoImg.src = url; })
+            .catch(() => { photoWrap.style.display = "none"; });
+        } else {
+          photoWrap.style.display = "none";
+          photoImg.removeAttribute("src");
+        }
+      }
+
       this.navigateTo("screen-report-detail");
     },
 
@@ -165,7 +179,21 @@
         description: desc
       };
 
-      const newInc = await ApiService.reportIncident(payload);
+      let newInc = await ApiService.reportIncident(payload);
+      const photoInput = document.getElementById("incPhotoFile");
+      if (photoInput && photoInput.files && photoInput.files[0] && newInc && newInc.id) {
+        try {
+          const uploaded = await ApiService.uploadIncidentPhoto(newInc.id, photoInput.files[0]);
+          if (uploaded && uploaded.photo_url) {
+            newInc.photo_url = uploaded.photo_url;
+          }
+          photoInput.value = "";
+          const lbl = document.getElementById("incPhotoLabel");
+          if (lbl) lbl.innerText = "Thêm ảnh minh họa PNG/JPEG (tùy chọn)";
+        } catch (err) {
+          this.showToast(err.message || "Upload ảnh thất bại (sự cố vẫn đã được gửi).");
+        }
+      }
       AppState.incidents.unshift(newInc);
 
       const sentIdEl = document.getElementById("createdIncidentId");

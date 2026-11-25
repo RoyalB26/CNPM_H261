@@ -6,16 +6,16 @@
       <div class="sub-label">CẬP NHẬT KẾT QUẢ</div>
       <div class="main-label">Báo cáo bảo trì</div>
     </div>
-    <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);">MT-102</span>
+    <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);" id="maintReportTaskCode">MT-102</span>
   </div>
 
   <!-- Black Checked Device Box -->
   <div class="dark-ticket-card" style="margin-bottom: 14px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
       <span style="font-size: 11px; color: #94a3b8; font-weight: 700;">THIẾT BỊ ĐÃ KIỂM TRA</span>
-      <span style="font-size: 11px; color: #94a3b8;">Nhiệm vụ #102</span>
+      <span style="font-size: 11px; color: #94a3b8;" id="maintReportHeaderId">Nhiệm vụ #102</span>
     </div>
-    <div style="font-size: 15px; font-weight: 800;">BK-EB-018 · Hub KTX Khu A</div>
+    <div style="font-size: 15px; font-weight: 800;" id="maintReportDeviceLabel">BK-EB-018 · Hub KTX Khu A</div>
   </div>
 
   <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; margin-bottom: 6px;">
@@ -54,10 +54,11 @@
     <span>ẢNH XÁC NHẬN SAU SỬA</span>
     <span style="font-size: 11px; color: var(--text-muted);">Không bắt buộc</span>
   </div>
-  <div class="dashed-upload-box" style="margin-bottom: 24px;" onclick="alert('Đã đính kèm ảnh kiểm tra nghiệm thu')">
+  <label class="dashed-upload-box" style="margin-bottom: 24px; cursor: pointer;">
     <i class="fa-solid fa-camera" style="font-size: 18px; margin-bottom: 6px;"></i>
-    <span style="font-size: 12px; font-weight: 700;">ĐÍNH KÈM ẢNH</span>
-  </div>
+    <span id="maintPhotoLabel" style="font-size: 12px; font-weight: 700;">ĐÍNH KÈM ẢNH PNG/JPEG</span>
+    <input type="file" id="maintPhotoFile" accept="image/png,image/jpeg" style="display: none;" onchange="document.getElementById('maintPhotoLabel').innerText = this.files[0] ? this.files[0].name : 'ĐÍNH KÈM ẢNH PNG/JPEG'">
+  </label>
 
   <button class="btn-staff-primary" onclick="StaffApp.submitMaintResult()">
     <span>GỬI KẾT QUẢ BẢO TRÌ</span>

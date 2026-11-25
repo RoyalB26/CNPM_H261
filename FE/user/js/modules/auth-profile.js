@@ -178,6 +178,34 @@
 
       document.getElementById("radioPrefWallet").classList.toggle("checked", isWallet);
       document.getElementById("radioPrefBank").classList.toggle("checked", !isWallet);
+    },
+
+    async openUserNotifications() {
+      const box = document.getElementById("userNotificationsBox");
+      const list = document.getElementById("userNotificationsList");
+      if (!box || !list) return;
+      const isShown = box.style.display === "block";
+      if (isShown) {
+        box.style.display = "none";
+        return;
+      }
+      box.style.display = "block";
+      list.innerHTML = "Đang tải thông báo...";
+      try {
+        const items = await ApiService.getNotifications();
+        if (!items.length) {
+          list.innerHTML = "Chưa có thông báo mới.";
+          return;
+        }
+        list.innerHTML = items.map(n => `
+          <div style="border-top: 1px solid var(--border-color); padding: 8px 0;">
+            <strong style="color: var(--text-main);">${n.title || "Thông báo"}</strong>
+            <div>${n.message || n.body || ""}</div>
+          </div>
+        `).join("");
+      } catch (err) {
+        list.innerHTML = err.message || "Không thể tải thông báo.";
+      }
     }
   };
 })(window);

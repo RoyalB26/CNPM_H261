@@ -177,7 +177,8 @@
             hub_name: t.hub_name || "N/A",
             assigned_staff_id: t.assigned_staff_id || null,
             assigned_staff_name: t.assigned_staff_name || "Chưa gán",
-            status: t.status || "Chờ xử lý"
+            status: t.status || "Chờ xử lý",
+            photo_url: t.photo_url || null
           }));
         }
       } catch (e) {
@@ -352,11 +353,186 @@
           headers: this._authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(payload)
         });
-        if (res.ok) return await res.json();
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || data.message || `HTTP ${res.status}`);
+        return data;
       } catch (e) {
-        console.warn("OperatorApi saveFallbackRule fallback:", e);
+        console.warn("OperatorApi saveFallbackRule error:", e);
+        throw e;
       }
-      return { success: true };
+    },
+
+    async createHub(payload) {
+      const res = await fetch(`${OPERATOR_API_BASE}/hubs`, {
+        method: "POST",
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || data.message || `HTTP ${res.status}`);
+      return data;
+    },
+
+    async getHubDevices(hubId) {
+      const res = await fetch(`${OPERATOR_API_BASE}/hubs/${encodeURIComponent(hubId)}/devices`, {
+        headers: this._authHeaders()
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      return (data && data.items) || [];
+    },
+
+    async createHubDevice(hubId, payload) {
+      const res = await fetch(`${OPERATOR_API_BASE}/hubs/${encodeURIComponent(hubId)}/devices`, {
+        method: "POST",
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      return data;
+    },
+
+    async toggleHubDevice(hubId, kind, deviceId, enabled) {
+      const res = await fetch(`${OPERATOR_API_BASE}/hubs/${encodeURIComponent(hubId)}/devices/${encodeURIComponent(kind)}/${encodeURIComponent(deviceId)}`, {
+        method: "PUT",
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ enabled: Boolean(enabled) })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      return data;
+    },
+
+    async createMaintenanceTicket(payload) {
+      const res = await fetch(`${OPERATOR_API_BASE}/maintenance/tickets`, {
+        method: "POST",
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || data.message || `HTTP ${res.status}`);
+      return data;
+    },
+
+    async getChargingSchedules() {
+      const res = await fetch(`${OPERATOR_API_BASE}/charging/schedules`, {
+        headers: this._authHeaders()
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      return (data && data.items) || [];
+    },
+
+    async getAutomationRuns() {
+      const res = await fetch(`${OPERATOR_API_BASE}/automation/runs`, {
+        headers: this._authHeaders()
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      return (data && data.items) || [];
+    },
+
+    async scanAutomation() {
+      const res = await fetch(`${OPERATOR_API_BASE}/automation/scan`, {
+        method: "POST",
+        headers: this._authHeaders()
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      return (data && data.items) || [];
+    },
+
+    async interveneAutomationRun(runId, payload) {
+      const res = await fetch(`${OPERATOR_API_BASE}/automation/runs/${encodeURIComponent(runId)}`, {
+        method: "PUT",
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      return data;
+    },
+
+    async updateHubLoad(hubId, powerDemandKw) {
+      const res = await fetch(`${OPERATOR_API_BASE}/hubs/${encodeURIComponent(hubId)}/load`, {
+        method: "PUT",
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ power_demand_kw: Number(powerDemandKw) })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      return data;
+    },
+
+    async validateSimulation(params) {
+      const res = await fetch(`${OPERATOR_API_BASE}/simulation/validate`, {
+        method: "POST",
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(params)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || data.message || `HTTP ${res.status}`);
+      return data;
+    },
+
+    async captureSimulationSnapshot(params = {}) {
+      const res = await fetch(`${OPERATOR_API_BASE}/simulation/snapshots`, {
+        method: "POST",
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(params)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || data.message || `HTTP ${res.status}`);
+      return data;
+    },
+
+    async retrySimulation(simId) {
+      const res = await fetch(`${OPERATOR_API_BASE}/simulation/${encodeURIComponent(simId)}/retry`, {
+        method: "POST",
+        headers: this._authHeaders()
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || data.message || `HTTP ${res.status}`);
+      return data;
+    },
+
+    async saveSimulationPlan(simId, operationPlan) {
+      const res = await fetch(`${OPERATOR_API_BASE}/simulation/${encodeURIComponent(simId)}/save`, {
+        method: "POST",
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ operation_plan: operationPlan })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || data.message || `HTTP ${res.status}`);
+      return data;
+    },
+
+    async getSimulationDetail(simId) {
+      const res = await fetch(`${OPERATOR_API_BASE}/simulation/history/${encodeURIComponent(simId)}`, {
+        headers: this._authHeaders()
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || data.message || `HTTP ${res.status}`);
+      return data;
+    },
+
+    async getNotifications() {
+      const res = await fetch(`${OPERATOR_API_BASE}/notifications`, {
+        headers: this._authHeaders()
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      return (data && data.items) || [];
+    },
+
+    async fetchAttachmentBlobUrl(photoUrl) {
+      const apiHost = (window.EMobilityConfig && window.EMobilityConfig.API_HOST) || "http://127.0.0.1:8000";
+      const url = photoUrl.startsWith("http") ? photoUrl : `${apiHost}${photoUrl}`;
+      const res = await fetch(url, { headers: this._authHeaders() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      return URL.createObjectURL(blob);
     }
   };
 

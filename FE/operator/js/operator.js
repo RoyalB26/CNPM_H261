@@ -61,7 +61,9 @@ const OperatorApp = {
       this.loadMaintenance(),
       this.loadHubsConfig(),
       this.loadSimSourceState(),
-      this.loadSimHistory()
+      this.loadSimHistory(),
+      this.loadAutomationTab ? this.loadAutomationTab() : Promise.resolve(),
+      this.loadOperatorNotifications ? this.loadOperatorNotifications() : Promise.resolve()
     ]);
 
     this.initMap();
@@ -116,6 +118,8 @@ const OperatorApp = {
       await this.loadMaintenance();
     } else if (tabId === "tab-hubs") {
       await this.loadHubsConfig();
+    } else if (tabId === "tab-automation") {
+      await this.loadAutomationTab();
     }
   },
 
@@ -138,6 +142,7 @@ if (window.OperatorModules) {
     window.OperatorModules.Overview,
     window.OperatorModules.Relocation,
     window.OperatorModules.MaintenanceHubs,
+    window.OperatorModules.Automation,
     window.OperatorModules.Simulation
   );
 }

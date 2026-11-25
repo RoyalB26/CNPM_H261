@@ -42,8 +42,65 @@
   async openMaintenanceDetail(taskCode) {
     this.currentMaintTaskCode = taskCode;
     const detail = await StaffApi.getMaintenanceDetail(taskCode);
+    if (detail) {
+      this.currentMaintDetail = detail;
+      const setTxt = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined && v !== null) el.innerText = v; };
+      setTxt("maintDetailTaskTitle", `Nhiệm vụ ${detail.task_code || taskCode}`);
+      setTxt("maintDetailPriority", detail.priority || "THƯỜNG");
+      setTxt("maintDetailCategory", detail.category_label || "BẢO TRÌ");
+      setTxt("maintDetailHeadline", detail.title || taskCode);
+      setTxt("maintDetailReporter", detail.reported_by || "Hệ thống");
+      setTxt("maintDetailDeviceCode", detail.device_code || "N/A");
+      setTxt("maintDetailLocation", detail.exact_location || detail.location_hub || "Hub ĐHQG");
+      setTxt("maintDetailDescription", detail.reporter_notes || detail.description || "");
+      setTxt("maintDetailPhotoName", detail.attachment_filename || (detail.photo_url ? "anh-su-co.jpg" : "Không có ảnh đính kèm"));
+
+      setTxt("maintScanTaskCode", detail.task_code || taskCode);
+      const scanInput = document.getElementById("maintScanCodeInput");
+      if (scanInput) scanInput.value = detail.device_code || "BK-EB-018";
+      setTxt("maintReportTaskCode", detail.task_code || taskCode);
+      setTxt("maintReportHeaderId", `Nhiệm vụ ${detail.task_code || taskCode}`);
+      setTxt("maintReportDeviceLabel", `${detail.device_code || "Thiết bị"} · ${detail.exact_location || detail.location_hub || ""}`);
+
+      const photoImg = document.getElementById("maintDetailPhotoImg");
+      const photoIcon = document.getElementById("maintDetailPhotoIcon");
+      if (photoImg && photoIcon) {
+        if (detail.photo_url) {
+          StaffApi.fetchAttachmentBlobUrl(detail.photo_url)
+            .then(url => {
+              photoImg.src = url;
+              photoImg.style.display = "block";
+              photoIcon.style.display = "none";
+            })
+            .catch(() => {
+              photoImg.style.display = "none";
+              photoIcon.style.display = "block";
+            });
+        } else {
+          photoImg.style.display = "none";
+          photoIcon.style.display = "block";
+        }
+      }
+    }
 
     this.goToScreen("screen-maint-detail");
+  },
+
+  async verifyScannedDevice() {
+    const taskCode = this.currentMaintTaskCode || "MT-102";
+    const qrCode = document.getElementById("maintScanCodeInput")?.value?.trim() || "BK-EB-018";
+    try {
+      const res = await StaffApi.verifyDevice(taskCode, qrCode);
+      const statusEl = document.getElementById("maintScanStatusText");
+      if (statusEl) statusEl.innerText = "ĐÃ XÁC THỰC";
+      const titleEl = document.getElementById("maintVerifyBannerTitle");
+      if (titleEl) titleEl.innerText = "Xác thực thành công";
+      const descEl = document.getElementById("maintVerifyBannerDesc");
+      if (descEl) descEl.innerText = res.message || `Đúng thiết bị ${qrCode}`;
+      this.goToScreen("screen-maint-report");
+    } catch (err) {
+      alert("Xác thực thiết bị thất bại: " + (err.message || "Mã QR không khớp"));
+    }
   },
 
   openMaintIncidentReport() {
@@ -71,11 +128,28 @@
   },
 
   async submitMaintResult() {
+    const taskCode = this.currentMaintTaskCode || "MT-102";
     const notes = document.getElementById("maintTechNotes") ? document.getElementById("maintTechNotes").value : "";
+    let photoUrl = null;
+    const photoInput = document.getElementById("maintPhotoFile");
+    if (photoInput && photoInput.files && photoInput.files[0]) {
+      try {
+        const up = await StaffApi.uploadMaintenancePhoto(taskCode, photoInput.files[0]);
+        if (up && up.photo_url) photoUrl = up.photo_url;
+        photoInput.value = "";
+        const lbl = document.getElementById("maintPhotoLabel");
+        if (lbl) lbl.innerText = "ĐÍNH KÈM ẢNH PNG/JPEG";
+      } catch (err) {
+        alert("Lỗi upload ảnh hiện trường: " + (err.message || "Ảnh không hợp lệ"));
+        return;
+      }
+    }
+
     const result = await StaffApi.resolveMaintenance({
-      task_code: this.currentMaintTaskCode || "MT-102",
+      task_code: taskCode,
       outcome: this.maintOutcome || "FIXED_ON_SITE",
-      technical_notes: notes
+      technical_notes: notes,
+      ...(photoUrl ? { photo_attachment_url: photoUrl } : {})
     });
 
     if (!result || !result.success) {

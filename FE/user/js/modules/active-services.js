@@ -242,17 +242,79 @@
     }
   },
 
+  async startChargingSession() {
+    const bookingId = AppState.selectedBookingId
+      || (AppState.bookings.find(b => (b.plan_type === "charging" || b.plan_type === "personal") && b.status === "Đã xác nhận") || {}).id;
+    if (!bookingId) {
+      this.showToast("Không tìm thấy mã đặt chỗ sạc khả dụng!");
+      return;
+    }
+    try {
+      const res = await ApiService.startCharging(bookingId);
+      if (res && res.charging) {
+        AppState.activeServices = { ...AppState.activeServices, has_active: true, charging: res.charging };
+        this.renderActiveServices(AppState.activeServices);
+      }
+      this.showToast("Đã kích hoạt cổng sạc an toàn!");
+      this.navigateTo("screen-charging-active");
+    } catch (err) {
+      this.showToast(err.message || "Không thể bắt đầu phiên sạc.");
+    }
+  },
+
   finishParkingExit() {
     this.showToast("Đã xác nhận xe rời chỗ đỗ P08!");
     this.navigateTo("screen-map-home");
   },
 
-  finishChargingSession() {
+  async finishChargingSession() {
+    const activeChg = AppState.activeServices?.charging;
+    const sessionId = activeChg?.session_id;
+    const kwh = parseFloat(document.getElementById("stopChargingKwhInput")?.value || "2.4") || 2.4;
+    const finalPct = parseInt(document.getElementById("stopChargingFinalPct")?.value || "80", 10) || 80;
+    if (sessionId) {
+      try {
+        const res = await ApiService.stopCharging({
+          session_id: sessionId,
+          power_consumed_kwh: kwh,
+          final_charge: finalPct
+        });
+        if (res && res.invoice) {
+          AppState.currentInvoice.id = res.invoice.id;
+          AppState.currentInvoice.amount = res.invoice.total_amount;
+        }
+        await this.loadActiveServices();
+        this.showToast(`Đã dừng sạc (${res.total_fee?.toLocaleString() || ""}đ).`);
+        this.navigateTo("screen-invoice-charging");
+        return;
+      } catch (err) {
+        this.showToast(err.message || "Không thể dừng phiên sạc.");
+        return;
+      }
+    }
     this.showToast("Đã dừng sạc điện an toàn.");
     this.navigateTo("screen-invoice-charging");
   },
 
-  finishBatterySwap() {
+  async finishBatterySwap() {
+    const bookingId = AppState.selectedBookingId
+      || (AppState.bookings.find(b => (b.plan_type === "swap" || b.plan_type === "battery_swap") && b.status === "Đã xác nhận") || {}).id;
+    if (bookingId) {
+      try {
+        const res = await ApiService.completeSwap(bookingId);
+        if (res && res.invoice) {
+          AppState.currentInvoice.id = res.invoice.id;
+          AppState.currentInvoice.amount = res.invoice.total_amount;
+        }
+        await this.loadBookings();
+        this.showToast("Đã xác nhận đổi pin thành công!");
+        this.navigateTo("screen-invoice-swap");
+        return;
+      } catch (err) {
+        this.showToast(err.message || "Không thể xác nhận đổi pin.");
+        return;
+      }
+    }
     this.showToast("Đã nhận pin 100% thành công.");
     this.navigateTo("screen-invoice-swap");
   },

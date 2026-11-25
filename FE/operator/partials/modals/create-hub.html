@@ -1,0 +1,65 @@
+<!-- Partial: operator/partials/modals/create-hub.html -->
+<div id="modalCreateHub" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header-dark">
+      <span>TẠO MỚI MOBILITY HUB</span>
+      <i class="fa-solid fa-xmark" style="cursor: pointer;" onclick="OperatorApp.closeModal('modalCreateHub')"></i>
+    </div>
+    <div class="modal-body">
+      <div style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label class="form-label">Mã Hub *</label>
+          <input type="text" id="newHubCode" class="form-input" placeholder="HUB-06" value="HUB-06">
+        </div>
+        <div>
+          <label class="form-label">Tên Hub *</label>
+          <input type="text" id="newHubName" class="form-input" placeholder="Hub Khoa học Tự nhiên">
+        </div>
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label class="form-label">Địa chỉ *</label>
+        <input type="text" id="newHubAddress" class="form-input" placeholder="Khu đô thị ĐHQG - HCM">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label class="form-label">Vĩ độ (Lat) *</label>
+          <input type="number" step="0.0001" id="newHubLat" class="form-input" value="10.8765">
+        </div>
+        <div>
+          <label class="form-label">Kinh độ (Lng) *</label>
+          <input type="number" step="0.0001" id="newHubLng" class="form-input" value="106.7985">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label class="form-label">Sức chứa chỗ đỗ *</label>
+          <input type="number" min="1" max="1000" id="newHubParkingCap" class="form-input" value="30">
+        </div>
+        <div>
+          <label class="form-label">Số cổng sạc *</label>
+          <input type="number" min="0" max="200" id="newHubChargerCap" class="form-input" value="6">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div>
+          <label class="form-label">Công suất tối đa (kW) *</label>
+          <input type="number" min="10" step="10" id="newHubMaxPower" class="form-input" value="120">
+        </div>
+        <div>
+          <label class="form-label">Ngưỡng cảnh báo (%)</label>
+          <input type="number" min="50" max="100" id="newHubThreshold" class="form-input" value="85">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary-light" onclick="OperatorApp.closeModal('modalCreateHub')">Hủy</button>
+      <button class="btn-primary-dark" onclick="OperatorApp.submitCreateHub()">
+        <i class="fa-solid fa-plus" style="margin-right: 4px;"></i> Tạo mới Hub
+      </button>
+    </div>
+  </div>
+</div>

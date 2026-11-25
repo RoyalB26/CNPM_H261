@@ -6,12 +6,12 @@
       <div class="sub-label">XÁC NHẬN THIẾT BỊ</div>
       <div class="main-label">Quét mã QR</div>
     </div>
-    <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);">MT-102</span>
+    <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);" id="maintScanTaskCode">MT-102</span>
   </div>
 
   <div style="margin-bottom: 12px;">
     <div style="font-size: 13px; font-weight: 800;">QUÉT QR XÁC NHẬN VỊ TRÍ</div>
-    <div style="font-size: 12px; color: var(--text-muted);">Đưa mã QR trên thiết bị vào giữa khung quét.</div>
+    <div style="font-size: 12px; color: var(--text-muted);">Nhập hoặc quét mã QR trên thiết bị cần kiểm tra.</div>
   </div>
 
   <!-- Camera Scanner with Viewfinder -->
@@ -27,28 +27,25 @@
   </div>
 
   <!-- Recognized Result Card -->
-  <div style="font-size: 12px; font-weight: 800; margin-bottom: 6px;">KẾT QUẢ NHẬN DIỆN</div>
-  <div class="staff-card" style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-    <div style="display: flex; align-items: center; gap: 12px;">
+  <div style="font-size: 12px; font-weight: 800; margin-bottom: 6px;">MÃ QR THIẾT BỊ QUÉT ĐƯỢC</div>
+  <div class="staff-card" style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px;">
+    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
       <i class="fa-solid fa-qrcode" style="font-size: 26px;"></i>
-      <div>
-        <div style="font-size: 11px; color: var(--text-muted);">MÃ THIẾT BỊ</div>
-        <strong style="font-size: 15px;">BK-EB-018</strong>
-      </div>
+      <input type="text" id="maintScanCodeInput" value="BK-EB-018" style="width: 100%; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; font-weight: 700;">
     </div>
-    <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">ĐÃ NHẬN DIỆN</span>
+    <span style="font-size: 12px; font-weight: 700; color: var(--text-main);" id="maintScanStatusText">CHỜ XÁC THỰC</span>
   </div>
 
   <!-- Verification Success Banner matching 8.jpg -->
   <div class="dark-notice-banner" style="margin-bottom: 24px;">
     <div class="notice-icon" style="background: #ffffff; color: #0f172a;"><i class="fa-solid fa-check"></i></div>
     <div>
-      <div style="font-weight: 800; font-size: 13.5px; margin-bottom: 2px;">Xác thực thành công</div>
-      <div style="font-size: 11.5px; color: #94a3b8;">Đúng thiết bị tại Hub KTX Khu A · Ô số 018</div>
+      <div style="font-weight: 800; font-size: 13.5px; margin-bottom: 2px;" id="maintVerifyBannerTitle">Sẵn sàng xác thực</div>
+      <div style="font-size: 11.5px; color: #94a3b8;" id="maintVerifyBannerDesc">Nhấn xác nhận thiết bị để đối chiếu với Backend</div>
     </div>
   </div>
 
-  <button class="btn-staff-primary" onclick="StaffApp.goToScreen('screen-maint-report')">
+  <button class="btn-staff-primary" onclick="StaffApp.verifyScannedDevice()">
     <span>XÁC NHẬN THIẾT BỊ</span>
   </button>
   <button class="btn-staff-secondary" onclick="StaffApp.openMaintIncidentReport()">

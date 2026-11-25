@@ -350,5 +350,69 @@
     }
   },
 
+  async loadChargingSchedules() {
+    const listEl = document.getElementById("userChargingSchedulesList");
+    if (!listEl) return;
+    try {
+      const items = await ApiService.getChargingSchedules();
+      if (!items.length) {
+        listEl.innerHTML = "Chưa có lịch sạc nào.";
+        return;
+      }
+      listEl.innerHTML = items.map(s => `
+        <div style="border-top: 1px solid var(--border-color); padding: 8px 0; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+          <div>
+            <strong>${s.id}</strong> · ${s.hub_id} (${s.port_id || "Hàng đợi"})<br>
+            <span>${(s.starts_at || "").slice(11, 16)} - ${(s.ends_at || "").slice(11, 16)} · ${s.status}</span>
+          </div>
+          <div style="display: flex; gap: 4px;">
+            ${s.status === "RESERVED" ? `<button type="button" class="btn-primary" style="padding: 4px 8px; font-size: 11px; width: auto;" onclick="App.runChargingScheduleAction('${s.id}', 'start')">Sạc</button>` : ""}
+            ${["RESERVED", "WAITING"].includes(s.status) ? `<button type="button" class="btn-secondary" style="padding: 4px 8px; font-size: 11px; width: auto;" onclick="App.runChargingScheduleAction('${s.id}', 'cancel')">Hủy</button>` : ""}
+          </div>
+        </div>
+      `).join("");
+    } catch (e) {
+      listEl.innerHTML = "Đăng nhập để xem lịch sạc.";
+    }
+  },
+
+  async submitChargingSchedule() {
+    const hubId = AppState.bookingDraft.hubId || "hub-01";
+    const plate = (document.getElementById("chargingPersonalVehicle")?.value || "59-X1 123.45").split("·").pop().trim();
+    const offsetMin = Math.max(0, parseInt(document.getElementById("schedStartOffsetMin")?.value || "15", 10));
+    const batteryPct = Math.min(100, Math.max(0, parseInt(document.getElementById("schedBatteryPct")?.value || "35", 10)));
+    const start = new Date(Date.now() + offsetMin * 60000);
+    const end = new Date(start.getTime() + 60 * 60000);
+    try {
+      const row = await ApiService.createChargingSchedule({
+        hub_id: hubId,
+        port_id: null,
+        plate_number: plate,
+        starts_at: start.toISOString(),
+        ends_at: end.toISOString(),
+        battery_pct: batteryPct,
+        join_queue: true
+      });
+      this.showToast(`Đã đặt lịch sạc ${row.id} (${row.status})!`);
+      await this.loadChargingSchedules();
+    } catch (err) {
+      this.showToast(err.message || "Không thể đặt lịch sạc.");
+    }
+  },
+
+  async runChargingScheduleAction(scheduleId, action) {
+    try {
+      const res = await ApiService.actionChargingSchedule(scheduleId, action);
+      this.showToast(action === "start" ? "Đã bắt đầu phiên sạc theo lịch!" : "Đã hủy lịch sạc.");
+      await this.loadChargingSchedules();
+      if (action === "start" && res && res.booking_id) {
+        await this.loadActiveServices();
+        this.navigateTo("screen-charging-active");
+      }
+    } catch (err) {
+      this.showToast(err.message || "Thao tác lịch sạc thất bại.");
+    }
+  },
+
   };
 })(window);
