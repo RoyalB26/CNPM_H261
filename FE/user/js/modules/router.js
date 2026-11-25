@@ -84,6 +84,8 @@
         this.updateReviewParkingView();
       } else if (screenId === "screen-review-swap") {
         this.updateReviewSwapView();
+      } else if (screenId === "screen-select-charging" && typeof this.loadChargingSchedules === "function") {
+        this.loadChargingSchedules();
       }
 
       if (screenId === "screen-map-home" && this.mapInstance) {

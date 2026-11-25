@@ -4,6 +4,18 @@
     <button class="nav-back" onclick="App.navigateTo('screen-charging-active')"><i class="fa-solid fa-arrow-left"></i></button>
     <span class="nav-title">Dừng phiên sạc</span>
   </div>
-  <p style="font-size: 14px; margin-bottom: 24px;">Hệ thống sẽ ngắt điện trụ sạc và tạo hóa đơn điện năng tiêu thụ.</p>
+  <p style="font-size: 14px; margin-bottom: 16px;">Hệ thống sẽ ngắt điện trụ sạc và tạo hóa đơn điện năng tiêu thụ.</p>
+  <div class="form-group">
+    <label class="form-label">Điện năng đã sạc (kWh)</label>
+    <div class="input-box">
+      <input type="number" id="stopChargingKwhInput" step="0.1" min="0.1" value="2.4">
+    </div>
+  </div>
+  <div class="form-group" style="margin-bottom: 20px;">
+    <label class="form-label">Mức pin sau sạc (%)</label>
+    <div class="input-box">
+      <input type="number" id="stopChargingFinalPct" min="1" max="100" value="80">
+    </div>
+  </div>
   <button class="btn-primary" onclick="App.finishChargingSession()">Xác nhận dừng sạc & Xem hóa đơn</button>
 </section>

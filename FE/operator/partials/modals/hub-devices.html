@@ -1,0 +1,62 @@
+<!-- Partial: operator/partials/modals/hub-devices.html -->
+<div id="modalHubDevices" class="modal-backdrop">
+  <div class="modal-dialog" style="max-width: 680px;">
+    <div class="modal-header-dark">
+      <span id="hubDevicesModalTitle">QUẢN LÝ THIẾT BỊ HUB</span>
+      <i class="fa-solid fa-xmark" style="cursor: pointer;" onclick="OperatorApp.closeModal('modalHubDevices')"></i>
+    </div>
+    <div class="modal-body">
+      <div style="max-height: 260px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 16px;">
+        <table class="styled-table" style="margin: 0;">
+          <thead>
+            <tr>
+              <th>Mã TB</th>
+              <th>Loại</th>
+              <th>Tên</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="hubDevicesTableBody">
+            <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">Đang tải thiết bị...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">
+        <div style="font-size: 12px; font-weight: 800; margin-bottom: 10px;">THÊM THIẾT BỊ MỚI VÀO HUB</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 10px; margin-bottom: 10px;">
+          <div>
+            <label class="form-label">Loại thiết bị</label>
+            <select id="newDeviceKind" class="form-input">
+              <option value="bike">Xe đạp điện (bike)</option>
+              <option value="port">Cổng sạc (port)</option>
+              <option value="slot">Chỗ đỗ (slot)</option>
+              <option value="battery">Khay pin (battery)</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Mã thiết bị *</label>
+            <input type="text" id="newDeviceId" class="form-input" placeholder="VD: XE-099 / S09">
+          </div>
+          <div>
+            <label class="form-label">Tên hiển thị *</label>
+            <input type="text" id="newDeviceName" class="form-input" placeholder="Xe đạp điện mới">
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: flex-end;">
+          <div style="flex: 1;">
+            <label class="form-label">Pin (%) / Công suất (kW) / Số lượng pin</label>
+            <input type="number" id="newDeviceParam" class="form-input" value="100" min="1">
+          </div>
+          <button type="button" class="btn-primary-dark" onclick="OperatorApp.submitCreateHubDevice()">
+            <i class="fa-solid fa-plus" style="margin-right: 4px;"></i> Thêm thiết bị
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary-light" onclick="OperatorApp.closeModal('modalHubDevices')">Đóng</button>
+    </div>
+  </div>
+</div>

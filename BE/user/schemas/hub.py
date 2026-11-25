@@ -80,9 +80,13 @@ class RouteSuggestionRequest(BaseModel):
     dest_name: Optional[str] = None
     dest_lat: float = Field(..., ge=-90, le=90, allow_inf_nan=False)
     dest_lng: float = Field(..., ge=-180, le=180, allow_inf_nan=False)
-    vehicle_type: Literal["bike"] = "bike"
+    vehicle_type: Literal["bike", "personal"] = "bike"
+    service: Literal["parking", "charging"] = "parking"
 
 class RouteSuggestionResponse(BaseModel):
+    routing_provider: str = "OSRM"
+    routing_profile: str = "driving"
+    geometry: dict = Field(default_factory=dict)
     origin_hub: HubSummary
     destination_hub: HubSummary
     distance_km: float = Field(..., example=2.1)

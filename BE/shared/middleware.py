@@ -1,7 +1,7 @@
-"""Lưu thay đổi User/Staff khi chạy qua gateway chung.
+"""Khóa request chung và lưu thay đổi Staff khi chạy qua Gateway.
 
 Dành cho các HTTP API JSON hiện tại, một tiến trình phục vụ.
-Các thay đổi Operator đã dùng persist_change trong handler.
+User/Operator đã dùng persist_change trong handler; không lưu lại lần hai.
 """
 
 import asyncio
@@ -20,13 +20,15 @@ class SharedPersistenceMiddleware:
             return
 
         # Cho các request dùng chung db chạy lần lượt.
-        async with self._request_lock:
+        app_state = getattr(scope.get("app"), "state", None)
+        request_lock = getattr(app_state, "request_lock", self._request_lock)
+        async with request_lock:
             path = scope.get("path", "")
             method = scope.get("method", "GET")
 
             should_track = (
                 method in {"POST", "PUT", "PATCH", "DELETE"}
-                and not path.startswith("/api/v1/operator/")
+                and path.startswith("/api/v1/staff/")
             )
 
             if not should_track:
@@ -42,6 +44,10 @@ class SharedPersistenceMiddleware:
 
             try:
                 await self.app(scope, receive, capture)
+                if scope.get("persistence_managed"):
+                    for message in messages:
+                        await send(message)
+                    return
 
                 response_start = next(
                     message

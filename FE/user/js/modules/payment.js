@@ -15,7 +15,10 @@
     let amount = defaultAmount;
     try {
       const invData = await ApiService.getInvoice(type);
-      if (invData && invData.total_amount) {
+      if (!invData || !invData.id || !Number.isInteger(invData.total_amount)) {
+        throw new Error("Chưa lấy được hóa đơn hợp lệ từ hệ thống");
+      }
+      if (invData && Number.isInteger(invData.total_amount)) {
         amount = invData.total_amount;
         AppState.currentInvoice.id = invData.id;
         AppState.currentInvoice.amount = invData.total_amount;
@@ -45,7 +48,9 @@
         }
       }
     } catch (e) {
-      console.warn("Fetch invoice error:", e);
+      this.showToast(e.message);
+      this.navigateTo(returnScreen);
+      return;
     }
 
     AppState.currentInvoice.amount = amount;
@@ -110,39 +115,22 @@
   async executePaymentProcess() {
     this.navigateTo("screen-payment-pending");
     try {
-      await ApiService.payInvoice({
-        invoice_id: AppState.currentInvoice.id || "INV-2026-901",
+      const result = await ApiService.payInvoice({
+        invoice_id: AppState.currentInvoice.id,
         method: AppState.user.paymentMethod,
         amount: AppState.currentInvoice.amount
       });
-    } catch (e) {
-      console.warn("Pay invoice error:", e);
-    }
-
-    const willStartRide = AppState.currentInvoice.startRideOnSuccess;
-
-    setTimeout(() => {
-      this.showToast("Thanh toán thành công!");
-
-      const successBtn = document.getElementById("btnPaymentSuccessAction");
-      if (successBtn) {
-        if (willStartRide) {
-          successBtn.innerText = "Bắt đầu chuyến đi";
-        } else {
-          successBtn.innerText = "Về màn hình chính";
-        }
+      if (result.status === "pending" && result.payment_url) {
+        window.location.assign(result.payment_url);
+        return;
       }
-
+      if (result.status !== "completed") throw new Error("Giao dịch đang chờ xác nhận");
+      this.showToast("Thanh toán thành công!");
       this.navigateTo("screen-payment-success");
-
-      // Tự động chuyển màn hình tiếp theo sau khi hiển thị thành công
-      setTimeout(() => {
-        const successEl = document.getElementById("screen-payment-success");
-        if (successEl && successEl.classList.contains("active")) {
-          this.handlePaymentSuccessNext();
-        }
-      }, 2000);
-    }, 1200);
+    } catch (error) {
+      this.showToast(error.message);
+      this.navigateTo("screen-payment-method");
+    }
   },
 
   handlePaymentSuccessNext() {

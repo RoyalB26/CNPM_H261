@@ -1,119 +1,92 @@
-"""Các API đăng nhập và xác thực hai bước của Operator."""
-
+"""Đăng nhập Operator bằng mật khẩu và TOTP, challenge dùng một lần."""
 import json
-import copy
-
-
+import secrets
+import time
 from pydantic import ValidationError
-from starlette import status
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
-
-
-from ..store import db
-from ..schemas.auth import (
-    OperatorLoginRequest,
-    OperatorLoginResponse,
-    OperatorAuthErrorResponse,
-    Operator2FARequest,
-    OperatorProfile,
-    OperatorTokenResponse,
+from shared.authentication import (
+    ensure_accounts, find_account, password_matches, issue_session,
+    challenges, totp,
 )
+from ..store import persist_change
+from ..schemas.auth import OperatorLoginRequest, Operator2FARequest
 
 
-async def login(request: Request) -> JSONResponse:
-    """Kiểm tra dữ liệu đăng nhập và trả yêu cầu 2FA của luồng giả lập."""
+def error(code, detail):
+    return JSONResponse({"status_code": str(code), "error": 1, "detail": detail}, status_code=code)
+
+
+async def parse(request, model):
     try:
         body = await request.json()
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        err_data = OperatorAuthErrorResponse(
-            status_code="400",
-            error=1,
-            detail="JSON không hợp lệ",
-        )
-        return JSONResponse(
-            content=err_data.model_dump(mode="json"),
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
-
+    except (ValueError, UnicodeError):
+        return None, error(400, "JSON không hợp lệ")
     try:
-        req = OperatorLoginRequest.model_validate(body)
+        return model.model_validate(body), None
     except ValidationError:
-        # Không đưa mật khẩu trong dữ liệu lỗi Pydantic vào response.
-        err_data = OperatorAuthErrorResponse(
-            status_code="422",
-            error=1,
-            detail="Dữ liệu đăng nhập không hợp lệ",
-        )
-        return JSONResponse(
-            content=err_data.model_dump(mode="json"),
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        )
-
-    response_data = OperatorLoginResponse(
-        success=True,
-        requires_2fa=True,
-        email=req.email,
-        message="Vui lòng nhập mã xác thực 6 chữ số từ Google Authenticator hoặc Email.",
-    )
-    return JSONResponse(
-        content=response_data.model_dump(mode="json"),
-        status_code=status.HTTP_200_OK,
-    )
+        return None, error(422, "Dữ liệu xác thực không hợp lệ")
 
 
-async def verify_2fa(request: Request) -> JSONResponse:
-    """Kiểm tra dữ liệu 2FA và trả token, hồ sơ của luồng giả lập."""
-    try:
-        body = await request.json()
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        err_data = OperatorAuthErrorResponse(
-            status_code="400",
-            error=1,
-            detail="JSON không hợp lệ",
-        )
-        return JSONResponse(
-            content=err_data.model_dump(mode="json"),
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
-
-    try:
-        req = Operator2FARequest.model_validate(body)
-    except ValidationError:
-        # Không đưa mã OTP trong dữ liệu lỗi Pydantic vào response.
-        err_data = OperatorAuthErrorResponse(
-            status_code="422",
-            error=1,
-            detail="Dữ liệu xác thực hai bước không hợp lệ",
-        )
-        return JSONResponse(
-            content=err_data.model_dump(mode="json"),
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        )
-
-    # Sao chép mẫu để bổ sung dữ liệu request mà không sửa seed trong db.
-    auth_data = copy.deepcopy(db.operator_mock["auth"])
-
-    profile_data = auth_data["profile"]
-    profile_data["email"] = req.email
-    profile = OperatorProfile.model_validate(profile_data)
-
-    token_data = auth_data["token"]
-    token_data["operator"] = profile
-    token_resp = OperatorTokenResponse.model_validate(token_data)
+async def login(request: Request):
+    req, failure = await parse(request, OperatorLoginRequest)
+    if failure is not None:
+        return failure
+    failure = ensure_accounts()
+    if failure is not None:
+        return failure
+    account = find_account(req.email, "operator")
+    if account is None or not password_matches(req.password, account["password_hash"]):
+        return error(401, "Sai tài khoản hoặc mật khẩu")
+    now = time.time()
+    for key in list(challenges):
+        if challenges[key]["expires_at"] <= now:
+            del challenges[key]
+    challenge_id = secrets.token_urlsafe(32)
+    challenges[challenge_id] = {
+        "account_id": account["id"], "expires_at": now + 300, "attempts": 0,
+    }
+    return JSONResponse({
+        "success": True, "requires_2fa": True, "email": account["email"],
+        "challenge_id": challenge_id, "expires_in": 300,
+        "message": "Nhập mã TOTP từ ứng dụng Authenticator.",
+    })
 
 
-    
-    return JSONResponse(
-        content=token_resp.model_dump(mode="json"),
-        status_code=status.HTTP_200_OK,
-    )
+async def verify_2fa(request: Request):
+    req, failure = await parse(request, Operator2FARequest)
+    if failure is not None:
+        return failure
+    challenge = challenges.get(req.challenge_id)
+    account = find_account(req.email, "operator")
+    if (not challenge or challenge["expires_at"] <= time.time()
+            or challenge["attempts"] >= 5 or account is None
+            or challenge["account_id"] != account["id"]):
+        return error(401, "Yêu cầu 2FA không hợp lệ hoặc hết hạn")
+    challenge["attempts"] += 1
+    step = int(time.time() // 30)
+    matched = next((s for s in (step - 1, step, step + 1)
+                    if s > account["last_totp_step"]
+                    and secrets.compare_digest(totp(account["totp_secret"], s), req.otp_code)), None)
+    if matched is None:
+        return error(401, "OTP không hợp lệ hoặc đã sử dụng")
 
+    def change(candidate):
+        target = next(a for a in candidate.operator_mock["accounts"] if a["id"] == account["id"])
+        target["last_totp_step"] = matched
+
+    failure = persist_change(change)
+    if failure is not None:
+        return failure
+    challenges.pop(req.challenge_id, None)
+    return JSONResponse({
+        "access_token": issue_session(account), "token_type": "bearer",
+        "expires_in": 28800, "operator": account["profile"],
+    })
 
 
 routes = [
     Route("/api/v1/operator/auth/login", login, methods=["POST"]),
     Route("/api/v1/operator/auth/verify-2fa", verify_2fa, methods=["POST"]),
-
 ]

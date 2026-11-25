@@ -14,8 +14,8 @@ def expire_rental_bookings(db: MockDatabaseStore, now: datetime | None = None) -
     now = now if now is not None else datetime.now(timezone.utc)
     active = db.user.get("active_services", {}).get("ride")
     expired = []
-    for booking in db.get_bookings():
-        if booking.get("plan_type") not in ("rental", "parking", "swap", "battery_swap", "charging") or booking.get("status") != "Đã xác nhận":
+    for booking in db.bookings:
+        if booking.get("plan_type") not in ("rental", "parking", "swap", "battery_swap", "charging", "personal") or booking.get("status") != "Đã xác nhận":
             continue
         bike_id = booking.get("resource_name", "").split(" · ")[0].strip()
         if booking.get("plan_type") == "rental" and active and active.get("vehicle_id") == bike_id:
@@ -28,6 +28,8 @@ def expire_rental_bookings(db: MockDatabaseStore, now: datetime | None = None) -
     # Kiểm tra mọi quyền giữ xe trước vòng sửa, tránh hết hạn một phần khi
     # runtime cũ có hai booking cùng giữ xe hoặc reserved_by không khớp.
     for booking in expired:
+        if booking.get('personal_bundle') and not db._personal_hold_owned(booking):
+            raise ValueError('Gói ghép không còn giữ đúng cả hai tài nguyên')
         if booking.get("plan_type") == "rental":
             hub = db.get_hub(booking.get("hub_id"))
             bike_id = booking.get("resource_name", "").split(" · ")[0].strip()
@@ -35,7 +37,9 @@ def expire_rental_bookings(db: MockDatabaseStore, now: datetime | None = None) -
             if not db._rental_hold_owned(booking, bike):
                 raise ValueError("Không xác định được booking đang giữ xe, chưa thể xử lý hết hạn")
     for booking in expired:
-        db.cancel_booking(booking["id"])
+        result = db._cancel_booking(booking["id"], user_only=False)
+        if result is None or "error" in result:
+            raise ValueError("Không thể giải phóng booking hết hạn")
         booking["status"] = "Hết hạn"
         booking["expired_at"] = now.isoformat()
     return ids

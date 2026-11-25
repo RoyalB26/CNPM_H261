@@ -73,3 +73,36 @@ class ChargingBookingTests(unittest.TestCase):
         before = copy.deepcopy(self.db.__dict__)
         self.assertIn('error', self.db.create_booking({**self.payload, 'charging_port': 'S04'}))
         self.assertEqual(before, self.db.__dict__)
+
+    def test_occupied_marker_or_duplicate_port_id_prevents_reservation(self):
+        port = self.db.get_hub('hub-01')['ports'][0]
+        port['occupied_by'] = 'CHG-OTHER'
+        before = copy.deepcopy(self.db.__dict__)
+        self.assertIn('error', self.db.create_booking(self.payload))
+        self.assertEqual(before, self.db.__dict__)
+        port.pop('occupied_by')
+        self.db.get_hub('hub-01')['ports'].append(copy.deepcopy(port))
+        before = copy.deepcopy(self.db.__dict__)
+        self.assertIn('error', self.db.create_booking(self.payload))
+        self.assertEqual(before, self.db.__dict__)
+
+    def test_cancel_at_inactive_hub_does_not_reopen_port(self):
+        booking = self.db.create_booking(self.payload)
+        hub = self.db.get_hub('hub-01')
+        count = hub['available_chargers']
+        hub['status'] = 'DEACTIVATED'
+        self.db.cancel_booking(booking['id'])
+        self.assertEqual(hub['ports'][0]['status'], 'Không khả dụng')
+        self.assertFalse(hub['ports'][0]['is_available'])
+        self.assertEqual(hub['available_chargers'], count)
+
+    def test_cancel_preserves_foreign_occupied_marker(self):
+        booking = self.db.create_booking(self.payload)
+        hub = self.db.get_hub('hub-01')
+        port = hub['ports'][0]
+        port['occupied_by'] = 'CHG-OTHER'
+        count = hub['available_chargers']
+        self.db.cancel_booking(booking['id'])
+        self.assertEqual(port['occupied_by'], 'CHG-OTHER')
+        self.assertFalse(port['is_available'])
+        self.assertEqual(hub['available_chargers'], count)

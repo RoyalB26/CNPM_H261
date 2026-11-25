@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from shared.booking_expiry import booking_expired
+from shared.battery_reservations import swap_battery_blocked
 from shared.memory_store import MockDatabaseStore
 from .schemas.booking import BookingResponse, CompleteSwapResponse
 from .schemas.payment import InvoiceResponse
@@ -33,13 +34,17 @@ def complete_swap(db: MockDatabaseStore, booking_id: str) -> CompleteSwapRespons
     if expired:
         raise SwapError('Booking đổi pin đã hết hạn')
     hub = db.get_hub(booking['hub_id'])
-    battery = next((b for b in hub.get('batteries', []) if b['battery_type'] == booking['battery_type']), None) if hub else None
-    if hub is None or hub.get('status') != 'ACTIVE' or battery is None or not battery.get('is_available', True):
+    batteries = [b for b in hub.get('batteries', []) if b['battery_type'] == booking['battery_type']] if hub else []
+    battery = batteries[0] if len(batteries) == 1 else None
+    if hub is None or hub.get('status') != 'ACTIVE' or battery is None or swap_battery_blocked(db, hub, battery):
         raise SwapError('Hub hoặc loại pin không còn hoạt động')
     quantity, unit_price = booking['battery_quantity'], booking['swap_unit_price']
+    if type(quantity) is not int or quantity <= 0 or type(unit_price) is not int or unit_price < 0:
+        raise SwapError('Số lượng pin hoặc đơn giá đã giữ không hợp lệ')
     amount = quantity * unit_price
     description = f"Đổi {quantity} pin {booking['battery_type']}"
     invoice = InvoiceResponse(
+        user_id=db.user['id'],
         id=f'INV-SWAP-{booking_id}', service_type='battery_swap', title='Hóa đơn đổi pin',
         reference_id=booking['battery_type'], items=[{'label': description, 'description': description, 'amount': amount}],
         total_amount=amount, payment_channel='online', status='unpaid', created_at=now.isoformat(),

@@ -30,6 +30,15 @@
       }
     },
 
+    selectSourceOption(opt) {
+      this.selectedSourceOpt = opt;
+      const c1 = document.getElementById("sourceOption1") || document.getElementById("simSourceOpt1");
+      const c2 = document.getElementById("sourceOption2") || document.getElementById("simSourceOpt2");
+      if (c1) c1.classList.toggle("selected", opt === 1);
+      if (c2) c2.classList.toggle("selected", opt === 2);
+      return this.setSimSourceOpt(opt);
+    },
+
     setSimSourceOpt(opt) {
       this.selectedSourceOpt = opt;
       const r1 = document.getElementById("simSourceRealtime");
@@ -157,6 +166,54 @@
       this.loadRelocations();
     },
 
+    async captureSnapshotNow() {
+      try {
+        const res = await OperatorApi.captureSimulationSnapshot({
+          source_type: this.selectedSourceOpt === 2 ? "MANUAL_A_PRIME" : "LIVE_A"
+        });
+        this.lastSnapshotId = res.snapshot_id;
+        await this.loadSimSourceState();
+        alert(`Đã chụp snapshot mạng lưới thành công (${res.snapshot_id})!`);
+      } catch (err) {
+        alert("Lỗi chụp snapshot: " + (err.message || "Lỗi kết nối"));
+      }
+    },
+
+    async testValidateParams() {
+      const nameEl = document.getElementById("scenarioNameInput");
+      const scenarioName = (nameEl && nameEl.value.trim()) || "Nhu cầu sạc tăng cao";
+      const sliderEl = document.getElementById("demandSlider");
+      const demandPct = sliderEl ? parseInt(sliderEl.value, 10) || 50 : 50;
+      try {
+        const res = await OperatorApi.validateSimulation({
+          source_type: this.selectedSourceOpt === 2 ? "MANUAL_A_PRIME" : "LIVE_A",
+          config: {
+            scenario_name: scenarioName,
+            scenario_type: "Nhu cầu sạc tăng đột biến",
+            demand_increase_pct: demandPct,
+            duration_minutes: 60,
+            start_time: "18:00"
+          }
+        });
+        alert(res.message || "Dữ liệu đầu vào hợp lệ!");
+      } catch (err) {
+        alert("Kiểm tra tham số thất bại: " + (err.message || "Dữ liệu không hợp lệ"));
+      }
+    },
+
+    async saveOperationPlan() {
+      const simId = this.lastSimulationId || "SIM-20261018-01";
+      const plan = prompt("Nhập phương án vận hành cần lưu cho phiên " + simId + ":", "Điều chuyển xe dự phòng và phân tải cổng sạc giờ cao điểm.");
+      if (!plan || !plan.trim()) return;
+      try {
+        await OperatorApi.saveSimulationPlan(simId, plan.trim());
+        alert("Đã lưu phương án vận hành thành công!");
+        await this.loadSimHistory();
+      } catch (err) {
+        alert("Không thể lưu phương án: " + (err.message || "Lỗi nghiệp vụ"));
+      }
+    },
+
     async showSimulationHistory() {
       document.querySelectorAll("#tab-simulation .sim-subview").forEach(el => el.classList.remove("active"));
       const histView = document.getElementById("simHistoryView");
@@ -164,17 +221,32 @@
       await this.loadSimHistory();
     },
 
-    inspectHistoryItem(simId) {
-      const item = (this.cachedSimHistory || []).find(i => i.sim_id === simId || i.id === simId);
+    async inspectHistoryItem(simId) {
+      let item = (this.cachedSimHistory || []).find(i => i.sim_id === simId || i.id === simId);
+      try {
+        const detail = await OperatorApi.getSimulationDetail(simId);
+        if (detail) item = detail;
+      } catch (e) {}
       if (!item) return;
       const titleEl = document.getElementById("inspTitle");
       if (titleEl) titleEl.innerText = item.scenario_name || item.title || simId;
       const paramsEl = document.getElementById("inspParams");
       if (paramsEl) paramsEl.innerText = item.what_if_params || item.parameters_summary || "Kịch bản What-If";
       const resEl = document.getElementById("inspResult");
-      if (resEl) resEl.innerText = item.recorded_result || `Đỉnh tải ${item.peak_power_kw} kW`;
+      if (resEl) resEl.innerText = item.recorded_result || `Đỉnh tải ${item.peak_power_kw ?? 185} kW`;
       const ruleEl = document.getElementById("inspRule");
       if (ruleEl) ruleEl.innerText = item.saved_rule || "Chưa có quy tắc ứng phó được lưu.";
+    },
+
+    async retryFailedSimulation(simId) {
+      try {
+        const res = await OperatorApi.retrySimulation(simId);
+        if (res && res.simulation_id) this.lastSimulationId = res.simulation_id;
+        alert(`Đã chạy lại phiên ${simId} thành công!`);
+        await this.loadSimHistory();
+      } catch (err) {
+        alert("Không thể chạy lại phiên " + simId + ": " + (err.message || "Lỗi nghiệp vụ"));
+      }
     },
 
     reloadScenarioParams(simId) {
@@ -188,19 +260,27 @@
       const tbody = document.getElementById("simHistoryTableBody");
       if (!tbody || !history) return;
 
-      tbody.innerHTML = history.map(item => `
-        <tr>
-          <td><strong>${item.sim_id}</strong></td>
-          <td>${item.created_at}</td>
-          <td>${item.scenario_name}</td>
-          <td><span class="badge ${item.status === 'Thành công' ? 'badge-success' : 'badge-danger'}">${item.status}</span></td>
-          <td>${item.peak_power_kw} kW</td>
-          <td>${item.impacted_hubs} Hub</td>
-          <td>
-            <button class="btn-secondary-light" style="padding: 4px 8px; font-size: 11.5px;" onclick="alert('Kịch bản: ${item.scenario_name}\nKết quả: Đỉnh tải ${item.peak_power_kw} kW, ảnh hưởng ${item.impacted_hubs} Hub.')">Xem lại</button>
-          </td>
-        </tr>
-      `).join("");
+      tbody.innerHTML = history.map(item => {
+        const isOk = item.status === "Thành công" || item.status === "COMPLETED";
+        const isFailed = item.status === "Thất bại" || item.status === "FAILED";
+        const retryBtn = isFailed
+          ? `<button class="btn-secondary-light" style="padding: 4px 8px; font-size: 11px; margin-left: 4px;" onclick="event.stopPropagation(); OperatorApp.retryFailedSimulation('${item.sim_id}')">Thử lại</button>`
+          : "";
+        return `
+          <tr onclick="OperatorApp.inspectHistoryItem('${item.sim_id}')" style="cursor: pointer;">
+            <td><strong>${item.sim_id}</strong></td>
+            <td>
+              <div style="font-weight: 700;">${item.scenario_name}</div>
+              <div style="font-size: 11.5px; color: var(--text-muted);">${item.what_if_params || ""}</div>
+            </td>
+            <td style="font-size: 12px;">${item.created_at}</td>
+            <td><span class="badge ${isOk ? 'badge-success' : 'badge-danger'}">${item.status}</span></td>
+            <td>
+              <button class="btn-secondary-light" style="padding: 4px 8px; font-size: 11.5px;" onclick="event.stopPropagation(); OperatorApp.inspectHistoryItem('${item.sim_id}')">Xem</button>${retryBtn}
+            </td>
+          </tr>
+        `;
+      }).join("");
     }
   };
 })(window);

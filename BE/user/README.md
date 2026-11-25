@@ -1,5 +1,30 @@
 # Backend Mock Service - Smart E-Mobility Hub (End-User)
 
+## Lưu ý sau khi ghép `feature/operator`
+
+Giữ cấu trúc `handlers/` và `shared/persistence/` đã tách. Các thay đổi chức
+năng mới của nhóm đã được nối vào cấu trúc đó, không chép đè `main.py` cũ.
+
+- API bảo vệ cần `Authorization: Bearer <token>` từ login; User seed vẫn dùng
+  mật khẩu `123456`. Đăng ký lưu tài khoản mới, mật khẩu tối thiểu 8 ký tự và
+  cần `confirm_password`. Session lưu trong RAM nên khởi động lại phải login lại.
+- Gợi ý đường bộ dùng OSRM bất đồng bộ, hỗ trợ `vehicle_type=personal` và
+  `service=parking|charging`. Mất kết nối/không có tuyến OSRM trả 503; kết quả
+  không tự giữ tài nguyên. `OSRM_BASE_URL`/`OSRM_PROFILE` có thể cấu hình.
+- Thanh toán online tạo URL VNPAY và trạng thái `pending`, chưa phải `paid`.
+  Cần `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL`; thiếu cấu hình
+  trả 503. IPN có chữ ký tại `/api/v1/payments/vnpay/ipn` mới chốt thanh toán
+  (hóa đơn 0đ được tất toán ngay). Lặp request đang chờ dùng lại cùng phiên.
+- Gửi xe tính theo giờ bắt đầu từ thời điểm vào bãi, xem trước/thu tiền mặt
+  qua Staff. `price` trên booking vẫn là ước tính, không phải phí đã thu.
+- Có API lịch sạc, upload ảnh và thông báo trong `shared.operations_api`.
+  Phiếu sự cố cần Operator phân công cho đúng Staff trước khi Staff giải quyết.
+- Cài dependency bằng `.venv/bin/python -m pip install -r requirements.txt`;
+  branch mới thêm Pillow để kiểm tra ảnh. Không cần reset runtime khi ghép code.
+
+Kiểm thử tự động dùng runtime tạm, OSRM giả lập và IPN ký bằng cấu hình thử;
+chưa chứng minh giao dịch VNPAY Sandbox thật hoặc toàn bộ luồng trình duyệt.
+
 ## Đối chiếu đặc tả và phạm vi bản demo
 
 Đối chiếu ba tài liệu nhóm đã gửi: `Đặc tả CNPM (1) (1).docx` (mô tả),
@@ -10,27 +35,27 @@ phần trăm khi nhóm chưa thống nhất trọng số nghiệm thu.
 
 | Spec / use case | Đã có trong Backend User | Giới hạn còn lại |
 | --- | --- | --- |
-| FR-I01 / UC1 – Tài khoản | Đăng nhập tài khoản seed bằng email/điện thoại; đọc/sửa hồ sơ; xem xe cá nhân | Đăng ký chỉ là stub trả thành công, không lưu tài khoản; chưa có xác thực token, phân quyền hoặc nhiều tài khoản |
-| FR-I02 / UC2 – Tra cứu Hub | Tìm tên/địa chỉ không dấu; chi tiết tài nguyên; gợi ý Hub lấy/trả xe dùng chung từ tọa độ | Khoảng cách đường chim bay; chưa định tuyến đường bộ hoặc gợi ý riêng theo nhu cầu xe cá nhân |
-| FR-I03 / UC3 – Đặt trước | Thuê xe, giữ ô đỗ, giữ cổng sạc ngay, giữ pin; xem/hủy booking; kiểm tra tài nguyên | Chưa có lịch sạc theo giờ, gói ghép `personal` hoặc gợi ý thay thế tự động trong response đặt thất bại |
+| FR-I01 / UC1 – Tài khoản | Đăng ký, mật khẩu băm, session Bearer theo role, hồ sơ riêng từng User; đồng bộ email/phone đăng nhập khi sửa hồ sơ | Session trong RAM, mất khi khởi động lại; chưa xác nhận OTP/SMS hoặc khôi phục mật khẩu |
+| FR-I02 / UC2 – Tra cứu Hub | Tìm Hub không dấu; tài nguyên; tuyến OSRM cho xe thuê/xe cá nhân, lọc nhu cầu đỗ/sạc | Phụ thuộc dịch vụ OSRM; kiểm thử dùng response giả lập, chưa xác nhận tuyến thực tế |
+| FR-I03 / UC3 – Đặt trước | Thuê xe, giữ ô đỗ, giữ cổng sạc ngay, giữ pin; gói ghép đỗ + sạc `personal`; xem/hủy booking; tối đa 3 gợi ý khi đặt thất bại | Có lịch sạc qua API riêng, chưa xác nhận FE; gợi ý khi đặt thất bại chỉ đổi nơi/tài nguyên nhận, giữ nguyên Hub trả xe |
 | FR-I04 / UC4 – Sử dụng dịch vụ | Nhận/trả xe; trạng thái đang sử dụng; bắt đầu/kết thúc sạc; xác nhận đổi pin; gửi xe liên thông bảo vệ | Chưa có khóa xe/thiết bị thật; kWh nhập mô phỏng; giữ chỗ và phiên sạc không phải lịch sạc tối ưu |
-| FR-I05 / UC5 – Báo sự cố | Tạo báo cáo và phiếu bảo trì liên kết; đọc lại trạng thái/kết quả Staff | Chưa có push/SMS; chưa kiểm chứng tải ảnh thực tế; phân quyền theo tài khoản chưa triển khai |
-| FR-I11 / UC6 – Thu phí | Hóa đơn thuê theo phút, sạc theo kWh, đổi pin theo số lượng; thanh toán mock một lần; hóa đơn gửi xe từ vé bãi | Chưa có cổng thanh toán thật/đối soát; phí gửi xe vẫn theo mock Staff, chưa tính thời gian đỗ thực |
-| FR-N01, N02, N03 – Trạng thái và giữ tài nguyên | Cập nhật RAM/JSON dùng chung; chặn đặt trùng, xe đang đi, bảo trì/điều chuyển; hoàn tài nguyên khi hủy/hết hạn | Hết hạn cần gọi API thủ công; thời hạn 10/15 phút còn cố định; chưa xử lý nhiều tiến trình hoặc khóa phân tán |
+| FR-I05 / UC5 – Báo sự cố | Tạo báo cáo và phiếu bảo trì liên kết; đọc lại trạng thái/kết quả Staff | Có upload/đọc ảnh và thông báo lưu trong JSON; chưa có push/SMS hoặc kiểm thử giao diện |
+| FR-I11 / UC6 – Thu phí | Hóa đơn thuê/sạc/đổi pin; tạo URL và xử lý IPN VNPAY; phí gửi xe theo thời gian, báo giá có chữ ký | Chưa kiểm tra VNPAY Sandbox thực; test dùng merchant/signature thử |
+| FR-N01, N02, N03 – Trạng thái và giữ tài nguyên | Cập nhật RAM/JSON dùng chung; chặn đặt trùng, xe đang đi, bảo trì/điều chuyển; tự quét hết hạn qua Gateway và hoàn tài nguyên một lần | Thời hạn 10/15 phút còn cố định; chưa xử lý nhiều tiến trình hoặc khóa phân tán |
 | FR-N08, N09, N10 – Liên thông và lịch sử | Báo cáo nối phiếu bảo trì; User đọc thay đổi Hub từ Operator; lưu lịch sử booking/chuyến/phiên và hóa đơn | Chưa chứng minh mọi nhánh điều chuyển; chưa có audit log đầy đủ hoặc thời hạn lưu trữ theo NFR |
 | FR-N12 – Dữ liệu mô phỏng | Seed JSON, runtime JSON, kiểm thử độc lập không dùng runtime demo | Chưa thay thế nguồn mock bằng IoT chỉ qua cấu hình |
 
 FR-I06–I10, I12 và các yêu cầu điều phối/mô phỏng toàn mạng do phần Operator,
 Staff hoặc hệ thống chung phụ trách; không lấy các phần đó làm chức năng
-BE User đã hoàn thành. FR-N04 (lịch sạc), N11 (thông báo), N14 (IoT thời gian
-thực), N15 (tác vụ nền khi ngừng thiết bị) chưa được coi là đáp ứng trong BE User.
+BE User đã hoàn thành. Nhánh mới bổ sung lịch sạc/thông báo và tác vụ vận hành
+chung; việc đáp ứng đầy đủ NFR/IoT vẫn cần nghiệm thu riêng.
 Các chỉ tiêu tải, SLA, bảo mật và triển khai của NFR chưa được đo/nghiệm thu
 bằng bộ test chức năng hiện tại.
 
-**Điểm cần nhóm chốt:** tài liệu mô tả có câu tính thời gian thuê “sau khi đặt
-xe”; code hiện tính từ khi nhận xe (`start`) đến khi trả thành công. Checklist
-ghi nhận khác biệt này, chưa tự đổi quy tắc tính phí. Trước khi báo hoàn thành
-theo spec, nhóm cần chọn mốc tính tiền và cập nhật code hoặc đặc tả tương ứng.
+**Quy tắc tính phí đã chọn:** booking thuê xe mới tính tiền từ lúc Backend
+xác nhận đặt xe thành công đến khi trả xe thành công, bao gồm thời gian chờ
+nhận xe. Chưa bổ sung phí cho booking hủy/hết hạn mà không nhận xe vì đặc tả
+chưa quy định khoản này. Dữ liệu cũ được xử lý theo phần cước bên dưới.
 
 ## Kịch bản trình bày demo BE User
 
@@ -70,24 +95,34 @@ kiểm tra `git status --short` để rà file mới/chưa commit. Chưa tính v
 
 ## Cước thuê xe hiện tại
 
-Thời gian tính tiền bắt đầu khi nhận xe thành công (`start`), kết thúc khi
-trả xe thành công. Thời gian giữ chỗ chưa tính phí. Đơn giá lấy từ
-`pricing.rental_bike_hourly` của Hub nguồn và lưu trong chuyến đi lúc nhận xe.
+Booking thuê xe mới lưu `billing_started_at` ISO 8601 UTC khi được Backend
+xác nhận; đây là mốc bắt đầu tính tiền. Cước kết thúc lúc trả xe thành công.
+Đơn giá lấy từ `pricing.rental_bike_hourly` của Hub nguồn, lưu vào
+`rental_hourly_rate` tại lúc đặt, rồi sao chép vào chuyến đi khi nhận xe.
+Đổi giá Hub sau khi đặt không thay đổi đơn giá của booking đã xác nhận.
+`started_at` vẫn là thời điểm nhận xe thực tế, tách với mốc bắt đầu tính phí.
 Quy ước mock: làm tròn lên phút, cước = số phút × đơn giá giờ / 60,
-làm tròn lên 1 đồng. Ví dụ 30 phút với 10.000đ/giờ là 5.000đ.
+làm tròn lên 1 đồng. Ví dụ đặt 08:00, nhận 08:08, trả 08:30 với 10.000đ/giờ
+là 30 phút, 5.000đ. `elapsed_minutes` trong kết quả trả xe là số phút tính phí;
+lịch sử ghi `billing_source=billing_started_at` cho các booking mới này.
 
 Trả xe tạo `rental_invoice` trong booking; response trả xe, lịch sử và hóa đơn
 dùng chung kết quả tính cước. `GET /api/invoices/current?type=rental` lấy hóa đơn
 đã kết thúc gần nhất; thêm `trip_id` để chọn chuyến cụ thể. Chưa có hóa đơn trả
-HTTP 404. Chuyến seed/runtime cũ thiếu `started_at` dùng số phút snapshot đã lưu,
-ghi `billing_source=legacy_elapsed_minutes`; không tự tạo mốc bắt đầu.
-`POST /api/invoices/pay` ghi nhận thanh toán mô phỏng cho hóa đơn thuê xe đã
+HTTP 404. Booking/phiên cũ thiếu `billing_started_at` tiếp tục tính từ
+`started_at` nếu có, ghi `billing_source=started_at`. Nếu thiếu cả hai mốc,
+dùng số phút snapshot đã lưu, ghi `billing_source=legacy_elapsed_minutes`.
+Không đoán ngày đặt từ `created_at`/`hold_until` chỉ có giờ và không tính lại
+các hóa đơn đã tạo/thanh toán. Request client không được quyết định mốc hay
+đơn giá tính phí. Booking mới có đơn giá hoặc mốc thời gian sai bị từ chối
+trước khi chuyển xe hoặc thay đổi tài nguyên.
+`POST /api/invoices/pay` tạo phiên thanh toán VNPAY cho hóa đơn thuê xe đã
 hoàn tất. Body gồm `invoice_id`, `method` (`wallet` hoặc `bank_transfer`), và
 `amount` tùy chọn để đối chiếu. Chấp nhận tên FE `Ví điện tử`/`Thẻ ngân hàng`.
-Số tiền chính thức lấy từ hóa đơn Backend. Thành công lưu `paid`, `paid_at`,
-`transaction_id`, `payment_method`; chưa tích hợp cổng thanh toán thật.
-Thanh toán lặp/sai số tiền/tiền mặt trả 409; không tìm thấy hóa đơn trả 404;
-sai schema trả 422. Gateway ghi JSON lỗi trả 503 và phục hồi trạng thái cũ.
+Số tiền chính thức lấy từ hóa đơn Backend. API trả `payment_url` và `pending`;
+IPN hợp lệ mới lưu `paid`, `paid_at`, `transaction_id`, `payment_method`.
+Request lặp khi pending trả lại phiên cũ; hóa đơn đã paid/sai số tiền/tiền mặt
+trả 409; không tìm thấy trả 404; sai schema trả 422. Lỗi ghi trả 503, giữ dữ liệu cũ.
 Endpoint thanh toán nhận hóa đơn thuê xe, đổi pin và sạc đã lưu. Gửi xe cá
 nhân thanh toán trực tiếp cho bảo vệ; hóa đơn gửi xe không được thanh toán
 qua endpoint trực tuyến này.
@@ -103,11 +138,12 @@ thì API trả toàn bộ Hub, bao gồm trạng thái ngừng hoạt động.
 
 `POST /api/hubs/suggest-route` nhận `origin_lat`, `origin_lng`, `dest_lat`,
 `dest_lng`, `vehicle_type=bike` (mặc định). Gợi ý loại xe đã đặt, đang đi,
-điều chuyển hoặc bảo trì và Hub trả hết chỗ/ngừng hoạt động. Khoảng cách là
-đường chim bay, thời gian là ước tính demo. Không có phương án trả 409;
-tọa độ sai trả 422. Kết quả gợi ý chưa giữ tài nguyên, lúc đặt phải kiểm tra lại.
+điều chuyển hoặc bảo trì và Hub trả hết chỗ/ngừng hoạt động. Khoảng cách/thời
+gian lấy từ OSRM, response có geometry. Có thể chọn `personal` và nhu cầu
+`parking`/`charging`. Không có Hub phù hợp trả 409; OSRM không có tuyến hoặc
+lỗi kết nối trả 503; tọa độ sai trả 422. Gợi ý chưa giữ tài nguyên, lúc đặt kiểm tra lại.
 
-## Booking thuê xe hết hạn
+## Tự động xử lý booking hết hạn
 
 Booking mới có `expires_at` ISO 8601 với múi giờ UTC; thuê xe được giữ 10 phút.
 `hold_until` tiếp tục dùng để hiển thị như cũ. Nhận xe tại hoặc sau `expires_at`
@@ -119,9 +155,31 @@ trả 409, không tạo chuyến đi. Thời hạn chỉ do Backend đặt, khô
 hoàn xe khi xe vẫn đủ điều kiện. Gọi lặp không tăng lại số xe; không thay đổi
 chuyến đang sử dụng hoặc xe bảo trì. Gateway lưu thay đổi vào runtime JSON.
 
-Bản demo hiện cần gọi API xử lý hết hạn, chưa có tác vụ nền định kỳ. GET không
-tự giải phóng xe. Booking seed/runtime cũ thiếu `expires_at` không được suy đoán
-ngày hết hạn từ chuỗi giờ `hold_until`, nên không được quét trong bước này.
+Gateway (`BE/run_all.py`) khởi động worker quét ngay rồi mỗi 5 giây cho booking
+`rental`, `parking`, `charging`, `swap` và `battery_swap`. Chỉ booking đang
+`Đã xác nhận` có hạn đầy đủ mới được chuyển sang `Hết hạn`; không kết thúc
+chuyến đi/phiên dịch vụ đã nhận tài nguyên. Worker tự dừng khi Gateway tắt.
+API `/bookings/expire` vẫn dùng được để yêu cầu quét ngay; GET không tự sửa dữ liệu.
+
+Worker và mọi request HTTP User/Operator/Staff dùng cùng một `asyncio.Lock`.
+Một lượt quét có thể chờ request đang chạy. Lượt quét chuẩn bị trên bản sao,
+ghi JSON nguyên tử rồi mới cập nhật RAM; không có booking hết hạn thì không
+ghi file. Lỗi dữ liệu/lỗi lưu được ghi log và thử lại ở lượt sau, không áp dụng
+một phần thay đổi vào store thật. Tài nguyên bị khóa bảo trì/điều chuyển không
+được tự bật lại khi hết hạn. Booking hết hạn chưa nhận xe không tạo hóa đơn thuê.
+
+Có thể đổi chu kỳ quét bằng biến môi trường khi chạy, đơn vị giây:
+
+```bash
+BE_BOOKING_EXPIRY_INTERVAL_SECONDS=2 .venv/bin/python -B BE/run_all.py
+```
+
+Giá trị phải dương và hữu hạn; cấu hình sai làm Gateway từ chối khởi động.
+Chu kỳ quét khác với thời hạn giữ tài nguyên 10/15 phút. Cơ chế chỉ áp dụng
+khi chạy Gateway một tiến trình; chạy riêng `BE/user/main.py` không có worker
+này, và chưa hỗ trợ nhiều worker/tiến trình cùng ghi chung runtime JSON.
+Booking seed/runtime cũ thiếu `expires_at` không được suy đoán ngày hết hạn
+từ chuỗi giờ `hold_until`, nên vẫn giữ nguyên.
 
 ## Đặt chỗ gửi xe cá nhân cho demo
 
@@ -133,8 +191,8 @@ nếu không gửi thì Backend chọn một chỗ còn trống. Response có `p
 Backend kiểm tra Hub hoạt động, biển số chưa đặt/đang gửi, chỗ chưa bị vé bãi,
 booking hoặc điều chuyển giữ. Thành công đặt `is_available=false` và giảm
 `available_parking`; hủy hoàn lại chỗ một lần. Endpoint `/bookings/expire`
-cũng xử lý booking `parking` mới. Gói ghép `personal` chưa được nâng cấp thành
-đặt gửi xe và sạc đồng thời trong bước này.
+cũng xử lý booking `parking` mới. Gói ghép `personal` giữ cả chỗ đỗ và cổng
+sạc, được mô tả riêng bên dưới.
 
 Staff check-in cùng biển số/Hub sẽ dùng chỗ đã giữ dù request Staff chứa tên
 chỗ hiển thị khác; không trừ chỗ lần nữa. Booking hết hạn/Hub ngừng hoạt động
@@ -142,10 +200,27 @@ bị từ chối 409. Người dùng demo chỉ có một phiên parking hiện 
 phiên cũ trước khi check-in phiên mới. Check-out liên kết booking mới sẽ chuyển
 booking sang `Hoàn thành`, xóa phiên đang đỗ và trả chỗ một lần.
 
+Check-in lặp, kể cả vé seed/walk-in cũ, trả lại vé đang mở duy nhất tại đúng
+Hub; không tạo vé mới hoặc giảm số chỗ lần hai. Có nhiều vé/booking khớp hoặc
+xe đang gửi ở Hub khác trả 409. Chỗ bị báo bảo trì sau khi giữ không được check-in.
+
+Check-out ưu tiên mã vé chính xác; nếu dùng biển số thì chọn vé đang mở duy
+nhất, không lấy nhầm lượt gửi cũ trong lịch sử. Không có vé trả 404; nhiều vé
+khớp trả 409. Vé liên kết booking phải khớp trạng thái, Hub, biển số, chủ sở
+hữu và ô đang chiếm trước khi ghi nhận thu tiền. Lỗi đối chiếu không cập nhật
+dở dang vé, booking hoặc số chỗ. Check-out lặp bằng mã vé đã thu tiền trả lại
+kết quả cũ; không hoàn chỗ lần nữa, kể cả vé legacy không có booking.
+
+Hủy hoặc check-out không tự mở lại ô đang bảo trì/bị khóa. Xe vẫn có thể ra
+bãi và kết thúc lượt gửi, nhưng ô đó không được cộng vào số chỗ khả dụng cho
+đến khi trạng thái tài nguyên được xử lý. Vé mới lưu thời điểm check-out ISO
+UTC; booking liên kết lưu `completed_at`. Chưa có điều khiển barrier vật lý.
+
 `price` khi đặt là ước tính đơn giá giờ × số giờ dự kiến (mặc định 2).
-Chưa tính phí theo thời gian đỗ thực; response thu phí Staff vẫn là mock cũ.
-Nhánh Staff walk-in không có booking tiếp tục dùng logic cũ; chưa hoàn thiện
-toàn bộ kiểm tra bãi đỗ walk-in trong bước BE User này.
+Vé mới lưu đơn giá lúc vào bãi; phí thực tế tính theo số giờ bắt đầu. Staff
+xem trước để lấy báo giá có chữ ký (hiệu lực 5 phút) rồi xác nhận thu tiền.
+Walk-in cũng chọn ô khả dụng, ghi quyền chiếm ô và thời điểm ISO; checkout
+liên kết đúng vé, không hoàn chỗ hai lần.
 
 Cung cấp REST API Mock mô phỏng toàn bộ dữ liệu cho ứng dụng User của hệ thống điều phối phương tiện điện Thông minh ĐHQG-HCM.
 
@@ -219,6 +294,17 @@ Luồng FE cũ chưa gọi API xác nhận đổi pin; demo đầy đủ qua API
 Pin cũ nhận lại không được cộng ngay vào kho pin đầy; chưa mô phỏng chu kỳ sạc
 và đo chất lượng từng viên pin, cũng chưa có tích hợp thiết bị vật lý.
 
+Giữ và xác nhận đổi pin đều kiểm tra lại cờ/trạng thái hoạt động, phiếu bảo
+trì khớp mã loại pin (hoặc ID nhóm pin nếu có) tại đúng Hub. Loại pin trùng
+trong cùng Hub bị từ chối thay vì chọn nhóm đầu tiên. Số lượng và đơn giá đã
+giữ phải là số nguyên hợp lệ trước khi chốt hóa đơn. Giá Hub thay đổi sau
+khi đặt không thay đổi đơn giá đã chốt của booking.
+
+Hủy/hết hạn hoàn số pin đầy đã giữ về kho, không sửa cờ khóa/bảo trì của nhóm
+pin. Response Hub cho User tính số pin có thể cấp từ nhóm đang hoạt động;
+nhóm bị khóa hiển thị 0 pin khả dụng, nhưng số tồn vật lý trong store không
+bị xóa. Khi phiếu được xử lý và nhóm đủ điều kiện, số pin đó lại được xét.
+
 ## Giữ cổng sạc ngay cho demo
 
 Tạo booking với `plan_type=charging`, `hub_id`, `personal_plate` và tùy chọn
@@ -236,7 +322,7 @@ phiếu bảo trì và trạng thái Hub/cổng trước khi xác nhận. Một 
 `arrival_time` hoặc `services[].time_slot` bị từ chối 422 thay vì được xác nhận
 như một lịch sạc đã xử lý. `price=0` ở booking là chưa chốt phí điện, không có
 nghĩa sạc miễn phí. API bắt đầu/kết thúc sạc và hóa đơn theo kWh được mô tả dưới đây.
-Chưa sửa FE và gói ghép `personal`.
+Không sửa FE; gói ghép `personal` dùng lại các API sạc này sau khi vào bãi.
 
 
 ## Phiên sạc và hóa đơn điện năng mô phỏng
@@ -274,6 +360,18 @@ khả dụng. Chưa tự chuẩn hóa toàn bộ bộ đếm seed. Gateway lưu 
 Chưa có đo điện năng thật, thanh toán thật, hàng đợi hoặc lịch sạc tối ưu.
 FE cũ chưa gọi các endpoint mới; demo đầy đủ qua API/curl.
 
+Phiên sạc mới chỉ được kết thúc khi mã phiên lưu trong booking, đơn giá đã
+giữ, mốc bắt đầu và quyền `occupied_by` của cổng khớp phiên hiện tại. Mã cổng
+trùng, marker chiếm cổng khác hoặc dữ liệu phiên mâu thuẫn bị từ chối trước
+khi tạo hóa đơn. Không tự lấy đơn giá cổng hiện tại thay cho snapshot bị thiếu
+ở phiên mới. 0 kWh là hợp lệ, tạo hóa đơn 0 đồng và vẫn chặn thanh toán lặp.
+
+Hub bị tạm ngưng/bảo trì trong lúc sạc không cản việc kết thúc và chốt phí
+phiên hợp lệ, nhưng cổng không được chuyển `Sẵn sàng` hoặc tăng bộ đếm khả
+dụng. Hủy booking đang giữ tại Hub ngừng hoạt động cũng không bật lại cổng.
+Các cờ bảo trì có sẵn được giữ nguyên; phục hồi Hub/thiết bị cần xử lý ở luồng
+vận hành, không tự mở lại chỉ vì User kết thúc dịch vụ.
+
 ## Kiểm thử trước khi demo hoặc commit
 
 Chạy tại thư mục gốc repository:
@@ -298,6 +396,8 @@ Kịch bản HTTP kiểm tra:
 - Operator tạm ngưng Hub: User không thể đặt tài nguyên tại Hub đó.
 - GET và request lỗi không thay đổi dữ liệu; lỗi ghi JSON trả 503 và hoàn nguyên RAM.
 - Một tiến trình Python mới đọc lại được hóa đơn đã thanh toán từ runtime JSON.
+- Worker tự xử lý booking hết hạn qua lifecycle Gateway, chờ khóa HTTP và được
+  hủy khi shutdown; kiểm tra lỗi ghi file không mất tài nguyên và lượt sau thử lại.
 
 Có thể chỉ chạy kiểm thử Gateway bằng:
 
@@ -306,9 +406,9 @@ Có thể chỉ chạy kiểm thử Gateway bằng:
 ```
 
 Các kiểm thử này chưa thay thế việc kiểm tra giao diện FE hoặc xác nhận toàn
-bộ đặc tả. Chưa triển khai nhiều tài khoản/phân quyền thật, gói ghép `personal`,
-lịch sạc theo giờ, IoT và thanh toán thực. Những phần đó nằm ngoài bản demo
-đã thống nhất; API và dữ liệu mock không được xem là hệ thống production.
+bộ đặc tả. Nhánh mới có auth, lịch sạc và VNPAY; chưa kiểm tra IoT, giao dịch
+cổng thật hoặc toàn bộ UI. Không coi kết quả unit/integration test là nghiệm
+thu production.
 
 ## Quy tắc chọn hóa đơn và Hub đích
 
@@ -328,6 +428,57 @@ Nếu gửi cả `destination_hub_id` và `destination_hub_name`, hai trường 
 chỉ cùng một Hub. Mã Hub đích được giữ trong booking và chuyến đi để client
 có thể dùng lại khi trả xe. Khi trả xe vẫn kiểm tra Hub thực tế và chỗ đỗ.
 
+Chỗ đỗ tiếp nhận xe được tính bằng bộ đếm tổng `available_parking` trừ số
+chỗ dành cho các lệnh điều chuyển đến Hub đang `PENDING`, `IN_PROGRESS` hoặc
+`IN_TRANSIT`. Lệnh cũ chỉ có tổng xe vẫn được tính; lệnh có cả tổng xe và ID
+chỗ giữ không bị trừ hai lần. Booking gửi xe đã giảm bộ đếm lúc giữ chỗ nên
+không bị trừ thêm một lần trong phép tính này.
+
+`GET /hubs`, `GET /hubs/{id}` và response gợi ý Hub của User hiển thị số chỗ
+sau phép trừ trên. Đây là response được tính khi đọc, không sửa bộ đếm chung
+trong store hoặc dữ liệu Operator/Staff. Hub đích đã hết chỗ tiếp nhận không
+được chọn khi đặt thuê xe; lúc trả vẫn kiểm tra lại vì chỗ trống có thể thay
+đổi trong lúc di chuyển. Không giữ trước chỗ trả xe chỉ vì đã chọn Hub đích.
+
+Nếu trả xe bị từ chối, chuyến vẫn hoạt động và chưa lập hóa đơn. Người dùng
+có thể chọn một Hub khác đủ điều kiện bằng `hub_id`/`hub_name` trong request
+trả xe. API vẫn chặn Hub không tồn tại/ngừng hoạt động và các định danh mâu thuẫn.
+Danh sách `slots` trong seed chỉ là mẫu một phần của bãi; luồng thuê xe dùng
+bộ đếm tổng, chưa gắn xe đạp điện vào từng ô đỗ vật lý.
+
+## Chủ sở hữu dữ liệu và tài khoản
+
+Booking, chuyến đi, phiên sạc, hóa đơn trực tuyến và báo cáo User mới có
+`user_id` do Backend lấy từ hồ sơ hiện tại. Mã chủ gửi trong request không
+được dùng để quyết định chủ sở hữu. Vé gửi xe và phiên parking liên kết
+booking giữ cùng chủ của booking; không ghi phiên thuộc chủ khác vào hồ sơ seed.
+
+`get_bookings()` và `get_user_incidents()` là danh sách cá nhân. User không
+được nhận/hủy booking, nhận cổng, hoàn tất đổi pin, xem hoặc thanh toán hóa
+đơn mang chủ khác, kể cả biết mã bản ghi. Các truy vấn theo mã không thuộc
+tài khoản trả 404 để không xác nhận sự tồn tại của bản ghi của người khác.
+Hóa đơn trực tuyến cũng phải có chủ khớp với tài khoản đang được Backend dùng.
+
+Operator, kiểm tra tài nguyên và worker hết hạn vẫn dùng `db.bookings` toàn
+cục. Worker gọi đường hủy nội bộ cho mọi chủ đã quá hạn, còn API hủy của User
+luôn kiểm tra chủ. Lọc danh sách cá nhân không được làm tài nguyên đang được
+người khác giữ trở thành khả dụng.
+
+Khi nạp seed/runtime cũ, loader bổ sung chủ tài khoản seed cho booking/báo cáo
+thiếu `user_id`, vì dữ liệu cũ được tạo trong bản demo một tài khoản. Chuyến,
+phiên và hóa đơn nằm trong booking kế thừa chủ đó. Chủ tường minh đã lưu được
+giữ nguyên; quan hệ cha/con mang chủ mâu thuẫn bị từ chối. Vé bãi liên kết
+booking kế thừa chủ booking; vé walk-in không rõ chủ không tự gán hàng loạt.
+Vé cũ chưa có chủ/liên kết vẫn theo quy tắc một tài khoản đối chiếu biển số;
+vé đã có chủ khác không được xem chỉ vì trùng biển số. Việc chuẩn hóa xảy ra
+trong RAM, file seed không bị sửa; runtime lưu metadata ở lần cập nhật thành công.
+
+Auth mới lưu tài khoản trong runtime, xác định User hiện tại theo session và
+ContextVar của request. `db.user` trả hồ sơ của User đó; snapshot persistence
+luôn lưu hồ sơ seed gốc ở trường `user`, còn hồ sơ tài khoản mới nằm trong
+`operator_mock.accounts`. Mật khẩu được băm; middleware kiểm tra Bearer token,
+hạn session và role User/Operator/Staff. Session chưa được lưu qua restart.
+
 ## Bảo vệ xe đang đi và quyền giữ xe
 
 Booking thuê xe mới ghi `reserved_by` trên xe. Nhận hoặc hủy xe phải khớp mã
@@ -344,3 +495,170 @@ chuyển, nhưng không tự chuyển xe đó thành `Sẵn sàng` hoặc tăng 
 dụng. Xe bảo trì mang trạng thái `Đang bảo trì`; xe bị khóa điều chuyển mang
 trạng thái `Không khả dụng`. Vẫn trừ một chỗ đỗ vì xe đã về Hub thực tế.
 Thao tác trả xe không thay thế việc nhân viên kiểm tra và mở lại tài nguyên.
+
+## Gợi ý khi đặt dịch vụ thất bại
+
+`POST /bookings` và alias versioned vẫn trả HTTP 409 khi không đặt được.
+Response giữ `success: false`, `error` và bổ sung `alternatives`, tối đa 3
+lựa chọn, mỗi Hub một lựa chọn. Mỗi phần tử có `hub` và `request` có thể gửi
+lại tới API đặt chỗ. Không có lựa chọn phù hợp thì danh sách rỗng.
+
+Backend ưu tiên tài nguyên khác tại Hub ban đầu rồi các Hub gần đó theo
+khoảng cách đường chim bay. Giữ nguyên loại dịch vụ, biển số, số lượng/loại
+pin, thời lượng gửi xe và Hub trả xe đã chọn; thay mã tài nguyên theo Hub
+thay thế. Backend kiểm chứng bằng cùng logic đặt chỗ trên bản sao, không
+tạo booking, giữ tài nguyên, sinh giao dịch hoặc ghi runtime thật.
+
+Gợi ý là trạng thái tại thời điểm trả lỗi; client cần gửi request mới sau khi
+người dùng chọn, và vẫn có thể nhận 409 nếu tài nguyên vừa được người khác
+giữ. Nếu Hub đích thuê xe hết chỗ, danh sách có thể rỗng vì Backend không tự
+đổi Hub đích. Cần chọn Hub trả xe khác rồi thử lại.
+
+Gói `personal` cũng được gợi ý nhưng chỉ chọn Hub đồng thời giữ được cả hai
+tài nguyên, không gợi ý một chỗ đỗ hoặc một cổng sạc đơn lẻ.
+
+## Demo gói ghép gửi xe và sạc `personal`
+
+Gửi `POST /api/v1/user/bookings` với body tối thiểu:
+
+```json
+{
+  "plan_type": "personal",
+  "hub_id": "hub-02",
+  "personal_plate": "59-A1 888.88"
+}
+```
+
+Có thể chọn riêng `parking_slot` và `charging_port`; nếu bỏ trống Backend
+chọn tài nguyên trống. Không dùng `resource_id` chung vì gói có hai mã khác
+nhau. Cần biển số; chưa nhận lịch theo giờ. Giá và danh sách `services` được
+Backend dựng từ tài nguyên thực, không dùng giá ước tính do client gửi.
+
+Backend kiểm tra cả chỗ đỗ và cổng sạc trước khi giữ. Thành công giảm mỗi bộ
+đếm một lần và ghi `reserved_by` trên cả hai; thất bại trả 409, không giữ bên
+còn lại. Response có `personal_bundle=true`, `parking_slot`, `charging_port`
+và đơn giá điện đã chốt. Chặn đặt trùng biển số với các booking gửi xe/sạc
+liên quan. Hủy hoặc tự hết hạn 15 phút trước khi vào bãi hoàn cả hai một lần,
+không mở lại tài nguyên đang bảo trì.
+
+Thứ tự demo:
+
+1. User đặt gói ghép.
+2. Staff gọi API check-in hiện có bằng đúng biển số/Hub, dùng chỗ đã giữ,
+   không trừ chỗ đỗ lần hai. Booking chuyển `Đang sử dụng`.
+3. User gọi `POST /bookings/{id}/charging/start`, dùng cổng đã giữ. Sau khi
+   vào bãi, thời hạn giữ chỗ ban đầu không làm mất quyền bắt đầu sạc.
+4. User gọi `POST /services/charging/stop` với mã phiên và kWh mô phỏng.
+   Cổng được hoàn nếu đủ điều kiện; booking vẫn `Đang sử dụng` vì xe còn đỗ.
+5. Phí điện xem bằng `GET /invoices/current?type=charging&booking_id=...`
+   và thanh toán trực tuyến mock như sạc riêng, có thể thanh toán trước khi ra bãi.
+6. Staff xác nhận checkout sau khi kết thúc sạc, thu phí gửi xe theo luồng
+   tiền mặt hiện có và hoàn chỗ đỗ. Booking chuyển `Hoàn thành`.
+
+`price` của gói là khoản gửi xe ước tính đã chốt, không cộng phí điện; hóa đơn
+sạc tính riêng theo kWh. Hóa đơn gửi xe truy vấn `type=parking` với cùng
+`booking_id`. Không tự thu điện lần nữa khi ra bãi. Gói đã vào bãi không hủy
+bằng API hủy booking; phải kết thúc sạc rồi checkout. Hai dịch vụ riêng vẫn
+giữ cách sử dụng cũ. Booking `personal` seed cũ chưa giữ đủ tài nguyên không
+được coi là gói ghép hợp lệ để mở cổng sạc.
+
+## Kiểm tra báo cáo sự cố và hóa đơn đã chốt
+
+`POST /incidents` kiểm tra loại và mã tài nguyên tại đúng Hub trước khi tạo
+báo cáo cùng phiếu bảo trì. Các loại được hỗ trợ là `Phương tiện`, `Chỗ đỗ`,
+`Cổng sạc`, `Pin`, `Trạm pin` và `Cơ sở hạ tầng`. Mã xe, ô đỗ, cổng sạc,
+nhóm pin phải thuộc Hub được chọn; cơ sở hạ tầng dùng mã Hub. Xe trong chuyến
+đang hoạt động của tài khoản có thể báo về Hub tiếp nhận. Mã được đối chiếu
+không phân biệt chữ hoa/thường và lưu theo mã chuẩn trong store.
+
+Không tìm thấy Hub/tài nguyên trả 404; loại tài nguyên không hỗ trợ trả 422.
+Chưa có API tải ảnh nên `image_attached` chỉ chấp nhận `false` hoặc bỏ trống;
+không coi cờ `true` từ client là bằng chứng đã lưu ảnh.
+
+GET báo cáo đọc trạng thái mới từ phiếu bảo trì liên kết, không sửa bản ghi.
+Mã phiếu trùng hoặc quan hệ phiếu/báo cáo mâu thuẫn trả 409. Các báo cáo seed
+cũ thiếu metadata liên kết vẫn được đọc theo dữ liệu hiện có.
+
+Thanh toán trực tuyến đối chiếu schema, loại dịch vụ, mã tham chiếu, tổng các
+khoản phí và kết quả thuê xe/sạc/đổi pin đã chốt trong booking. Dữ liệu lệch
+trả 409 và không tạo giao dịch. Giá Hub hiện tại không thay thế đơn giá đã
+lưu. Tra cứu gặp mã hóa đơn trùng cũng trả 409 thay vì chọn ngẫu nhiên.
+
+Chuyến mới có `booking_id` chỉ được trả khi booking vẫn `Đang sử dụng` và
+`rental_trip.trip_id` khớp phiên hiện tại. Nếu xe của chuyến mới đã xuất hiện
+trong danh sách xe tại một Hub, hoặc xe legacy xuất hiện ở nhiều Hub, trả xe
+bị từ chối thay vì tự xóa/chuyển các bản ghi mâu thuẫn. Seed một chuyến cũ
+chưa có `booking_id` vẫn nối booking duy nhất theo mã xe như quy tắc tương thích.
+
+## Phân chia handler BE User theo sơ đồ module
+
+`main.py` ghép routes và tạo app Starlette. Các handler HTTP được tách vào
+`handlers/`; giữ nguyên URL, phương thức HTTP, request/response và nghiệp vụ.
+
+| Module | Trách nhiệm |
+| --- | --- |
+| `handlers/auth.py` | Health, đăng nhập/đăng ký, hồ sơ, xe cá nhân |
+| `handlers/hub.py` | Danh sách, chi tiết và gợi ý Hub |
+| `handlers/booking.py` | Liệt kê, tạo, hủy và xử lý hết hạn booking |
+| `handlers/service.py` | Trạng thái dịch vụ, nhận/trả xe, bắt đầu/kết thúc sạc, đổi pin |
+| `handlers/incident.py` | Tạo và xem báo cáo sự cố |
+| `handlers/payment.py` | Tra cứu hóa đơn, tạo phiên VNPAY |
+
+`schemas/` tiếp tục kiểm tra dữ liệu. Các module nghiệp vụ như `charging.py`,
+`swaps.py`, `payments.py`, `incidents.py` không bị chuyển vào handler: handler
+nhận HTTP và gọi các hàm đó. Tên hàm handler vẫn được import ở `main.py` để
+giữ cách ghép routes và tương thích với Gateway hiện có.
+
+Handler User đọc `db` qua đầu mối công khai `shared.database`. Các thao tác
+ghi (hồ sơ, booking, sử dụng dịch vụ, báo cáo, thanh toán) gọi callback đồng
+bộ `change(candidate)` rồi `return persist_change(change)`. Callback chỉ
+đổi candidate và chuẩn bị response; không sửa singleton thật hoặc dùng await.
+
+`persist_change()` yêu cầu ghi JSON thành công trước khi áp dụng candidate
+vào RAM. Response lỗi HTTP từ callback bị bỏ toàn bộ thay đổi; exception cũng
+không áp dụng candidate. Lỗi ghi trả 503 và giữ RAM/file cũ. Callback không
+đổi dữ liệu không ghi lại file (ví dụ hết hạn không có kết quả, cập nhật hồ sơ
+cùng giá trị). Đăng ký/khởi tạo tài khoản khi login lần đầu có lưu dữ liệu;
+GET nghiệp vụ không ghi, riêng callback IPN công khai ghi transaction có chữ ký.
+
+Middleware Gateway vẫn khóa chung mọi request cùng worker hết hạn. Chỉ
+Staff còn dùng nhánh lưu tự động của middleware; User/Operator tự commit ở
+handler nên không lưu hai lần. Handler User cũng lưu được khi chạy app User
+riêng, nhưng demo toàn hệ thống vẫn chạy `BE/run_all.py` để có khóa chung,
+quét hết hạn và các API Operator/Staff.
+
+Kiểm thử trong tiến trình con với runtime tạm kiểm tra cả 11 thao tác ghi
+qua app User độc lập (`/api/...`) và Gateway (`/api/v1/user/...`): lỗi ghi
+không đổi RAM/file, tại thời điểm `_write` RAM vẫn là trạng thái trước request,
+request thành công chỉ ghi đúng một lần. Lỗi nghiệp vụ sau khi sửa candidate
+cũng bị bỏ, không tạo giao dịch một phần.
+
+Phần triển khai lưu trữ đã chuyển vào thư mục nội bộ:
+
+```text
+BE/shared/
+├── database.py              # Đầu mối db, persist_change và lỗi dùng chung
+├── persistence/
+│   ├── memory_store.py      # Store RAM, nghiệp vụ hiện có, một singleton db
+│   ├── json_store.py        # Snapshot, ghi JSON an toàn, áp dụng RAM
+│   └── seed_loader.py       # Đọc/kiểm tra seed và runtime JSON
+├── memory_store.py          # Giữ tương thích đường import cũ
+├── json_store.py            # Giữ tương thích đường import cũ
+└── seed_loader.py           # Giữ tương thích đường import cũ
+```
+
+Các module tương thích chỉ re-export lớp/hàm từ `persistence`, không tạo
+store hoặc singleton riêng. `mock_db.py` và adapter Operator cũng lấy db/lỗi
+qua `shared.database`. Seed vẫn là `BE/data/mock_seed.json`; runtime mặc định
+vẫn là `BE/data/runtime_db.json`, cấu hình `BE_RUNTIME_PATH` giữ nguyên.
+
+`run_all.py` ghép routes bằng import theo package `BE.user.main`,
+`BE.operator.main`, `BE.staff.main`; không nạp main bằng tên giả và không
+xóa cache `schemas`. Staff dùng `BE.staff.schemas` để chọn đúng schema khi
+chạy Gateway hoặc nạp độc lập; chỉ đổi import/bootstrap, không đổi nghiệp vụ
+Staff. Chưa tách các handler Staff ra khỏi `staff/main.py` vì phần đó thuộc
+phạm vi nhóm Staff. Operator đã có thư mục handlers riêng.
+
+Kiểm thử import từ thư mục làm việc bên ngoài repository xác nhận cả ba
+role dùng chung db, các import cũ trỏ về cùng lớp/hàm mới, đường dẫn JSON
+không đổi và module `schemas` không liên quan không bị xóa hoặc thay thế.

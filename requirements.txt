@@ -21,3 +21,6 @@ httpx>=0.27.0
 
 # Multipart form-data parser support
 python-multipart>=0.0.9
+
+# Validate uploaded incident photos
+Pillow>=10.4.0,<13.0.0

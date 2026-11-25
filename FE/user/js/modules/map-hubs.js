@@ -510,5 +510,33 @@
     this.showToast(`Đã định vị: ${name}`);
   },
 
+  async suggestOptimalRoute() {
+    const orig = (document.getElementById("routeOriginPreset")?.value || "10.8835,106.7820").split(",").map(Number);
+    const dest = (document.getElementById("routeDestPreset")?.value || "10.8805,106.8055").split(",").map(Number);
+    const box = document.getElementById("routeSuggestResult");
+    if (!box) return;
+    box.style.display = "block";
+    box.innerHTML = `<span style="color: var(--text-muted);">Đang tìm lộ trình tối ưu...</span>`;
+    try {
+      const res = await ApiService.suggestRoute({
+        origin_lat: orig[0],
+        origin_lng: orig[1],
+        dest_lat: dest[0],
+        dest_lng: dest[1],
+        vehicle_type: "bike"
+      });
+      if (!res || !res.origin_hub) throw new Error("Không tìm được lộ trình phù hợp.");
+      const bikeInfo = res.recommended_bike ? ` · Xe đề xuất: <strong>${res.recommended_bike.id}</strong> (${res.recommended_bike.battery_level}%)` : "";
+      box.innerHTML = `
+        <div style="font-weight: 700; margin-bottom: 4px; color: #059669;">${res.message || "Đã tìm thấy lộ trình tối ưu"}</div>
+        <div style="margin-bottom: 4px;">Nhận xe: <strong>${res.origin_hub.name}</strong> → Trả xe: <strong>${res.destination_hub.name}</strong></div>
+        <div style="color: var(--text-muted); margin-bottom: 8px;">Quãng đường: ${res.distance_km} km · ~${res.estimated_minutes} phút (${res.routing_provider || "OSRM"})${bikeInfo}</div>
+        <button type="button" class="btn-primary" style="padding: 7px 12px; font-size: 12px;" onclick="App.locateHubOnMap('${res.origin_hub.id}')">Mở Hub nhận xe</button>
+      `;
+    } catch (err) {
+      box.innerHTML = `<span style="color: #dc2626;">${err.message || "Không tìm thấy lộ trình khả dụng"}</span>`;
+    }
+  },
+
   };
 })(window);

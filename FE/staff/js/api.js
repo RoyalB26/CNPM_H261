@@ -10,9 +10,26 @@
 const StaffApi = {
   isBackendAvailable: false,
 
+  _authHeaders(extra = {}) {
+    const token = sessionStorage.getItem("staff_access_token") || "";
+    return token ? { ...extra, Authorization: "Bearer " + token } : { ...extra };
+  },
+
+  async login(username, password) {
+    const response = await fetch(`${STAFF_API_BASE}/auth/login`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username_or_phone: username, password })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || "Đăng nhập thất bại");
+    sessionStorage.setItem("staff_access_token", result.access_token);
+    return result;
+  },
+
+
   async checkBackend() {
     try {
-      const res = await fetch(`${STAFF_API_BASE}/profile`);
+      const res = await fetch(`${STAFF_API_BASE}/profile`, { headers: { Authorization: "Bearer " + (sessionStorage.getItem("staff_access_token") || "") } });
       if (res.ok) {
         this.isBackendAvailable = true;
         return true;
@@ -25,7 +42,7 @@ const StaffApi = {
 
   async getProfile() {
     try {
-      const res = await fetch(`${STAFF_API_BASE}/profile`);
+      const res = await fetch(`${STAFF_API_BASE}/profile`, { headers: { Authorization: "Bearer " + (sessionStorage.getItem("staff_access_token") || "") } });
       if (res.ok) return await res.json();
     } catch (e) {
       console.warn("StaffApi getProfile fallback:", e);
@@ -41,9 +58,10 @@ const StaffApi = {
     };
   },
 
-  async getRelocationTask() {
+  async getRelocationTask(taskId = "") {
+    const path = taskId ? `/relocation/task/${encodeURIComponent(taskId)}` : "/relocation/task";
     try {
-      const res = await fetch(`${STAFF_API_BASE}/relocation/task`);
+      const res = await fetch(`${STAFF_API_BASE}${path}`, { headers: this._authHeaders() });
       if (res.ok) return await res.json();
     } catch (e) {
       console.warn("StaffApi getRelocationTask fallback:", e);
@@ -72,7 +90,7 @@ const StaffApi = {
     try {
       const res = await fetch(`${STAFF_API_BASE}/relocation/scan-bike`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ task_id: taskId, bike_code: bikeCode, dock_number: dockNumber })
       });
       if (res.ok) return await res.json();
@@ -86,7 +104,7 @@ const StaffApi = {
     try {
       const res = await fetch(`${STAFF_API_BASE}/relocation/handover`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ task_id: taskId, completed_bikes_count: completedCount, target_hub_name: targetHub })
       });
       if (res.ok) return await res.json();
@@ -100,7 +118,7 @@ const StaffApi = {
     try {
       const res = await fetch(`${STAFF_API_BASE}/relocation/incident`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload)
       });
       if (res.ok) return await res.json();
@@ -112,7 +130,7 @@ const StaffApi = {
 
   async getMaintenanceTasks() {
     try {
-      const res = await fetch(`${STAFF_API_BASE}/maintenance/tasks`);
+      const res = await fetch(`${STAFF_API_BASE}/maintenance/tasks`, { headers: { Authorization: "Bearer " + (sessionStorage.getItem("staff_access_token") || "") } });
       if (res.ok) return await res.json();
     } catch (e) {
       console.warn("StaffApi getMaintenanceTasks fallback:", e);
@@ -126,7 +144,7 @@ const StaffApi = {
 
   async getMaintenanceDetail(taskCode) {
     try {
-      const res = await fetch(`${STAFF_API_BASE}/maintenance/tasks/${taskCode}`);
+      const res = await fetch(`${STAFF_API_BASE}/maintenance/tasks/${taskCode}`, { headers: { Authorization: "Bearer " + (sessionStorage.getItem("staff_access_token") || "") } });
       if (res.ok) return await res.json();
     } catch (e) {
       console.warn("StaffApi getMaintenanceDetail fallback:", e);
@@ -148,39 +166,62 @@ const StaffApi = {
     };
   },
 
-  async verifyDevice(taskCode, scannedCode) {
-    try {
-      const res = await fetch(`${STAFF_API_BASE}/maintenance/verify-device`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task_code: taskCode, scanned_code: scannedCode })
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn("StaffApi verifyDevice fallback:", e);
-    }
-    return { is_match: true, message: "Mã thiết bị trùng khớp 100% với phiếu sự cố." };
+  async verifyDevice(taskCode, scannedQrCode, confirmedSlot = "Ô số 018") {
+    const res = await fetch(`${STAFF_API_BASE}/maintenance/verify-device`, {
+      method: "POST",
+      headers: this._authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ task_code: taskCode, scanned_qr_code: scannedQrCode, confirmed_slot: confirmedSlot })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+    return data;
+  },
+
+  async uploadMaintenancePhoto(taskCode, file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${STAFF_API_BASE}/maintenance/${encodeURIComponent(taskCode)}/photos`, {
+      method: "POST",
+      headers: this._authHeaders(),
+      body: formData
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+    return data;
+  },
+
+  async fetchAttachmentBlobUrl(photoUrl) {
+    const apiHost = (window.EMobilityConfig && window.EMobilityConfig.API_HOST) || "http://127.0.0.1:8000";
+    const url = photoUrl.startsWith("http") ? photoUrl : `${apiHost}${photoUrl}`;
+    const res = await fetch(url, { headers: this._authHeaders() });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  },
+
+  async getNotifications() {
+    const res = await fetch(`${STAFF_API_BASE}/notifications`, { headers: this._authHeaders() });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+    return (data && data.items) || [];
   },
 
   async resolveMaintenance(payload) {
-    try {
-      const res = await fetch(`${STAFF_API_BASE}/maintenance/resolve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn("StaffApi resolveMaintenance fallback:", e);
-    }
-    return { success: true, message: "Gửi kết quả bảo trì thành công!" };
+    const response = await fetch(`${STAFF_API_BASE}/maintenance/resolve`, {
+      method: "POST",
+      headers: this._authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (!response.ok) return { success: false, detail: result.detail || "Gửi kết quả thất bại" };
+    return result;
   },
 
   async reportMaintIncident(payload) {
     try {
       const res = await fetch(`${STAFF_API_BASE}/maintenance/incident`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload)
       });
       if (res.ok) return await res.json();
@@ -194,7 +235,7 @@ const StaffApi = {
     try {
       const res = await fetch(`${STAFF_API_BASE}/parking/checkin`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload)
       });
       if (res.ok) return await res.json();
@@ -212,41 +253,30 @@ const StaffApi = {
   },
 
   async parkingCheckoutPreview(plateOrTicket) {
-    try {
-      const res = await fetch(`${STAFF_API_BASE}/parking/checkout/${encodeURIComponent(plateOrTicket)}`);
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn("StaffApi parkingCheckoutPreview fallback:", e);
-    }
-    return {
-      ticket_code: "SG-20261022-018",
-      license_plate: plateOrTicket,
-      checkin_time: "22/10/2026 · 14:36",
-      checkout_time: "22/10/2026 · 16:42",
-      duration_str: "2 giờ 06 phút",
-      total_fee_vnd: 25000,
-      payment_method: "Thanh toán bằng tiền mặt tại quầy",
-      is_paid: false
-    };
+    const response = await fetch(`${STAFF_API_BASE}/parking/checkout/${encodeURIComponent(plateOrTicket)}`, {
+      headers: { Authorization: "Bearer " + (sessionStorage.getItem("staff_access_token") || "") }
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || "Không lấy được báo giá gửi xe");
+    return result;
   },
 
-  async parkingCheckoutConfirm(ticketCode, cashReceived = 25000) {
-    try {
-      const res = await fetch(`${STAFF_API_BASE}/parking/checkout/confirm`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticket_code: ticketCode, cash_received: cashReceived })
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn("StaffApi parkingCheckoutConfirm fallback:", e);
-    }
-    return { success: true, message: "Xác nhận đã thu tiền mặt thành công. Mở barrier cho xe ra." };
+  async parkingCheckoutConfirm(ticketCode, cashReceived, quoteToken) {
+    const response = await fetch(`${STAFF_API_BASE}/parking/checkout/confirm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json",
+        Authorization: "Bearer " + (sessionStorage.getItem("staff_access_token") || "") },
+      body: JSON.stringify({ ticket_code: ticketCode, cash_received: cashReceived,
+        payment_method: "TIỀN MẶT", quote_token: quoteToken })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || "Xác nhận thu phí thất bại");
+    return result;
   },
 
   async getShiftSummary() {
     try {
-      const res = await fetch(`${STAFF_API_BASE}/parking/shift-summary`);
+      const res = await fetch(`${STAFF_API_BASE}/parking/shift-summary`, { headers: this._authHeaders() });
       if (res.ok) return await res.json();
     } catch (e) {
       console.warn("StaffApi getShiftSummary fallback:", e);
@@ -269,7 +299,7 @@ const StaffApi = {
     try {
       const res = await fetch(`${STAFF_API_BASE}/parking/shift-close`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ guard_id: guardId, total_cash_deposited_vnd: cash })
       });
       if (res.ok) return await res.json();

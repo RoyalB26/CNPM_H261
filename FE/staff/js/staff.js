@@ -40,6 +40,51 @@ const StaffApp = {
     }
     this.updateBottomNavLabels();
 
+    if (!sessionStorage.getItem("staff_access_token")) {
+      this.showLoginView();
+      return;
+    }
+
+    const savedRole = sessionStorage.getItem("staff_role");
+    if (savedRole) {
+      this.switchRole(savedRole);
+    }
+
+    await this.loadInitialData();
+  },
+
+  showLoginView() {
+    const view = document.getElementById("staffLoginView");
+    if (view) view.style.display = "flex";
+  },
+
+  async submitLogin(e) {
+    if (e) e.preventDefault();
+    const errEl = document.getElementById("staffLoginError");
+    if (errEl) errEl.style.display = "none";
+    const username = document.getElementById("staffLoginUsername")?.value?.trim() || "staff_b";
+    const password = document.getElementById("staffLoginPassword")?.value || "";
+    try {
+      await StaffApi.login(username, password);
+      const view = document.getElementById("staffLoginView");
+      if (view) view.style.display = "none";
+      if (username.toLowerCase().includes("01") || username.toLowerCase() === "staff_1") {
+        this.switchRole("relocation");
+      } else {
+        this.switchRole("maintenance");
+      }
+      await this.loadInitialData();
+    } catch (err) {
+      if (errEl) {
+        errEl.innerText = err.message || "Đăng nhập thất bại";
+        errEl.style.display = "block";
+      } else {
+        alert(err.message || "Đăng nhập thất bại");
+      }
+    }
+  },
+
+  async loadInitialData() {
     await Promise.allSettled([
       this.loadProfile(),
       this.loadRelocationTask(),
@@ -72,6 +117,7 @@ const StaffApp = {
    */
   switchRole(role) {
     this.currentRole = role;
+    sessionStorage.setItem("staff_role", role);
     const sel = document.getElementById("staffRoleSelect");
     if (sel) sel.value = role;
 
@@ -145,18 +191,60 @@ const StaffApp = {
       else if (tabIndex === 2) {
         this.openCheckoutScreen();
       } else if (tabIndex === 3) this.goToScreen("screen-guard-shift");
-      else alert("Mục Cá nhân: Thông tin tài khoản bảo vệ Nguyen Van B");
+      else this.goToScreen("screen-staff-profile");
     } else if (this.currentRole === "relocation") {
       if (tabIndex === 1) this.goToScreen("screen-reloc-route");
-      else if (tabIndex === 2) alert("Lịch sử các đợt điều chuyển đã hoàn tất trong tuần: 14 đợt.");
-      else if (tabIndex === 3) alert("Thông báo từ Operator: Chuẩn bị nhận 20 xe tại trạm KTX Khu A lúc 17:00.");
-      else alert("Thông tin nhân viên điều chuyển: Nguyen Van B");
+      else if (tabIndex === 2) this.loadRelocationTask();
+      else if (tabIndex === 3) this.openStaffNotifications();
+      else this.goToScreen("screen-staff-profile");
     } else if (this.currentRole === "maintenance") {
       if (tabIndex === 1) this.goToScreen("screen-maint-list");
-      else if (tabIndex === 2) alert("Lịch sử bảo dưỡng: Đã sửa 42 sự cố trong tháng.");
-      else if (tabIndex === 3) alert("Cảnh báo mới: Trạm sạc C-05 Ga Metro phát sinh dòng rò.");
-      else alert("Thông tin kỹ thuật viên: Nguyen Van B");
+      else if (tabIndex === 2) this.loadMaintenanceTasks();
+      else if (tabIndex === 3) this.openStaffNotifications();
+      else this.goToScreen("screen-staff-profile");
     }
+  },
+
+  async openStaffNotifications() {
+    this.goToScreen("screen-staff-notifications");
+    const box = document.getElementById("staffNotificationsContainer");
+    if (!box) return;
+    box.innerHTML = `<div class="staff-card" style="padding: 16px; text-align: center; color: var(--text-muted);">Đang tải thông báo...</div>`;
+    try {
+      const items = await StaffApi.getNotifications();
+      if (!items.length) {
+        box.innerHTML = `<div class="staff-card" style="padding: 16px; text-align: center; color: var(--text-muted);">Chưa có thông báo nhiệm vụ nào.</div>`;
+        return;
+      }
+      box.innerHTML = items.map(n => {
+        const msg = n.message || n.body || "";
+        const isReloc = (n.title || "").toLowerCase().includes("điều") || msg.startsWith("CMD-") || msg.startsWith("#");
+        const clickFn = isReloc
+          ? `StaffApp.openRelocTaskById('${msg.trim()}')`
+          : `StaffApp.openMaintenanceDetail('${msg.trim()}')`;
+        return `
+          <div class="staff-card" style="padding: 12px 14px; cursor: pointer;" onclick="${clickFn}">
+            <div style="font-weight: 800; font-size: 13.5px; margin-bottom: 4px;">${n.title || "Thông báo mới"}</div>
+            <div style="font-size: 12px; color: var(--text-muted);">${msg}</div>
+          </div>
+        `;
+      }).join("");
+    } catch (err) {
+      box.innerHTML = `<div class="staff-card" style="padding: 16px; text-align: center; color: #dc2626;">${err.message || "Không thể tải thông báo"}</div>`;
+    }
+  },
+
+  async openRelocTaskById(taskId) {
+    const task = await StaffApi.getRelocationTask(taskId);
+    if (task && task.task_id) {
+      this.currentRelocTaskId = task.task_id;
+    }
+    this.switchRole("relocation");
+  },
+
+  logoutStaff() {
+    sessionStorage.removeItem("staff_access_token");
+    this.showLoginView();
   }
 };
 

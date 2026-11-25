@@ -1,6 +1,9 @@
 """Kiểm tra thanh toán một lần và bảo vệ số tiền hóa đơn thuê xe."""
 
 import copy
+import os
+from unittest.mock import patch
+from integration_support import VNPAY_TEST_CONFIG
 from pathlib import Path
 import sys
 import unittest
@@ -13,17 +16,25 @@ from user.schemas.payment import PaymentSubmitRequest
 
 class RentalPaymentTests(unittest.TestCase):
     def setUp(self):
+        config = patch.dict(os.environ, VNPAY_TEST_CONFIG)
+        config.start()
+        self.addCleanup(config.stop)
         self.db = MockDatabaseStore()
         result = self.db.return_vehicle("TRIP-8821", "Hub Đại học Quốc Tế")
         self.assertTrue(result['success'])
         self.invoice = self.db.bookings[0]['rental_invoice']
 
-    def test_paid_state_and_repeat_rejected(self):
+    def test_pending_payment_reused_and_paid_invoice_rejected(self):
         request = PaymentSubmitRequest(invoice_id=self.invoice['id'], method='Ví điện tử')
         result = pay_invoice(self.db, request)
-        self.assertEqual(self.invoice['status'], 'paid')
-        self.assertEqual(self.invoice['transaction_id'], result.transaction_id)
-        self.assertEqual(self.invoice['payment_method'], 'wallet')
+        self.assertEqual(self.invoice['status'], 'pending')
+        self.assertEqual(result.status, 'pending')
+        self.assertIn('vnp_SecureHash=', result.payment_url)
+        before = copy.deepcopy(self.db.__dict__)
+        repeated = pay_invoice(self.db, request)
+        self.assertEqual(repeated.transaction_id, result.transaction_id)
+        self.assertEqual(before, self.db.__dict__)
+        self.invoice['status'] = 'paid'
         before = copy.deepcopy(self.db.__dict__)
         with self.assertRaises(PaymentError):
             pay_invoice(self.db, request)
@@ -43,3 +54,30 @@ class RentalPaymentTests(unittest.TestCase):
         with self.assertRaises(PaymentError):
             pay_invoice(self.db, PaymentSubmitRequest(invoice_id=self.invoice['id'], method='wallet'))
         self.assertEqual(before, self.db.__dict__)
+
+    def test_invoice_type_reference_total_or_items_mismatch_not_paid(self):
+        original = copy.deepcopy(self.invoice)
+        for changes in ({'service_type': 'charging'}, {'reference_id': 'XE-OTHER'},
+                        {'total_amount': self.invoice['total_amount'] + 1},
+                        {'items': [{'description': 'Sai khoản phí', 'amount': 1}]},
+                        {'total_amount': '2167'}, {'transaction_id': 'TXN-ALREADY-CREATED'}):
+            with self.subTest(changes=changes):
+                self.invoice.clear(); self.invoice.update(copy.deepcopy(original)); self.invoice.update(changes)
+                before = copy.deepcopy(self.db.__dict__)
+                with self.assertRaises(PaymentError) as error:
+                    pay_invoice(self.db, PaymentSubmitRequest(invoice_id=self.invoice['id'], method='wallet'))
+                self.assertEqual(error.exception.status_code, 409)
+                self.assertEqual(before, self.db.__dict__)
+
+    def test_changed_final_trip_fee_prevents_payment(self):
+        self.db.bookings[0]['rental_trip']['total_fee'] += 1
+        before = copy.deepcopy(self.db.__dict__)
+        with self.assertRaises(PaymentError):
+            pay_invoice(self.db, PaymentSubmitRequest(invoice_id=self.invoice['id'], method='wallet'))
+        self.assertEqual(before, self.db.__dict__)
+
+    def test_changed_current_hub_price_does_not_reprice_final_invoice(self):
+        self.db.get_hub('hub-01')['pricing']['rental_bike_hourly'] = 999999
+        result = pay_invoice(self.db, PaymentSubmitRequest(invoice_id=self.invoice['id'], method='wallet'))
+        self.assertTrue(result.success)
+        self.assertEqual(self.invoice['status'], 'pending')

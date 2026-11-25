@@ -7,18 +7,20 @@ class CreateIncidentReportRequest(BaseModel):
 
     model_config = ConfigDict(strict=True)
 
-    resource_type: NonEmptyString
+    resource_type: Literal['Phương tiện', 'Chỗ đỗ', 'Cổng sạc', 'Cơ sở hạ tầng', 'Pin', 'Trạm pin']
     resource_code: NonEmptyString
     hub_name: NonEmptyString
     incident_type: NonEmptyString
     description: NonEmptyString
-    image_attached: bool = Field(False)
+    image_attached: Literal[False] = Field(False, description='Chưa có API tải ảnh; không xác nhận ảnh chỉ bằng cờ client')
 
 class IncidentReportResponse(BaseModel):
     """Báo cáo chuẩn hóa; giữ các trường bổ sung của seed cũ khi đọc."""
 
     model_config = ConfigDict(extra="allow")
     id: str = Field(..., example="INC-2026-089")
+    user_id: Optional[str] = Field(None, min_length=1)
+    hub_id: Optional[str] = Field(None, min_length=1)
     resource_type: str = Field(..., example="Phương tiện")
     resource_code: str = Field(..., example="XE-024")
     hub_name: str = Field(..., example="Hub Ga Metro ĐHQG")
