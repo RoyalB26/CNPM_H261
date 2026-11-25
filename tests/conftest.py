@@ -18,17 +18,24 @@ for path_str in (str(ROOT_DIR), str(BE_DIR)):
         sys.path.insert(0, path_str)
 
 import BE.mock_db as _shared_mock_db  # noqa: E402
+from shared.authentication import challenges, sessions  # noqa: E402
+from shared.database import storage  # noqa: E402
 
 sys.modules["mock_db"] = _shared_mock_db
 MockDatabaseStore = _shared_mock_db.MockDatabaseStore
 db = _shared_mock_db.db
 
+
 @pytest.fixture(autouse=True)
 def reset_shared_mock_db() -> Iterator[MockDatabaseStore]:
-    """Reset MockDatabaseStore before and after test."""
-    db.reset()
+    """Reset MockDatabaseStore, file runtime và phiên đăng nhập trước/sau mỗi test."""
+    storage.reset_to_seed()
+    sessions.clear()
+    challenges.clear()
     yield db
-    db.reset()
+    storage.reset_to_seed()
+    sessions.clear()
+    challenges.clear()
 
 
 @pytest.fixture(scope="session", autouse=True)

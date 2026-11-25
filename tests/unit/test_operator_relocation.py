@@ -1,7 +1,7 @@
 """Unit/API Test cho UC8: Lệnh điều phối xe và ngoại lệ RelocationError (TC-O03-ERR)."""
 
-import pytest
 import copy
+import pytest
 from starlette.testclient import TestClient
 
 from BE.mock_db import RelocationError
@@ -19,6 +19,7 @@ def test_relocation_error_carries_status_code_and_message() -> None:
 
 def test_tc_o03_create_valid_relocation_command_succeeds(
     api_client: TestClient,
+    operator_headers: dict[str, str],
     reset_shared_mock_db,
 ) -> None:
     """Trường hợp thành công: Điều 1 xe từ hub-02 (2 xe sẵn sàng) sang hub-04 (1 chỗ trống)."""
@@ -30,13 +31,18 @@ def test_tc_o03_create_valid_relocation_command_succeeds(
         "assigned_staff_id": "STF-01",
         "notes": "Cân bằng tải giờ cao điểm",
     }
-    response = api_client.post(f"{OPERATOR_API}/relocation/commands", json=payload)
-    assert response.status_code == 201
+    response = api_client.post(
+        f"{OPERATOR_API}/relocation/commands",
+        headers=operator_headers,
+        json=payload,
+    )
+    assert response.status_code == 201, response.text
     assert len(reset_shared_mock_db.relocations) == total_before + 1
 
 
 def test_tc_o03_err_exceeding_target_capacity_is_rejected_without_mutating_db(
     api_client: TestClient,
+    operator_headers: dict[str, str],
     reset_shared_mock_db,
 ) -> None:
     source_before = copy.deepcopy(find_hub_in_db(reset_shared_mock_db, "hub-02"))
@@ -49,8 +55,12 @@ def test_tc_o03_err_exceeding_target_capacity_is_rejected_without_mutating_db(
         "assigned_staff_id": "STF-01",
         "priority": "Khẩn cấp",
     }
-    response = api_client.post(f"{OPERATOR_API}/relocation/commands", json=excessive_payload)
-    assert response.status_code == 409
+    response = api_client.post(
+        f"{OPERATOR_API}/relocation/commands",
+        headers=operator_headers,
+        json=excessive_payload,
+    )
+    assert response.status_code == 409, response.text
 
     body = response.json()
     msg = str(body.get("detail") or "").lower()

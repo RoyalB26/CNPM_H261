@@ -1,13 +1,17 @@
 """Kiểm thử E2E & NFR Nhóm 1 cho Bảng Điều Hành Operator (FE/operator/)."""
 
+import time
+
 from playwright.sync_api import Browser, Page, expect
 import pytest
-import time
 
 from tests.e2e.conftest import (
     ACTIVE_CLASS_RE,
+    BACKEND_URL,
     SHOW_CLASS_RE,
     block_external_requests,
+    get_operator_auth_headers,
+    get_user_auth_headers,
     login_end_user,
     open_operator_dashboard,
     switch_operator_tab,
@@ -25,7 +29,6 @@ def test_tc_o02_what_if_simulation_progress_bar_and_recommendations_ui(page: Pag
     page.evaluate("() => { OperatorApp.goToSimStep(2); }")
     expect(page.locator("#simStep2View")).to_have_class(ACTIVE_CLASS_RE, timeout=5000)
 
-    # Kích hoạt mô phỏng -> modal-backdrop.show xuất hiện, progress bar chạy mượt rồi chuyển Bước 3
     page.evaluate("() => { OperatorApp.triggerSimulationCalculation(); }")
     expect(page.locator("#modalSimLoading")).to_have_class(SHOW_CLASS_RE, timeout=3000)
 
@@ -57,18 +60,21 @@ def test_tc_o03_create_relocation_command_via_dashboard_ui(
     assert len(reset_shared_mock_db.relocations) == reloc_before + 1
     expect(page.locator("#relocationTableBody")).not_to_be_empty()
 
+
 @pytest.mark.e2e
-def test_tc_o04_assign_maintenance_ticket_via_dashboard_ui(page: Page,reset_shared_mock_db,) -> None:
+def test_tc_o04_assign_maintenance_ticket_via_dashboard_ui(
+    page: Page,
+    reset_shared_mock_db,
+) -> None:
+    """TC-O04 (UC9): Phân công phiếu bảo trì TICK-802 cho STF-02 trên UI -> cập nhật mock_db."""
     dialogs = open_operator_dashboard(page)
 
     switch_operator_tab(page, "maint")
     expect(page.locator("#maintenanceTableBody tr").first).to_be_visible(timeout=5000)
 
-    # Dùng mã phiếu PENDING có thật trong mock_seed.json thay vì 'ERR-8812'
     page.evaluate("() => { OperatorApp.openAssignMaintenanceModal('TICK-802'); }")
     expect(page.locator("#modalAssignMaintenance")).to_have_class(SHOW_CLASS_RE, timeout=5000)
 
-    # Đảm bảo chọn đúng kỹ thuật viên có role MAINTENANCE (STF-02) nếu modal có dropdown
     tech_select = page.locator("#modalAssignMaintenance select").first
     if tech_select.count() and tech_select.locator("option[value='STF-02']").count():
         tech_select.select_option("STF-02")
@@ -80,8 +86,12 @@ def test_tc_o04_assign_maintenance_ticket_via_dashboard_ui(page: Page,reset_shar
     page.evaluate("() => { void OperatorApp.submitMaintenanceAssign(); }")
     msg = wait_for_new_dialog(page, dialogs, prev, timeout_ms=5000)
 
-    assert "phân công" in msg.lower() and "không thể" not in msg.lower(), f"Thông điệp thực tế: {msg}"
-    ticket = next(t for t in reset_shared_mock_db.maintenance_tickets if t["code"] == "TICK-802")
+    assert "phân công" in msg.lower() and "không thể" not in msg.lower(), (
+        f"Thông điệp thực tế: {msg}"
+    )
+    ticket = next(
+        t for t in reset_shared_mock_db.maintenance_tickets if t["code"] == "TICK-802"
+    )
     assert ticket["status"] == "ASSIGNED"
 
 
@@ -97,7 +107,7 @@ def test_tc_o05_configure_metro_hub_capacity_updates_ui_and_mock_db(
     expect(page.locator("#hubsTableBody tr").first).to_be_visible(timeout=5000)
 
     page.evaluate(
-        "() => { OperatorApp.openHubConfigModal('HUB-01', 'Hub Ga Metro ĐHQG', 150, 50, 10.8753, 106.8005); }"
+        "() => { OperatorApp.openHubConfigModal('hub-01', 'Hub Ga Metro ĐHQG', 20, 4, 10.8753, 106.8005); }"
     )
     expect(page.locator("#modalHubConfig")).to_have_class(SHOW_CLASS_RE, timeout=5000)
 
@@ -112,7 +122,7 @@ def test_tc_o05_configure_metro_hub_capacity_updates_ui_and_mock_db(
     expect(page.locator("#hubsTableBody")).to_contain_text("200")
     expect(page.locator("#hubsTableBody")).to_contain_text("100")
 
-    metro_hub = find_hub_in_db(reset_shared_mock_db, "HUB-01")
+    metro_hub = find_hub_in_db(reset_shared_mock_db, "hub-01")
     assert metro_hub["parking_capacity"] == 200
     assert metro_hub["charger_capacity"] == 100
 
@@ -120,7 +130,7 @@ def test_tc_o05_configure_metro_hub_capacity_updates_ui_and_mock_db(
 @pytest.mark.e2e
 @pytest.mark.nfr
 @pytest.mark.xfail(
-    reason="BUG-FE-04 (NFR06): BE chưa bật cờ system_halted chặn booking; FE/user chưa nhận tín hiệu khóa UI trong < 2s",
+    reason="BUG-FE-04 (NFR06): FE gửi lệch field emergencyHalt, BE chưa chặn create_booking khi emergency_halt=True và FE/user chưa nhận tín hiệu khóa UI < 2s",
     strict=True,
 )
 def test_nfr06_emergency_halt_locks_user_ui_and_blocks_booking_under_2s(
@@ -137,30 +147,36 @@ def test_nfr06_emergency_halt_locks_user_ui_and_blocks_booking_under_2s(
 
         open_operator_dashboard(op_page)
         login_end_user(user_page)
+        user_headers = get_user_auth_headers(user_page)
         bookings_before = len(reset_shared_mock_db.bookings)
 
-        # Ghi nhận mốc thời gian ngay khi Operator kích hoạt Dừng khẩn cấp
         t0 = time.perf_counter()
-        op_page.evaluate("() => { OperatorApp.openEmergencyModal(); void OperatorApp.confirmEmergency(); }")
+        op_page.evaluate(
+            "() => { OperatorApp.openEmergencyModal(); void OperatorApp.confirmEmergency(); }"
+        )
 
         expect(user_page.locator("body")).to_contain_text("Tạm dừng khẩn cấp", timeout=2000)
         elapsed_ms = (time.perf_counter() - t0) * 1000
         assert elapsed_ms < 2000, f"Thời gian khóa UI vượt ngưỡng: {elapsed_ms:.1f}ms"
 
-        # Thử tạo booking mới sau khi halt -> phải bị từ chối và không phát sinh booking mới
         res = user_page.request.post(
-            "http://127.0.0.1:8000/api/bookings",
+            f"{BACKEND_URL}/api/bookings",
+            headers=user_headers,
             data={
                 "plan_type": "rental",
                 "hub_id": "hub-01",
                 "resource_name": "XE-031 · Xe đạp điện",
             },
         )
-        assert res.status in (403, 423, 503), f"Hệ thống đã halt nhưng API booking vẫn trả {res.status}"
+        assert res.status in (403, 423, 503), (
+            f"Hệ thống đã halt nhưng API booking vẫn trả {res.status}"
+        )
         assert len(reset_shared_mock_db.bookings) == bookings_before
     finally:
         op_ctx.close()
         user_ctx.close()
+
+
 @pytest.mark.e2e
 @pytest.mark.nfr
 @pytest.mark.xfail(
@@ -169,14 +185,21 @@ def test_nfr06_emergency_halt_locks_user_ui_and_blocks_booking_under_2s(
 )
 def test_nfr07_operator_intervention_writes_complete_audit_log(page: Page) -> None:
     dialogs = open_operator_dashboard(page)
+    op_headers = get_operator_auth_headers(page)
+
     prev = len(dialogs)
     page.evaluate("() => { void OperatorApp.confirmEmergency(); }")
     wait_for_new_dialog(page, dialogs, prev, timeout_ms=3000)
 
-    res = page.request.get("http://127.0.0.1:8000/api/v1/operator/dashboard/telemetry")
+    res = page.request.get(
+        f"{BACKEND_URL}/api/v1/operator/dashboard/telemetry",
+        headers=op_headers,
+    )
     assert res.status == 200
     events = res.json()
-    halt_events = [e for e in events if "khẩn cấp" in str(e).lower() or "halt" in str(e).lower()]
+    halt_events = [
+        e for e in events if "khẩn cấp" in str(e).lower() or "halt" in str(e).lower()
+    ]
     assert len(halt_events) > 0
 
     latest = halt_events[0]
@@ -185,6 +208,7 @@ def test_nfr07_operator_intervention_writes_complete_audit_log(page: Page) -> No
         assert field in latest and str(latest[field]).strip() != "", (
             f"Bản ghi kiểm toán thiếu hoặc rỗng trường '{field}': {latest}"
         )
+
 
 @pytest.mark.e2e
 @pytest.mark.nfr
@@ -198,14 +222,17 @@ def test_nfr10_hub_config_change_propagates_to_user_within_60s(browser: Browser)
         op_page = op_ctx.new_page()
         user_page = user_ctx.new_page()
 
-        # Mở cả 2 phía trước khi thay đổi cấu hình
         dialogs = open_operator_dashboard(op_page)
         login_end_user(user_page)
+        user_headers = get_user_auth_headers(user_page)
+
         user_page.evaluate("() => { void App.selectHubAndOpenDetail('hub-01'); }")
-        expect(user_page.locator("#screen-hub-detail")).to_have_class(ACTIVE_CLASS_RE, timeout=5000)
+        expect(user_page.locator("#screen-hub-detail")).to_have_class(
+            ACTIVE_CLASS_RE, timeout=5000
+        )
 
         op_page.evaluate(
-            "() => { OperatorApp.openHubConfigModal('HUB-01', 'Hub Ga Metro ĐHQG', 150, 50, 10.8753, 106.8005); }"
+            "() => { OperatorApp.openHubConfigModal('hub-01', 'Hub Ga Metro ĐHQG', 20, 4, 10.8753, 106.8005); }"
         )
         op_page.fill("#configParkingCap", "220")
         op_page.fill("#configChargerCap", "110")
@@ -214,18 +241,28 @@ def test_nfr10_hub_config_change_propagates_to_user_within_60s(browser: Browser)
         op_page.evaluate("() => { void OperatorApp.saveHubConfig(); }")
         wait_for_new_dialog(op_page, dialogs, prev, timeout_ms=5000)
 
-        # Kiểm tra dữ liệu trả về cho phiên User đang mở cập nhật trong ngưỡng <= 60s
+        hub_data: dict = {}
         deadline = time.perf_counter() + 60
         while time.perf_counter() < deadline:
-            hub_data = user_page.request.get("http://127.0.0.1:8000/api/hubs/hub-01").json()
-            if hub_data.get("parking_capacity") == 220 and hub_data.get("charger_capacity") == 110:
+            resp = user_page.request.get(
+                f"{BACKEND_URL}/api/hubs/hub-01",
+                headers=user_headers,
+            )
+            assert resp.status == 200, resp.text()
+            hub_data = resp.json()
+            if (
+                hub_data.get("parking_capacity") == 220
+                and hub_data.get("charger_capacity") == 110
+            ):
                 break
             user_page.wait_for_timeout(500)
-        assert hub_data["parking_capacity"] == 220
-        assert hub_data["charger_capacity"] == 110
+
+        assert hub_data.get("parking_capacity") == 220
+        assert hub_data.get("charger_capacity") == 110
     finally:
         op_ctx.close()
         user_ctx.close()
+
 
 @pytest.mark.e2e
 @pytest.mark.nfr
@@ -240,7 +277,9 @@ def test_nfr13_high_load_response_and_dispatch_recommendations_timing(
 
     open_operator_dashboard(page)
     switch_operator_tab(page, "sim")
-    page.evaluate("() => { OperatorApp.goToSimStep(2); OperatorApp.triggerSimulationCalculation(); }")
+    page.evaluate(
+        "() => { OperatorApp.goToSimStep(2); OperatorApp.triggerSimulationCalculation(); }"
+    )
 
     expect(page.locator("#simStep3View")).to_have_class(ACTIVE_CLASS_RE, timeout=5000)
     expect(page.locator("#simStep3View")).to_contain_text("Điều chuyển", timeout=10000)

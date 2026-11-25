@@ -2,22 +2,29 @@
 
 Tự động khởi chạy Unified Backend (cổng 8000) và Frontend Static Server (cổng 3000),
 chặn tài nguyên CDN/bản đồ bên ngoài để tránh treo `networkidle` hoặc sập WebGL,
-và cung cấp helper an toàn cho window.alert / chuyển tab.
+và cung cấp helper đăng nhập thật (End-User, Operator 2FA, Staff) + ký IPN VNPAY.
 """
 
+from datetime import datetime, timedelta, timezone
 from functools import partial
+import hashlib
+import hmac
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import importlib.util
+import os
 from pathlib import Path
 import re
 import socket
 import threading
 import time
 from typing import Iterator
+from urllib.parse import urlencode
 
 from playwright.sync_api import Browser, BrowserContext, Dialog, Page, Route
 import pytest
 import uvicorn
+
+from shared.authentication import accounts, ensure_accounts, totp
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 FE_DIR = ROOT_DIR / "FE"
@@ -36,6 +43,12 @@ STAFF_URL = f"{FRONTEND_URL}/staff/"
 
 ACTIVE_CLASS_RE = re.compile(r"\bactive\b")
 SHOW_CLASS_RE = re.compile(r"\bshow\b")
+VN_TZ = timezone(timedelta(hours=7))
+
+# Cấu hình mặc định cho VNPAY sandbox mock (D1) khi chạy E2E cục bộ
+os.environ.setdefault("VNPAY_TMN_CODE", "TESTMERCHANT")
+os.environ.setdefault("VNPAY_HASH_SECRET", "test-only-secret")
+os.environ.setdefault("VNPAY_RETURN_URL", f"{USER_URL}?payment=vnpay-return")
 
 
 def _is_port_open(host: str, port: int) -> bool:
@@ -71,11 +84,14 @@ class _QuietHandler(SimpleHTTPRequestHandler):
     def log_message(self, format: str, *args) -> None:  # noqa: A002
         return
 
+
 class _HighBacklogHTTPServer(ThreadingHTTPServer):
     """Tăng backlog TCP tránh rớt kết nối khi HtmlInclude nạp 50+ partials song song."""
+
     request_queue_size = 128
     allow_reuse_address = True
     daemon_threads = True
+
 
 @pytest.fixture(scope="session", autouse=True)
 def live_servers() -> Iterator[None]:
@@ -117,7 +133,12 @@ def block_external_requests(target: Page | BrowserContext) -> None:
 
     def _route_handler(route: Route) -> None:
         url = route.request.url
-        if url.startswith("http://127.0.0.1") or url.startswith("http://localhost") or url.startswith("data:"):
+        if (
+            url.startswith("http://127.0.0.1")
+            or url.startswith("http://localhost")
+            or url.startswith("data:")
+            or url.startswith("blob:")
+        ):
             route.continue_()
         else:
             route.abort()
@@ -137,14 +158,21 @@ def attach_dialog_collector(page: Page) -> list[str]:
     return messages
 
 
-def wait_for_new_dialog(page: Page, dialogs: list[str], previous_count: int, timeout_ms: int = 5000) -> str:
+def wait_for_new_dialog(
+    page: Page,
+    dialogs: list[str],
+    previous_count: int,
+    timeout_ms: int = 5000,
+) -> str:
     """Đợi cho tới khi xuất hiện hộp thoại alert mới thay vì sleep cố định."""
     deadline = time.perf_counter() + (timeout_ms / 1000.0)
     while time.perf_counter() < deadline:
         if len(dialogs) > previous_count:
             return dialogs[-1]
         page.wait_for_timeout(100)
-    raise AssertionError(f"Không nhận được hộp thoại alert sau {timeout_ms}ms. Hiện có: {dialogs}")
+    raise AssertionError(
+        f"Không nhận được hộp thoại alert sau {timeout_ms}ms. Hiện có: {dialogs}"
+    )
 
 
 def switch_operator_tab(page: Page, keyword: str) -> None:
@@ -154,9 +182,73 @@ def switch_operator_tab(page: Page, keyword: str) -> None:
         menu_btn.click()
         return
 
-    # Fallback: gọi trực tiếp switchTab với ID có tiền tố `tab-`
     tab_id = keyword if keyword.startswith("tab-") else f"tab-{keyword}"
     page.evaluate(f"() => {{ OperatorApp.switchTab('{tab_id}'); }}")
+
+
+def get_user_auth_headers(page: Page) -> dict[str, str]:
+    """Đọc Bearer token End-User hiện có trong sessionStorage."""
+    token = page.evaluate("() => sessionStorage.getItem('user_access_token') || ''")
+    assert token, "End-User chưa có user_access_token trong sessionStorage"
+    return {"Authorization": f"Bearer {token}"}
+
+
+def get_operator_auth_headers(page: Page) -> dict[str, str]:
+    """Đọc Bearer token Operator hiện có trong sessionStorage."""
+    token = page.evaluate("() => sessionStorage.getItem('operator_access_token') || ''")
+    assert token, "Operator chưa có operator_access_token trong sessionStorage"
+    return {"Authorization": f"Bearer {token}"}
+
+
+def get_staff_auth_headers(page: Page) -> dict[str, str]:
+    """Đọc Bearer token Staff hiện có trong sessionStorage."""
+    token = page.evaluate("() => sessionStorage.getItem('staff_access_token') || ''")
+    assert token, "Staff chưa có staff_access_token trong sessionStorage"
+    return {"Authorization": f"Bearer {token}"}
+
+
+def api_operator_headers(page: Page) -> dict[str, str]:
+    """Đăng nhập Operator qua API 2FA cho các test không mở Operator UI."""
+    email = "admin@e-mobility.com"
+    login_res = page.request.post(
+        f"{BACKEND_URL}/api/v1/operator/auth/login",
+        data={"email": email, "password": "operator123"},
+    )
+    assert login_res.status == 200, login_res.text()
+    challenge_id = login_res.json()["challenge_id"]
+
+    ensure_accounts()
+    op_account = next(a for a in accounts() if a["role"] == "operator")
+    otp_res = page.request.post(
+        f"{BACKEND_URL}/api/v1/operator/auth/verify-2fa",
+        data={
+            "email": email,
+            "challenge_id": challenge_id,
+            "otp_code": totp(op_account["totp_secret"]),
+        },
+    )
+    assert otp_res.status == 200, otp_res.text()
+    return {"Authorization": f"Bearer {otp_res.json()['access_token']}"}
+
+
+def build_vnpay_ipn_params(txn_ref: str, amount_vnd: int) -> dict[str, str]:
+    """Tạo tham số callback VNPAY IPN có chữ ký HMAC-SHA512 hợp lệ."""
+    data = {
+        "vnp_TmnCode": os.environ["VNPAY_TMN_CODE"],
+        "vnp_TxnRef": txn_ref,
+        "vnp_Amount": str(int(amount_vnd) * 100),
+        "vnp_ResponseCode": "00",
+        "vnp_TransactionStatus": "00",
+        "vnp_TransactionNo": str(int(time.time() * 1000) % 90_000_000 + 10_000_000),
+        "vnp_PayDate": datetime.now(VN_TZ).strftime("%Y%m%d%H%M%S"),
+    }
+    encoded = urlencode(sorted(data.items()))
+    data["vnp_SecureHash"] = hmac.new(
+        os.environ["VNPAY_HASH_SECRET"].encode(),
+        encoded.encode(),
+        hashlib.sha512,
+    ).hexdigest()
+    return data
 
 
 def login_end_user(page: Page) -> None:
@@ -176,25 +268,79 @@ def login_end_user(page: Page) -> None:
 
     page.evaluate("() => { void App.handleLogin(); }")
     page.wait_for_selector("#screen-map-home.active", timeout=10000)
+    page.wait_for_function(
+        "() => Boolean(sessionStorage.getItem('user_access_token'))",
+        timeout=10000,
+    )
 
 
 def open_operator_dashboard(page: Page) -> list[str]:
-    """Mở Dashboard Operator, chặn CDN ngoài và vượt qua lớp 2FA (nếu hiển thị)."""
+    """Mở Dashboard Operator, xác thực 2FA TOTP và đợi tải xong KPI thật."""
     block_external_requests(page)
     dialogs = attach_dialog_collector(page)
     page.goto(OPERATOR_URL, wait_until="domcontentloaded")
     page.wait_for_function(
-        "() => document.querySelectorAll('[data-include]').length === 0 && Boolean(window.OperatorApp)",
+        "() => document.querySelectorAll('[data-include]').length === 0 "
+        "&& Boolean(window.OperatorApp) "
+        "&& (Boolean(sessionStorage.getItem('operator_access_token')) "
+        "    || Boolean(document.querySelector('#operatorLoginView.show')))",
         timeout=10000,
     )
-    page.wait_for_selector("#kpiTotalHubs", state="attached", timeout=10000)
 
     login_overlay = page.locator("#operatorLoginView.show")
     if login_overlay.count() and login_overlay.is_visible():
-        prev = len(dialogs)
+        ensure_accounts()
+        op_account = next(a for a in accounts() if a["role"] == "operator")
+        otp_code = totp(op_account["totp_secret"])
+
+        digits = page.locator(".otp-digit")
+        for idx, ch in enumerate(otp_code):
+            digits.nth(idx).fill(ch)
+
         page.evaluate("() => { void OperatorApp.completeLogin(); }")
-        wait_for_new_dialog(page, dialogs, prev, timeout_ms=5000)
-        page.wait_for_selector("#operatorLoginView.show", state="detached", timeout=5000)
+        page.wait_for_selector("#operatorLoginView.show", state="detached", timeout=10000)
+        page.wait_for_function(
+            "() => Boolean(sessionStorage.getItem('operator_access_token'))",
+            timeout=10000,
+        )
+
+    page.wait_for_selector("#kpiTotalHubs", state="visible", timeout=10000)
+    # Đợi loadDashboardData() thay placeholder tĩnh (50) bằng số liệu thực từ BE (5)
+    page.wait_for_function(
+        "() => { const el = document.getElementById('kpiTotalHubs'); "
+        "return Boolean(el) && el.innerText.trim() !== '50'; }",
+        timeout=10000,
+    )
+    return dialogs
+
+
+def login_staff(
+    page: Page,
+    username: str = "staff_b",
+    password: str = "staff123",
+) -> list[str]:
+    """Mở ứng dụng Staff, đăng nhập qua #staffLoginView và đợi dữ liệu ban đầu sẵn sàng."""
+    block_external_requests(page)
+    dialogs = attach_dialog_collector(page)
+    page.goto(STAFF_URL, wait_until="domcontentloaded")
+    page.wait_for_function(
+        "() => document.querySelectorAll('[data-include]').length === 0 "
+        "&& Boolean(window.StaffApp) "
+        "&& (Boolean(sessionStorage.getItem('staff_access_token')) "
+        "    || (document.getElementById('staffLoginView')?.style.display === 'flex'))",
+        timeout=10000,
+    )
+
+    login_view = page.locator("#staffLoginView")
+    if login_view.is_visible():
+        page.fill("#staffLoginUsername", username)
+        page.fill("#staffLoginPassword", password)
+        page.evaluate("() => { void StaffApp.submitLogin(); }")
+        page.wait_for_selector("#staffLoginView", state="hidden", timeout=10000)
+        page.wait_for_function(
+            "() => Boolean(sessionStorage.getItem('staff_access_token'))",
+            timeout=10000,
+        )
 
     return dialogs
 
