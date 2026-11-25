@@ -103,6 +103,13 @@
 
     if (items.length > 0) {
       container.innerHTML = items.join("");
+    } else {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+          <i class="fa-solid fa-bolt" style="font-size: 30px; margin-bottom: 10px; opacity: 0.4;"></i>
+          <div style="font-weight: 600;">Chưa có dịch vụ nào đang hoạt động</div>
+        </div>
+      `;
     }
   },
 

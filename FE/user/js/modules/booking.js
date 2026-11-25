@@ -62,10 +62,12 @@
 
     const newBooking = await ApiService.createBooking(payload);
     AppState.bookings.unshift(newBooking);
+    AppState.selectedBookingId = newBooking.id;
 
     const successIdEl = document.getElementById("successBookingId");
     if (successIdEl) successIdEl.innerText = `Mã đặt: ${newBooking.id || 'EMH-1024'}`;
 
+    this.renderBookings();
     this.showToast("Đặt chỗ giữ tài nguyên thành công!");
     this.navigateTo("screen-booking-success");
   },
@@ -80,6 +82,10 @@
   },
 
   async confirmRental() {
+    if (!AppState.bookingDraft.selectedBike) {
+      this.showToast("Không có xe khả dụng tại Hub này.");
+      return;
+    }
     const destHubName = document.getElementById("selectDestHub") 
       ? document.getElementById("selectDestHub").value 
       : "Hub Đại học Bách khoa";
@@ -153,31 +159,36 @@
     this.setupInvoiceAndPay("swap", 25000, "screen-review-swap", false);
   },
 
-  async executeCancelBooking() {
-    const targetId = AppState.selectedBookingId || "EMH-1023";
+  async executeCancelBooking(bookingId) {
+    const targetId = bookingId || AppState.selectedBookingId || App.selectedBookingId;
+    if (!targetId) {
+      this.showToast("Không tìm thấy mã đặt chỗ để hủy.");
+      return;
+    }
     try {
       await ApiService.cancelBooking(targetId);
       const found = AppState.bookings.find(b => b.id === targetId);
       if (found) {
         found.status = "Đã hủy";
       }
+      this.showToast(`Đã hủy đặt chỗ ${targetId} thành công.`);
+      await this.loadBookings();
+      this.navigateTo("screen-cancelled");
     } catch (e) {
       console.warn("Cancel booking error:", e);
+      this.showToast(e?.message || `Không thể hủy đặt chỗ ${targetId}.`);
     }
-    this.showToast(`Đã hủy đặt chỗ ${targetId} thành công.`);
-    // Immediately remove from screen-my-bookings
-    this.renderBookings();
-    // Immediately display in screen-booking-history
-    this.renderBookingHistory();
-    this.navigateTo("screen-cancelled");
   },
 
   async loadBookings() {
     try {
       const bookings = await ApiService.getBookings();
-      if (bookings && bookings.length) {
+      if (Array.isArray(bookings)) {
         const cancelledIds = (AppState.bookings || [])
-          .filter(b => b.status === "Đã hủy")
+          .filter(b => {
+            const st = (b.status || "").toLowerCase();
+            return st.includes("hủy") || st.includes("huỷ") || st.includes("cancel");
+          })
           .map(b => b.id);
 
         AppState.bookings = bookings.map(b => {
@@ -198,8 +209,11 @@
     const container = document.getElementById("bookingCardsContainer");
     if (!container) return;
 
-    // Filter out cancelled bookings so they NO LONGER appear in screen-my-bookings
-    const activeList = (AppState.bookings || []).filter(b => b.status !== "Đã hủy" && b.status !== "Hoàn thành" && b.status !== "Đã hoàn thành");
+    // Filter out cancelled/completed/expired bookings so they NO LONGER appear in screen-my-bookings
+    const activeList = (AppState.bookings || []).filter(b => {
+      const st = (b.status || "").toLowerCase();
+      return !st.includes("hủy") && !st.includes("huỷ") && !st.includes("cancel") && !st.includes("hoàn thành") && !st.includes("hết hạn");
+    });
 
     if (activeList.length === 0) {
       container.innerHTML = `
@@ -220,17 +234,29 @@
       const resourceText = bk.resource_name || (bk.services && bk.services[0] ? bk.services[0].detail : (bk.personal_plate ? `Biển số: ${bk.personal_plate}` : 'Tài nguyên đã đặt'));
       const hubText = bk.hub_name || bk.hubName || "Hub Ga Metro ĐHQG";
       const holdText = bk.hold_until ? `Giữ đến ${bk.hold_until}` : (bk.created_at || "Đã xác nhận");
-      const statusText = bk.status || "Đã xác nhận";
+
+      const matchedHub = (AppState.hubs || []).find(
+        h => (bk.hub_id && h.id === bk.hub_id) || (hubText && h.name === hubText)
+      );
+      const isHubDeactivated = matchedHub && (matchedHub.status === "DEACTIVATED" || matchedHub.status === "Tạm ngưng");
+
+      const statusText = isHubDeactivated ? "Hub tạm ngưng" : (bk.status || "Đã xác nhận");
+      const badgeStyle = isHubDeactivated
+        ? "background: #fee2e2; color: #dc2626;"
+        : "background: #e0f2fe; color: #0284c7;";
+      const actionBtn = isHubDeactivated
+        ? `<button class="btn-secondary" style="border-color: #fca5a5; color: #dc2626;" onclick="AppState.selectedBookingId='${bk.id}'; App.executeCancelBooking('${bk.id}');">Hub tạm ngưng · Hủy đặt chỗ</button>`
+        : `<button class="${isRental ? 'btn-primary' : 'btn-secondary'}" onclick="App.openBookingDetail('${bk.id}')">${isRental ? 'Chi tiết và nhận xe' : 'Xem chi tiết đặt trước'}</button>`;
 
       return `
-        <div class="card-box" style="margin-bottom: 12px;">
+        <div class="card-box" style="margin-bottom: 12px; ${isHubDeactivated ? 'border-color: #fca5a5;' : ''}">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <span style="font-weight: 800; font-size: 14.5px;">${bk.id} · ${planTitle}</span>
-            <span style="font-size: 11px; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 4px; font-weight: 600;">${statusText}</span>
+            <span style="font-size: 11px; ${badgeStyle} padding: 2px 8px; border-radius: 4px; font-weight: 600;">${statusText}</span>
           </div>
           <div style="font-size: 13px; margin-bottom: 4px;">${resourceText} · ${hubText}</div>
           <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">${holdText}</div>
-          <button class="${isRental ? 'btn-primary' : 'btn-secondary'}" onclick="App.openBookingDetail('${bk.id}')">${isRental ? 'Chi tiết và nhận xe' : 'Xem chi tiết đặt trước'}</button>
+          ${actionBtn}
         </div>
       `;
     }).join("");
@@ -240,15 +266,18 @@
     const container = document.getElementById("bookingHistoryContainer");
     if (!container) return;
 
-    // Collect all cancelled bookings from AppState.bookings
+    // Collect all cancelled/completed/expired bookings from AppState.bookings
     const cancelledFromBookings = (AppState.bookings || [])
-      .filter(b => b.status === "Đã hủy")
+      .filter(b => {
+        const st = (b.status || "").toLowerCase();
+        return st.includes("hủy") || st.includes("huỷ") || st.includes("cancel") || st.includes("hoàn thành") || st.includes("hết hạn");
+      })
       .map(b => ({
         id: b.id,
         planType: b.plan_type || b.planType || "rental",
         hubName: b.hub_name || b.hubName || "Hub Ga Metro ĐHQG",
         resourceName: b.resource_name || (b.services && b.services[0] ? b.services[0].detail : "Tài nguyên"),
-        status: "Đã hủy",
+        status: b.status || "Đã hủy",
         createdAt: b.created_at || "18/10/2026",
         totalPrice: b.total_price || 0
       }));

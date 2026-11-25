@@ -28,6 +28,9 @@
           if (currentHub && typeof this.populateHubData === "function") {
             this.populateHubData(currentHub);
           }
+          if (typeof this.refreshUserMapHubs === "function") {
+            this.refreshUserMapHubs();
+          }
         }
       } catch (e) {
         console.warn("Could not load hubs from BE:", e);
@@ -142,12 +145,46 @@
         } catch (e) {
           console.warn("Could not load DHQG.geojson layer", e);
         }
+
+        // 3. Render dynamic hubs from Backend (including newly created hubs)
+        this.refreshUserMapHubs();
       });
     } catch (err) {
       console.warn("MapLibre init error, falling back to SVG:", err);
       const fallback = document.getElementById("fallbackSvgMap");
       if (fallback) fallback.style.display = "block";
     }
+  },
+
+  refreshUserMapHubs() {
+    if (!this.mapInstance || typeof maplibregl === "undefined") return;
+    if (Array.isArray(this.userDynamicHubMarkers)) {
+      this.userDynamicHubMarkers.forEach(m => { try { m.remove(); } catch (e) {} });
+    }
+    this.userDynamicHubMarkers = [];
+
+    const hubs = Array.isArray(AppState.hubs) ? AppState.hubs : [];
+    hubs.forEach(hub => {
+      if (typeof hub.lat !== "number" || typeof hub.lng !== "number") return;
+      const el = document.createElement("div");
+      el.title = hub.name;
+      el.style.width = "16px";
+      el.style.height = "16px";
+      el.style.borderRadius = "50%";
+      el.style.backgroundColor = hub.status === "DEACTIVATED" || hub.status === "Tạm ngưng" ? "#94a3b8" : "#0f172a";
+      el.style.border = "2.5px solid #ffffff";
+      el.style.boxShadow = "0 2px 6px rgba(15,23,42,0.4)";
+      el.style.cursor = "pointer";
+      el.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        this.openHubSheet(hub.id);
+      });
+
+      const marker = new maplibregl.Marker({ element: el, anchor: "center" })
+        .setLngLat([hub.lng, hub.lat])
+        .addTo(this.mapInstance);
+      this.userDynamicHubMarkers.push(marker);
+    });
   },
 
   openHubSheet(hubId) {
@@ -225,11 +262,11 @@
     const parkingBadge = document.getElementById("parkingAvailBadge");
     if (parkingBadge) parkingBadge.innerText = `${hub.available_parking ?? 8} chỗ trống`;
 
-    // Populate destination hub dropdown
+    // Populate destination hub dropdown (chỉ các Hub đang hoạt động)
     const destSelect = document.getElementById("selectDestHub");
     if (destSelect && AppState.hubs && AppState.hubs.length) {
       destSelect.innerHTML = AppState.hubs
-        .filter(h => h.id !== hub.id)
+        .filter(h => h.id !== hub.id && h.status !== "DEACTIVATED" && h.status !== "Tạm ngưng")
         .map(h => `<option value="${h.name}">${h.name}</option>`)
         .join("");
     }
@@ -272,10 +309,24 @@
     const container = document.getElementById("bikeListContainer");
     if (!container) return;
 
-    const bikes = hub.bikes || [
-      { id: "XE-024", name: "Xe đạp điện", battery_level: 85, status: "Sẵn sàng" },
-      { id: "XE-031", name: "Xe đạp điện", battery_level: 92, status: "Sẵn sàng" }
-    ];
+    const isDeactivated = hub.status === "DEACTIVATED" || hub.status === "Tạm ngưng";
+    const rawBikes = isDeactivated ? [] : (Array.isArray(hub.bikes) ? hub.bikes : []);
+    const bikes = rawBikes.filter(b => b.is_available !== false && b.disabled !== true && b.status !== "Bảo trì" && b.status !== "Không khả dụng");
+
+    if (bikes.length === 0) {
+      AppState.bookingDraft.selectedBike = null;
+      AppState.bookingDraft.bikeBattery = null;
+      container.innerHTML = `
+        <div class="card-box" style="text-align: center; padding: 24px; color: var(--text-muted);">
+          <i class="fa-solid fa-ban" style="font-size: 24px; margin-bottom: 8px; color: #ef4444;"></i>
+          <div style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">
+            ${isDeactivated ? "Hub đang tạm ngưng hoạt động" : "Không có xe khả dụng"}
+          </div>
+          <div style="font-size: 12.5px;">Vui lòng chọn Hub khác đang hoạt động trên bản đồ.</div>
+        </div>
+      `;
+      return;
+    }
 
     container.innerHTML = bikes.map((bike, index) => {
       const itemIndex = index + 1;

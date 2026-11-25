@@ -102,3 +102,4 @@ temp/
 # file json xuất dữ liệu ra khi có cái nào update hoặc tạo data mới
 /BE/data/runtime_db.json
 /BE/data/.runtime_db.json.*.tmp
+testing.md

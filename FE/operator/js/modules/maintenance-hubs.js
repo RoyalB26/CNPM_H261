@@ -158,6 +158,80 @@
     openCreateHubModal() {
       const m = document.getElementById("modalCreateHub");
       if (m) m.classList.add("show");
+      setTimeout(() => this.initCreateHubPickerMap(), 80);
+    },
+
+    initCreateHubPickerMap() {
+      const container = document.getElementById("createHubPickerMap");
+      if (!container || typeof maplibregl === "undefined") return;
+
+      const lat = parseFloat(document.getElementById("newHubLat")?.value || "10.8765") || 10.8765;
+      const lng = parseFloat(document.getElementById("newHubLng")?.value || "106.7985") || 106.7985;
+
+      if (this.createHubPickerMap) {
+        try {
+          this.createHubPickerMap.resize();
+          this.createHubPickerMap.setCenter([lng, lat]);
+          if (this.createHubPickerMarker) this.createHubPickerMarker.setLngLat([lng, lat]);
+        } catch (e) {}
+        return;
+      }
+
+      const mapCfg = (window.EMobilityConfig && window.EMobilityConfig.MAP_DEFAULTS) || {
+        tileUrl: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+      };
+
+      this.createHubPickerMap = new maplibregl.Map({
+        container: "createHubPickerMap",
+        style: {
+          version: 8,
+          sources: {
+            "osm-tiles": {
+              type: "raster",
+              tiles: [mapCfg.tileUrl],
+              tileSize: 256
+            }
+          },
+          layers: [{ id: "osm-layer", type: "raster", source: "osm-tiles" }]
+        },
+        center: [lng, lat],
+        zoom: 14.5
+      });
+
+      this.createHubPickerMap.addControl(new maplibregl.NavigationControl(), "top-right");
+
+      const updateCoords = (newLng, newLat) => {
+        const latEl = document.getElementById("newHubLat");
+        const lngEl = document.getElementById("newHubLng");
+        if (latEl) latEl.value = Number(newLat).toFixed(4);
+        if (lngEl) lngEl.value = Number(newLng).toFixed(4);
+      };
+
+      this.createHubPickerMarker = new maplibregl.Marker({ draggable: true, color: "#0f172a" })
+        .setLngLat([lng, lat])
+        .addTo(this.createHubPickerMap);
+
+      this.createHubPickerMarker.on("dragend", () => {
+        const pos = this.createHubPickerMarker.getLngLat();
+        updateCoords(pos.lng, pos.lat);
+      });
+
+      this.createHubPickerMap.on("click", (e) => {
+        this.createHubPickerMarker.setLngLat([e.lngLat.lng, e.lngLat.lat]);
+        updateCoords(e.lngLat.lng, e.lngLat.lat);
+      });
+    },
+
+    syncCreateHubMarkerFromInputs() {
+      const lat = parseFloat(document.getElementById("newHubLat")?.value);
+      const lng = parseFloat(document.getElementById("newHubLng")?.value);
+      if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+      if (this.createHubPickerMarker) {
+        this.createHubPickerMarker.setLngLat([lng, lat]);
+      }
+      if (this.createHubPickerMap) {
+        this.createHubPickerMap.flyTo({ center: [lng, lat] });
+      }
     },
 
     async submitCreateHub() {
@@ -182,6 +256,7 @@
         alert(`Đã tạo mới Hub "${payload.name}" thành công!`);
         await this.loadHubsConfig();
         if (typeof this.loadKpis === "function") await this.loadKpis();
+        if (typeof this.refreshOverviewMapMarkers === "function") await this.refreshOverviewMapMarkers();
       } catch (err) {
         alert("Không thể tạo Hub: " + (err.message || "Lỗi dữ liệu"));
       }

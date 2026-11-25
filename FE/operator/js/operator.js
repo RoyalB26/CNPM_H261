@@ -109,6 +109,9 @@ const OperatorApp = {
     } else if (tabId === "tab-overview") {
       await this.loadKpis();
       await this.loadRelocations();
+      if (typeof this.refreshOverviewMapMarkers === "function") {
+        await this.refreshOverviewMapMarkers();
+      }
       if (this.map) {
         setTimeout(() => {
           try { this.map.resize(); } catch (e) {}

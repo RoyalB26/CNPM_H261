@@ -22,14 +22,22 @@
         <input type="text" id="newHubAddress" class="form-input" placeholder="Khu đô thị ĐHQG - HCM">
       </div>
 
+      <div style="margin-bottom: 10px;">
+        <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Chọn vị trí trên bản đồ *</span>
+          <span style="font-size: 11px; font-weight: 500; color: var(--text-muted);">Nhấp hoặc kéo ghim để chọn tọa độ</span>
+        </label>
+        <div id="createHubPickerMap" style="width: 100%; height: 220px; border-radius: 10px; border: 1px solid var(--border-color); overflow: hidden; background: #f1f5f9;"></div>
+      </div>
+
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
         <div>
           <label class="form-label">Vĩ độ (Lat) *</label>
-          <input type="number" step="0.0001" id="newHubLat" class="form-input" value="10.8765">
+          <input type="number" step="0.0001" id="newHubLat" class="form-input" value="10.8765" onchange="OperatorApp.syncCreateHubMarkerFromInputs()">
         </div>
         <div>
           <label class="form-label">Kinh độ (Lng) *</label>
-          <input type="number" step="0.0001" id="newHubLng" class="form-input" value="106.7985">
+          <input type="number" step="0.0001" id="newHubLng" class="form-input" value="106.7985" onchange="OperatorApp.syncCreateHubMarkerFromInputs()">
         </div>
       </div>
 

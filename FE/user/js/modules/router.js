@@ -68,8 +68,20 @@
       this.updateBottomNavState(screenId);
 
       // Tự động làm mới dữ liệu khi chuyển tới các màn hình chức năng tương ứng
-      if (screenId === "screen-my-bookings") {
-        this.loadBookings();
+      if (screenId === "screen-map-home" || screenId === "screen-search-hub") {
+        if (sessionStorage.getItem("user_access_token") && typeof this.loadHubsFromBE === "function") {
+          this.loadHubsFromBE();
+        }
+      } else if (screenId === "screen-select-bike" && AppState.bookingDraft?.hubId) {
+        if (sessionStorage.getItem("user_access_token") && typeof this.loadHubsFromBE === "function") {
+          this.loadHubsFromBE();
+        }
+      } else if (screenId === "screen-my-bookings") {
+        if (sessionStorage.getItem("user_access_token") && typeof this.loadHubsFromBE === "function") {
+          this.loadHubsFromBE().then(() => this.loadBookings());
+        } else {
+          this.loadBookings();
+        }
       } else if (screenId === "screen-booking-history") {
         this.renderBookingHistory();
       } else if (screenId === "screen-active-services") {

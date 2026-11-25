@@ -137,58 +137,70 @@
         this.map.addControl(new maplibregl.NavigationControl(), "top-right");
 
         this.map.on("load", async () => {
-          const hubList = await OperatorApi.getHubsLive();
-
-          hubList.forEach(hub => {
-            const el = document.createElement("div");
-            el.style.width = "28px";
-            el.style.height = "28px";
-            el.style.borderRadius = "50%";
-            el.style.backgroundColor = hub.color || "#10b981";
-            el.style.border = "3px solid #ffffff";
-            el.style.boxShadow = "0 3px 8px rgba(0,0,0,0.3)";
-            el.style.cursor = "pointer";
-
-            let relocInfo = "";
-            if (Array.isArray(this.cachedRelocations)) {
-              const rel = this.cachedRelocations.find(r =>
-                (r.source_hub_name && (r.source_hub_name.includes(hub.name) || hub.name.includes(r.source_hub_name))) ||
-                (r.target_hub_name && (r.target_hub_name.includes(hub.name) || hub.name.includes(r.target_hub_name)))
-              );
-              if (rel && !(rel.status || '').toLowerCase().includes('hoàn thành')) {
-                relocInfo = `<div style="font-size: 11.5px; color: #2563eb; margin-bottom: 6px; font-weight: 600;"><i class="fa-solid fa-truck-fast"></i> Lệnh ${rel.id}: điều chuyển ${rel.bike_count || 5} xe</div>`;
-              }
-            }
-
-            const popupHtml = `
-              <div style="font-family: inherit; font-size: 13px; min-width: 190px; padding: 4px;">
-                <div style="font-weight: 800; font-size: 14px; margin-bottom: 4px;">${hub.name}</div>
-                <div style="display: inline-block; padding: 2px 7px; font-size: 11px; font-weight: 700; border-radius: 4px; background: ${hub.is_high_load ? '#fee2e2' : '#dcfce7'}; color: ${hub.color}; margin-bottom: 8px;">
-                  ${hub.status}
-                </div>
-                ${relocInfo}
-                <div style="font-size: 12px; color: #475569; margin-bottom: 3px;">• ${hub.free_slots || hub.freeSlots}</div>
-                <div style="font-size: 12px; color: #475569; margin-bottom: 3px;">• ${hub.chargers}/${hub.chargers_total || 50} cổng sạc rảnh</div>
-                <div style="font-size: 12px; color: #475569; margin-bottom: 10px;">• Công suất: <strong>${hub.power}</strong></div>
-                <button onclick="OperatorApp.switchTab('tab-hubs')" style="width: 100%; padding: 6px; font-size: 11.5px; background: #0f172a; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700;">Xem toàn bộ thiết bị</button>
-              </div>
-            `;
-
-            const marker = new maplibregl.Marker({ element: el })
-              .setLngLat([hub.lng, hub.lat])
-              .setPopup(new maplibregl.Popup({ offset: 14 }).setHTML(popupHtml))
-              .addTo(this.map);
-
-            if (hub.is_high_load) {
-              setTimeout(() => {
-                marker.togglePopup();
-              }, 500);
-            }
-          });
+          await this.refreshOverviewMapMarkers();
         });
       } catch (e) {
         console.warn("Operator MapLibre init error:", e);
       }
+    },
+
+    async refreshOverviewMapMarkers() {
+      if (!this.map || typeof maplibregl === "undefined") return;
+      if (Array.isArray(this.overviewMarkers)) {
+        this.overviewMarkers.forEach(m => { try { m.remove(); } catch (e) {} });
+      }
+      this.overviewMarkers = [];
+
+      const hubList = await OperatorApi.getHubsLive();
+      hubList.forEach(hub => {
+        if (typeof hub.lat !== "number" || typeof hub.lng !== "number") return;
+        const el = document.createElement("div");
+        el.style.width = "28px";
+        el.style.height = "28px";
+        el.style.borderRadius = "50%";
+        el.style.backgroundColor = hub.color || "#10b981";
+        el.style.border = "3px solid #ffffff";
+        el.style.boxShadow = "0 3px 8px rgba(0,0,0,0.3)";
+        el.style.cursor = "pointer";
+
+        let relocInfo = "";
+        if (Array.isArray(this.cachedRelocations)) {
+          const rel = this.cachedRelocations.find(r =>
+            (r.source_hub_name && (r.source_hub_name.includes(hub.name) || hub.name.includes(r.source_hub_name))) ||
+            (r.target_hub_name && (r.target_hub_name.includes(hub.name) || hub.name.includes(r.target_hub_name)))
+          );
+          if (rel && !(rel.status || '').toLowerCase().includes('hoàn thành')) {
+            relocInfo = `<div style="font-size: 11.5px; color: #2563eb; margin-bottom: 6px; font-weight: 600;"><i class="fa-solid fa-truck-fast"></i> Lệnh ${rel.id}: điều chuyển ${rel.bike_count || 5} xe</div>`;
+          }
+        }
+
+        const popupHtml = `
+          <div style="font-family: inherit; font-size: 13px; min-width: 190px; padding: 4px;">
+            <div style="font-weight: 800; font-size: 14px; margin-bottom: 4px;">${hub.name}</div>
+            <div style="display: inline-block; padding: 2px 7px; font-size: 11px; font-weight: 700; border-radius: 4px; background: ${hub.is_high_load ? '#fee2e2' : '#dcfce7'}; color: ${hub.color}; margin-bottom: 8px;">
+              ${hub.status}
+            </div>
+            ${relocInfo}
+            <div style="font-size: 12px; color: #475569; margin-bottom: 3px;">• ${hub.free_slots || hub.freeSlots}</div>
+            <div style="font-size: 12px; color: #475569; margin-bottom: 3px;">• ${hub.chargers}/${hub.chargers_total || 50} cổng sạc rảnh</div>
+            <div style="font-size: 12px; color: #475569; margin-bottom: 10px;">• Công suất: <strong>${hub.power}</strong></div>
+            <button onclick="OperatorApp.switchTab('tab-hubs')" style="width: 100%; padding: 6px; font-size: 11.5px; background: #0f172a; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700;">Xem toàn bộ thiết bị</button>
+          </div>
+        `;
+
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([hub.lng, hub.lat])
+          .setPopup(new maplibregl.Popup({ offset: 14 }).setHTML(popupHtml))
+          .addTo(this.map);
+
+        this.overviewMarkers.push(marker);
+
+        if (hub.is_high_load) {
+          setTimeout(() => {
+            marker.togglePopup();
+          }, 500);
+        }
+      });
     },
 
     openTelemetryDrawer() {

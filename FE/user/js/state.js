@@ -11,116 +11,28 @@ const AppState = {
     paymentMethod: "Ví điện tử"
   },
 
-  // Active bookings list
-  bookings: [
-    {
-      id: "EMH-1023",
-      planType: "rental",
-      hubName: "Hub Ga Metro ĐHQG",
-      destinationHubName: "Hub Đại học Bách khoa",
-      resourceName: "XE-024 · Xe đạp điện",
-      services: [{ service_type: "rental", detail: "Xe đạp điện XE-024 · Pin 85%", price_est: 10000 }],
-      status: "Đã xác nhận",
-      holdUntil: "08:10",
-      createdAt: "18/10/2026 · từ 08:00",
-      totalPrice: 10000
-    },
-    {
-      id: "EMH-1024",
-      planType: "personal",
-      hubName: "Hub Ga Metro ĐHQG",
-      personalPlate: "59-X1 123.45",
-      services: [
-        { service_type: "parking", detail: "Chỗ đỗ · 10:00 – 12:00", price_est: 5000 },
-        { service_type: "charging", detail: "Sạc S03 · 10:00 – 11:00", price_est: 15000 }
-      ],
-      status: "Đã xác nhận",
-      holdUntil: "10:15",
-      createdAt: "18/10/2026 · từ 10:00",
-      totalPrice: 20000
-    }
-  ],
+  // Active bookings list (populated from Backend)
+  bookings: [],
 
-  // History bookings
-  historyBookings: [
-    {
-      id: "EMH-0988",
-      planType: "rental",
-      hubName: "Hub KTX Khu B",
-      status: "Đã hoàn thành",
-      createdAt: "15/10/2026",
-      totalPrice: 15000
-    },
-    {
-      id: "EMH-0950",
-      planType: "personal",
-      hubName: "Hub Ga Metro ĐHQG",
-      status: "Đã hoàn thành",
-      createdAt: "10/10/2026",
-      totalPrice: 5000
-    }
-  ],
+  // History bookings (populated from Backend)
+  historyBookings: [],
 
-  // Active in-progress service
-  activeRide: {
-    id: "ACT-01",
-    vehicleId: "XE-024",
-    batteryLevel: 78,
-    originHub: "Hub Ga Metro ĐHQG",
-    destHub: "ĐH Bách Khoa",
-    elapsedMinutes: 13,
-    status: "Đang sử dụng",
-    logs: [
-      { label: "Đặt xe", time: "08:00" },
-      { label: "Nhận / bắt đầu", time: "08:05" },
-      { label: "Cập nhật gần nhất", time: "08:18:02" }
-    ]
+  // Active in-progress service (populated from Backend)
+  activeRide: null,
+
+  activeParking: null,
+
+  activeCharging: null,
+
+  activeServices: {
+    has_active: false,
+    ride: null,
+    parking: null,
+    charging: null
   },
 
-  activeParking: {
-    id: "PARK-01",
-    plate: "59-X1 123.45",
-    hubName: "Hub Ga Metro ĐHQG",
-    slot: "P-12",
-    checkin: "09:15",
-    elapsedMinutes: 45
-  },
-
-  activeCharging: {
-    id: "CHG-01",
-    plate: "59-X1 123.45",
-    hubName: "Hub Ga Metro ĐHQG",
-    port: "S03",
-    batteryPercent: 65,
-    powerConsumed: 2.4,
-    elapsedMinutes: 25
-  },
-
-  // Incident reports
-  incidents: [
-    {
-      id: "INC-2026-089",
-      resourceType: "Phương tiện",
-      resourceCode: "XE-024",
-      hubName: "Hub Ga Metro ĐHQG",
-      incidentType: "Không mở được khóa",
-      description: "Xe không mở được khóa sau khi xác nhận nhận xe.",
-      createdAt: "10:35 · 18/10/2026",
-      status: "Đang xử lý",
-      operatorNote: "Đã tiếp nhận yêu cầu, kỹ thuật viên đang đến kiểm tra thiết bị."
-    },
-    {
-      id: "INC-2026-042",
-      resourceType: "Cổng sạc",
-      resourceCode: "S02",
-      hubName: "Hub KTX Khu B",
-      incidentType: "Không vào điện",
-      description: "Cắm cáp sạc nhưng đèn báo không sáng.",
-      createdAt: "14:20 · 12/10/2026",
-      status: "Đã giải quyết",
-      operatorNote: "Đã reset cầu dao trạm sạc. Hoạt động bình thường."
-    }
-  ],
+  // Incident reports (populated from Backend)
+  incidents: [],
 
   // Current Booking Wizard State
   bookingDraft: {

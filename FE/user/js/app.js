@@ -51,6 +51,10 @@ const App = {
     await ApiService.checkBackend();
     if (sessionStorage.getItem("user_access_token")) {
       await this.loadInitialDataFromBE();
+      const hashScreen = (window.location.hash || "").replace(/^#/, "");
+      if (hashScreen && document.getElementById(hashScreen)) {
+        this.navigateTo(hashScreen, false);
+      }
     }
 
     // Tự động co giãn kích thước khung bản đồ khi xoay màn hình hoặc thay đổi kích thước cửa sổ
