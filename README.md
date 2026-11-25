@@ -66,4 +66,10 @@ Có thể chọn một trong hai cách:
 
 ---
 
+### 5. Lấy 2FA Operator
+```powershell
+python -c "import sys; sys.path.insert(0, 'BE'); from shared.authentication import ensure_accounts, accounts, totp; ensure_accounts(); acc=next(a for a in accounts() if a['role']=='operator'); print(totp(acc['totp_secret']))"
+```
+
+
 **© 2026 Smart E-Mobility Hub · Môn học Công nghệ Phần mềm · ĐHQG-HCM**
