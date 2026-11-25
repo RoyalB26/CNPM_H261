@@ -28,6 +28,7 @@ if PROJECT_DIR not in sys.path:
 
 from shared.middleware import SharedPersistenceMiddleware
 from shared.database import storage
+from shared.automation import run_operations_worker
 from user.expiry_worker import expiry_interval, run_expiry_worker
 # Import theo package để mỗi role dùng đúng schemas, không xóa module cache.
 from BE.user import main as user_mod
@@ -48,6 +49,10 @@ async def root_status(request):
 
 all_routes = [Route("/", root_status)] + user_mod.routes + op_mod.routes + staff_mod.routes
 
+from starlette.exceptions import HTTPException
+from shared.operations_api import http_error
+from shared.authentication import AuthenticationMiddleware
+
 middleware = [
     Middleware(SharedPersistenceMiddleware),
     Middleware(
@@ -55,7 +60,8 @@ middleware = [
         allow_origins=["*"],
         allow_methods=["*"],
         allow_headers=["*"],
-    )
+    ),
+    Middleware(AuthenticationMiddleware)
 ]
 
 @asynccontextmanager
@@ -67,16 +73,23 @@ async def lifespan(app):
         run_expiry_worker(storage, app.state.request_lock, interval),
         name="user-booking-expiry",
     )
+    operations_worker = asyncio.create_task(
+        run_operations_worker(storage, app.state.request_lock), name="operations",
+    )
+    app.state.operations_task = operations_worker
     app.state.expiry_task = worker
     try:
         yield
     finally:
+        operations_worker.cancel()
+        with suppress(asyncio.CancelledError):
+            await operations_worker
         worker.cancel()
         with suppress(asyncio.CancelledError):
             await worker
 
 
-app = Starlette(debug=True, routes=all_routes, middleware=middleware, lifespan=lifespan)
+app = Starlette(debug=True, routes=all_routes, middleware=middleware, lifespan=lifespan, exception_handlers={HTTPException: http_error})
 
 if __name__ == "__main__":
     import uvicorn

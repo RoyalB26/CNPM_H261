@@ -1,6 +1,9 @@
 """Kiểm tra gợi ý Hub không phân bổ tài nguyên đã bị giữ."""
 
 import copy
+import asyncio
+from unittest.mock import patch
+import httpx
 from pathlib import Path
 import sys
 import unittest
@@ -13,6 +16,16 @@ from user.schemas.hub import SearchHubQuery, RouteSuggestionRequest
 
 class HubTests(unittest.TestCase):
     def setUp(self):
+        async def road(url, **kwargs):
+            from user.hubs import distance
+            points = [tuple(map(float, pair.split(','))) for pair in url.rsplit('/', 1)[-1].split(';')]
+            km = sum(distance(a[1], a[0], b[1], b[0]) for a, b in zip(points, points[1:]))
+            return httpx.Response(200, request=httpx.Request('GET', url), json={
+                'code': 'Ok', 'routes': [{'distance': km * 1000, 'duration': km * 240,
+                'geometry': {'type': 'LineString', 'coordinates': points}}]})
+        source = patch('httpx.AsyncClient.get', side_effect=road)
+        source.start()
+        self.addCleanup(source.stop)
         self.db = MockDatabaseStore()
         self.query = RouteSuggestionRequest(origin_lat=10.8753, origin_lng=106.8005,
                                             dest_lat=10.8805, dest_lng=106.8055)
@@ -24,20 +37,20 @@ class HubTests(unittest.TestCase):
         self.assertEqual(before, self.db.__dict__)
 
     def test_suggestion_skips_seed_active_ride_and_held_bikes(self):
-        result = suggest_route(self.db, self.query)
+        result = asyncio.run(suggest_route(self.db, self.query))
         self.assertNotEqual(result.recommended_bike.id, 'XE-024')
         self.assertEqual(result.destination_hub.id, 'hub-02')
 
     def test_inactive_and_full_hubs_not_recommended(self):
         self.db.get_hub('hub-01')['status'] = 'DEACTIVATED'
         self.db.get_hub('hub-02')['available_parking'] = 0
-        result = suggest_route(self.db, self.query)
+        result = asyncio.run(suggest_route(self.db, self.query))
         self.assertNotEqual(result.origin_hub.id, 'hub-01')
         self.assertNotEqual(result.destination_hub.id, 'hub-02')
         for hub in self.db.hubs:
             hub['available_parking'] = 0
         with self.assertRaises(ValueError):
-            suggest_route(self.db, self.query)
+            asyncio.run(suggest_route(self.db, self.query))
 
     def test_relocation_held_bikes_excluded(self):
         self.assertEqual(available_bikes(self.db, self.db.get_hub('hub-03')), [])
@@ -45,7 +58,7 @@ class HubTests(unittest.TestCase):
     def test_empty_network(self):
         self.db.hubs = []
         with self.assertRaises(ValueError):
-            suggest_route(self.db, self.query)
+            asyncio.run(suggest_route(self.db, self.query))
 
     def test_hub_view_subtracts_incoming_hold_without_mutating_store(self):
         hub = self.db.get_hub('hub-02')
@@ -63,7 +76,7 @@ class HubTests(unittest.TestCase):
         hub['available_parking'] = 1
         self.db.relocations.append({'target_hub_id': hub['id'], 'status': 'PENDING',
                                     'total_bikes': 1, 'reserved_slot_ids': ['P11']})
-        result = suggest_route(self.db, self.query)
+        result = asyncio.run(suggest_route(self.db, self.query))
         self.assertNotEqual(result.destination_hub.id, hub['id'])
         found = search_hubs(self.db, SearchHubQuery(vehicle_type='personal'))
         self.assertNotIn(hub['id'], [h['id'] for h in found])

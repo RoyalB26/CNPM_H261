@@ -53,16 +53,24 @@ routes = [
 
 
 
+from shared.operations_api import operator_routes as operation_routes
+routes.extend(operation_routes)
+
+from starlette.exceptions import HTTPException
+from shared.operations_api import http_error
+from shared.authentication import AuthenticationMiddleware
+
 middleware = [
     Middleware(
         CORSMiddleware,
         allow_origins=["*"],
         allow_methods=["*"],
         allow_headers=["*"],
-    )
+    ),
+    Middleware(AuthenticationMiddleware)
 ]
 
-app = Starlette(debug=True, routes=routes, middleware=middleware)
+app = Starlette(debug=True, routes=routes, middleware=middleware, exception_handlers={HTTPException: http_error})
 
 if __name__ == "__main__":
     import uvicorn

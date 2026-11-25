@@ -2,6 +2,7 @@
 
 import operator
 import os
+from integration_support import authorize_client, confirm_payment, VNPAY_TEST_CONFIG
 from pathlib import Path
 import runpy
 import sys
@@ -14,6 +15,7 @@ def run() -> None:
     backend = Path(__file__).resolve().parents[2]
     with tempfile.TemporaryDirectory(prefix='be-package-import-') as directory:
         runtime = Path(directory) / 'runtime.json'
+        os.environ.update(VNPAY_TEST_CONFIG)
         os.environ['BE_RUNTIME_PATH'] = str(runtime)
         os.environ['BE_BOOKING_EXPIRY_INTERVAL_SECONDS'] = '3600'
         sys.path.insert(0, str(backend))
@@ -57,15 +59,19 @@ def run() -> None:
         before = database.storage.snapshot()
         assert not runtime.exists()
         with TestClient(run_all.app) as client:
+            authorize_client(client, database.db)
             root = client.get('/')
             assert root.status_code == 200
             assert root.json()['routes_count'] == sum(len(mod.routes) for mod in (
                 run_all.user_mod, run_all.op_mod, run_all.staff_mod))
+            # Worker vận hành mới được phép khởi tạo dữ liệu lúc startup.
+            before = database.storage.snapshot()
+            saved = runtime.read_bytes() if runtime.exists() else None
             for path in ('/api/v1/user/profile', '/api/v1/operator/hubs', '/api/v1/staff/profile'):
                 response = client.get(path)
                 assert response.status_code == 200, (path, response.text)
         assert before == database.storage.snapshot()
-        assert not runtime.exists(), 'Chỉ import/GET không được ghi file runtime'
+        assert (runtime.read_bytes() if runtime.exists() else None) == saved, 'GET không được ghi runtime'
 
 
 if __name__ == '__main__':

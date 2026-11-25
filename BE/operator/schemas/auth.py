@@ -37,8 +37,9 @@ class OperatorAuthErrorResponse(BaseModel):
     )
 
 class Operator2FARequest(BaseModel):
+    challenge_id: str = Field(..., min_length=1)
     email: str = Field(..., example="admin@e-mobility.com")
-    otp_code: str = Field(..., min_length=6, max_length=6, example="849201")
+    otp_code: str = Field(..., min_length=6, max_length=6, pattern=r"^[0-9]{6}$", example="849201")
     remember_device: Optional[bool] = Field(default=True)
 
 

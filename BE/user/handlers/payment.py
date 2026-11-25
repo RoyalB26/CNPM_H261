@@ -49,7 +49,7 @@ async def api_pay_invoice(request: Request) -> JSONResponse:
         return JSONResponse(PaymentErrorResponse(error="Dữ liệu thanh toán không hợp lệ").model_dump(mode="json"), status_code=422)
     def change(candidate):
         try:
-            response = pay_invoice(candidate, payment)
+            response = pay_invoice(candidate, payment, request.client.host if request.client else "127.0.0.1")
         except PaymentError as exc:
             return JSONResponse(PaymentErrorResponse(error=str(exc)).model_dump(mode="json"), status_code=exc.status_code)
         return JSONResponse(response.model_dump(mode="json"))

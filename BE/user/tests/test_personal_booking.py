@@ -1,6 +1,9 @@
 """Kiểm tra gói đỗ xe + sạc: giữ đồng thời, bàn giao và hoàn từng tài nguyên."""
 
 import copy
+import os
+from unittest.mock import patch
+from integration_support import VNPAY_TEST_CONFIG
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
@@ -22,6 +25,9 @@ from user.invoices import current_invoice
 
 class PersonalBookingTests(unittest.TestCase):
     def setUp(self):
+        config = patch.dict(os.environ, VNPAY_TEST_CONFIG)
+        config.start()
+        self.addCleanup(config.stop)
         self.db = MockDatabaseStore()
         self.db.user['active_services'].update(parking=None, charging=None)
         self.hub = self.db.get_hub('hub-02')
@@ -81,7 +87,8 @@ class PersonalBookingTests(unittest.TestCase):
             start_charging(self.db, booking['id'])
         self.assertEqual(before, self.db.__dict__)
         record = self.checkin()
-        self.assertEqual(record['parking_fee'], parking_price)
+        self.assertEqual(record['parking_fee'], 0)
+        self.assertGreater(record['parking_hourly_rate'], 0)
         self.assertEqual(self.hub['available_parking'], self.counts[0] - 1)
         self.assertIn('error', self.db.cancel_booking(booking['id']))
         # Nhận tài nguyên trước hạn thì được tiếp tục dùng sau thời hạn giữ chỗ.
@@ -99,14 +106,14 @@ class PersonalBookingTests(unittest.TestCase):
         self.assertEqual(self.hub['available_parking'], self.counts[0] - 1)
         invoice = current_invoice(self.db, InvoiceQuery(type='charging', booking_id=booking['id']))
         pay_invoice(self.db, PaymentSubmitRequest(invoice_id=invoice.id, method='wallet'))
-        self.assertEqual(booking['charging_invoice']['status'], 'paid')
+        self.assertEqual(booking['charging_invoice']['status'], 'pending')
         with self.assertRaises(ChargingError):
             start_charging(self.db, booking['id'])
         self.db.parking_checkout_confirm(record['ticket_code'], 'TIỀN MẶT')
         self.assertEqual(booking['status'], 'Hoàn thành')
         self.assertEqual((self.hub['available_parking'], self.hub['available_chargers']), self.counts)
         self.assertEqual(current_invoice(self.db, InvoiceQuery(type='parking', booking_id=booking['id'])).total_amount,
-                         parking_price)
+                         record['parking_fee'])
         before = copy.deepcopy(self.db.__dict__)
         self.db.parking_checkout_confirm(record['ticket_code'], 'TIỀN MẶT')
         self.assertEqual(before, self.db.__dict__)

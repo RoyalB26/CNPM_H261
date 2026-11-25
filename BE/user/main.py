@@ -9,6 +9,7 @@ import sys
 
 from starlette.applications import Starlette
 from starlette.routing import Route
+from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 
@@ -17,6 +18,10 @@ PARENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PARENT_DIR not in sys.path:
     sys.path.insert(0, PARENT_DIR)
 
+from shared.operations_api import user_routes as operation_routes, http_error
+from user.payment_gateway import routes as payment_routes
+from shared.authentication import AuthenticationMiddleware
+from shared.middleware import SharedPersistenceMiddleware
 from user.handlers.auth import (
     api_health,
     api_login,
@@ -99,11 +104,16 @@ routes = [
     Route("/api/v1/user/bookings/{booking_id}/start", api_start_ride, methods=["POST"]),
 ]
 
+routes.extend(payment_routes)
+routes.extend(operation_routes)
+
 middleware = [
-    Middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+    Middleware(SharedPersistenceMiddleware),
+    Middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]),
+    Middleware(AuthenticationMiddleware)
 ]
 
-app = Starlette(debug=True, routes=routes, middleware=middleware)
+app = Starlette(debug=True, routes=routes, middleware=middleware, exception_handlers={HTTPException: http_error})
 
 if __name__ == "__main__":
     import uvicorn

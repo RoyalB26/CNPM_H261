@@ -174,6 +174,8 @@ async def update_hub_config(request: Request) -> JSONResponse:
     def change(candidate):
         candidate_hub = candidate.get_hub(hub_id)
         candidate_hub.update(changes)
+        from shared.charging_schedule import reconcile_schedule
+        reconcile_schedule(candidate)
 
         return JSONResponse(
             content=content,
@@ -270,6 +272,8 @@ async def deactivate_hub(request: Request) -> JSONResponse:
     def change(candidate):
         candidate_hub = candidate.get_hub(hub_id)
         candidate_hub.update(changes)
+        from shared.charging_schedule import reconcile_schedule
+        reconcile_schedule(candidate)
 
         return JSONResponse(
             content=content,

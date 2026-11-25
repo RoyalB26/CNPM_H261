@@ -1,0 +1,32 @@
+# Test Operator
+
+Chạy từ CNPM_H261 bằng python -m unittest discover -s BE/operator/test -v.
+
+Test API gọi trực tiếp Gateway ASGI bằng runtime tạm. Event loop trong test không mở socket để chạy được ở môi trường hạn chế mạng. Chưa đo hiệu năng HTTP mạng.
+
+## Các ca nghiệm thu UI
+
+| Mã | Tiền điều kiện và thao tác | Kết quả phải kiểm tra |
+| --- | --- | --- |
+| TC-O01 | Load lưới/Hub. Chạy cùng snapshot với +20%, +80%, sau đó chạy lại bộ tham số đầu | JSON hợp lệ, tính đúng thiếu hụt theo công thức đã chốt, đổi input làm đổi số liệu, chạy lại cho cùng kết quả |
+| TC-O02 | Operator đăng nhập, TC-O01 pass. Chọn nguồn và kịch bản, bấm Chạy | Progress bar cập nhật theo tiến trình, kết quả/đề xuất xuất hiện Dashboard, báo lỗi rõ khi chạy thất bại |
+| TC-O03 | Operator đăng nhập. Hub nguồn có xe sẵn sàng, Hub đích đủ chỗ. Chọn nhân viên, tạo lệnh | Báo thành công, lệnh đọc lại đúng, nhân viên nhận đúng một thông báo |
+| TCO03-ERR | Operator đăng nhập. Đặt số xe lớn hơn chỗ trống đích, gửi tạo lệnh | Báo Hub đích không khả dụng, lệnh/xe/chỗ trống giữ nguyên |
+| TC-O04 | Operator đăng nhập. Chọn thiết bị, mô tả lỗi và nhân viên bảo trì, tạo phiếu | Báo thành công, đọc lại đúng phiếu/phân công, nhân viên nhận thông báo |
+| TC-O05 | Operator đăng nhập. Mở Hub tồn tại, sửa sức chứa/trạng thái, lưu và tải lại trang | Báo lưu thành công, màn hình phản ánh đúng dữ liệu đã lưu. Dữ liệu lỗi bị từ chối |
+
+TC-O01 có phép tính kiểm chứng trong test_features.py. TC-O03/04 có test API và thông báo lưu bền. TC-O02/03/04 phần UI đánh dấu skip, cần ghép FE. TC-O05 API readback và TCO03-ERR có test tự động.
+
+## Test B–C
+
+test_features.py dùng Gateway ASGI và runtime tạm để kiểm tra OSRM response/lỗi nguồn, xe dùng chung/xe cá nhân, lịch giao nhau/liền nhau, hủy lịch, pin thấp, cổng thay đổi trạng thái, nhận/trả cổng theo lịch, quyền sở hữu, tạo Hub/thiết bị, nhóm pin, quy tắc tải cao/chống trùng/can thiệp, điều chuyển tự động, snapshot/retry/lịch sử/phương án, upload và đọc ảnh, chuyển xưởng đúng thiết bị và tính lặp an toàn.
+
+OSRM được mock trong test để kết quả ổn định. Kết nối OSRM thực và các ca E2E trình duyệt cần kiểm chứng khi ghép FE. Hai file JS Staff được kiểm tra cú pháp bằng node --check.
+
+Phép tính TC-O01 dùng cổng 10 kW, tải nền 5 kW. Nhu cầu +50% cho tải yêu cầu 7,5 kW. +300% cho tải yêu cầu 20 kW, phục vụ 10 kW, chưa phục vụ 10 kW.
+
+## Test D1–D2
+
+test_payments_parking.py có 15 ca qua Gateway ASGI. D1 dùng cấu hình thử riêng, tạo URL, gửi IPN có chữ ký, kiểm tra số tiền/merchant/chủ sở hữu, callback trùng, mã giao dịch dùng cho hai hóa đơn, lỗi lưu, thất bại rồi thử lại, cấu hình thiếu và hóa đơn 0đ. D2 kiểm tra xem trước–xác nhận–hóa đơn khớp, báo giá sai/hết hạn, tiền nhận thiếu, làm tròn giờ, dữ liệu thời gian legacy, giá Hub thay đổi, luồng User đặt bãi → Staff vào/ra và vé walk-in.
+
+Các test dùng runtime tạm. Bộ test IPN xác minh logic nội bộ, giao dịch VNPAY Sandbox thực cần merchant/IPN của nhóm.

@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import copy
 from uuid import uuid4
 
+from ..identity import current_user_id
 from .seed_loader import load_seed
 from ..rental_pricing import rental_charge
 from ..booking_expiry import booking_expired
@@ -62,6 +63,20 @@ class MockDatabaseStore:
     def get_hub(self, hub_id):
         return next((h for h in self.hubs if h["id"] == hub_id), None)
 
+    @property
+    def user(self):
+        user_id = current_user_id.get()
+        seed_user = self.__dict__["user"]
+        if user_id is None or user_id == seed_user["id"]:
+            return seed_user
+        account = next(a for a in self.operator_mock.get("accounts", [])
+                       if a["id"] == user_id and a["role"] == "user")
+        return account["profile"]
+
+    @user.setter
+    def user(self, value):
+        self.__dict__["user"] = value
+
     def get_user_profile(self):
         return self.user
 
@@ -80,21 +95,29 @@ class MockDatabaseStore:
         """Chỉ đọc báo cáo thuộc tài khoản hiện tại."""
         return [report for report in self.incidents if self.owns_user_record(report)]
 
-    def _rental_bike_blocked(self, bike_id: str, *, ignore_active_ride: bool = False) -> bool:
+    def _rental_bike_blocked(self, bike_id: str, *, ignore_active_ride: bool = False, ignore_maintenance: bool = False) -> bool:
         """Kiểm tra xe đang phục vụ chuyến đi, điều chuyển hoặc bảo trì."""
-        ride = self.user.get("active_services", {}).get("ride")
+        profiles = [self.__dict__["user"]] + [
+            a["profile"] for a in self.operator_mock.get("accounts", [])
+            if a["role"] == "user" and a["id"] != self.__dict__["user"]["id"]
+        ]
+        active_ride = any(
+            profile.get("active_services", {}).get("ride")
+            and profile["active_services"]["ride"].get("vehicle_id") == bike_id
+            for profile in profiles
+        )
         return bool(
-            (not ignore_active_ride and ride and ride.get("vehicle_id") == bike_id)
+            (not ignore_active_ride and active_ride)
             or any(
                 task.get("status") in ("PENDING", "IN_PROGRESS", "IN_TRANSIT")
                 and any(b.get("bike_id") == bike_id for b in task.get("bikes", []))
                 for task in self.relocations
             )
-            or any(
+            or (not ignore_maintenance and any(
                 ticket.get("status") in ("PENDING", "ASSIGNED", "IN_PROGRESS")
                 and ticket.get("device_code") == bike_id
                 for ticket in self.maintenance_tickets
-            )
+            ))
         )
 
     def _rental_hold_owned(self, booking: dict, bike: dict | None) -> bool:
@@ -783,6 +806,9 @@ class MockDatabaseStore:
         }
 
         # Đây là chỗ duy nhất ghi vào store, sau toàn bộ kiểm tra.
+        from ..notifications import notify
+        notify(self, task["task_id"] + ":assigned", staff["id"],
+               "Có nhiệm vụ điều chuyển mới", task["task_id"])
         self.relocations.insert(0, task)
         self.next_relocation_number += 1
         return task
@@ -817,7 +843,9 @@ class MockDatabaseStore:
         return {"task": task, "status": "COMPLETED"}
 
     def create_maintenance_ticket(self, payload: dict):
-        new_code = f"TICK-{800 + len(self.maintenance_tickets) + 1}"
+        numbers = [int(t["code"][5:]) for t in self.maintenance_tickets
+                   if t.get("code", "").startswith("TICK-") and t["code"][5:].isdigit()]
+        new_code = f"TICK-{max(numbers, default=800) + 1}"
         ticket = {
             "code": new_code,
             "title": payload.get("title", "Sự cố thiết bị mới"),
@@ -839,20 +867,10 @@ class MockDatabaseStore:
         self.maintenance_tickets.insert(0, ticket)
         return ticket
 
-    def resolve_maintenance(self, task_code: str, resolution_notes: str):
-        ticket = next((t for t in self.maintenance_tickets if t["code"] == task_code), None)
-        if ticket:
-            ticket["status"] = "RESOLVED"
-            ticket["resolution_notes"] = resolution_notes
-            # If related to a hub port or bike, restore it
-            if "S02" in ticket.get("device_code", ""):
-                h = self.get_hub("hub-01")
-                if h:
-                    for p in h.get("ports", []):
-                        if p["id"] == "S02":
-                            p["is_available"] = True
-                            p["status"] = "Sẵn sàng"
-        return ticket
+    def resolve_maintenance(self, task_code: str, resolution_notes: str,
+                            outcome: str = "FIXED_ON_SITE", photo_url=None):
+        from ..devices import resolve_ticket
+        return resolve_ticket(self, task_code, resolution_notes, outcome, photo_url)
 
     def parking_checkin(self, payload: dict):
         """Dùng chỗ giữ của User khi có booking; giữ nhánh walk-in cũ của Staff."""
@@ -904,7 +922,7 @@ class MockDatabaseStore:
                     "vehicle_type": payload.get("vehicle_type", "Xe máy điện"),
                     "hub_id": hub["id"], "hub_name": hub["name"], "slot_id": slot["id"],
                     "checkin_time": datetime.now(timezone.utc).isoformat(), "checkout_time": None,
-                    "duration_display": "0 phút", "parking_fee": held["price"],
+                    "duration_display": "0 phút", "parking_fee": 0, "parking_hourly_rate": slot.get("hourly_rate", hub.get("pricing", {}).get("parking_hourly")),
                     "payment_status": "PENDING", "guard_id": payload.get("guard_id", "STF-02"),
                 }
                 self.parking_records.insert(0, record)
@@ -917,20 +935,30 @@ class MockDatabaseStore:
                     "hub_name": hub["name"], "slot_id": slot["id"],
                     "checkin_time": record["checkin_time"], "elapsed_minutes": 0,
                 }
-                if self.owns_user_record(held):
-                    self.user["active_services"]["parking"] = active_parking
+                profiles = [self.__dict__["user"]] + [a["profile"] for a in
+                    self.operator_mock.get("accounts", []) if a["role"] == "user"]
+                for profile in profiles:
+                    if profile["id"] == held["user_id"]:
+                        profile.setdefault("active_services", {})["parking"] = active_parking
                 return record
         if any(b.get("parking_slot") and b.get("status") in ("Đã xác nhận", "Đang sử dụng")
                and plate_key(b.get("personal_plate") or "") == plate_key(payload.get("plate_number", ""))
                for b in self.bookings):
             raise HTTPException(409, "Biển số đang có booking tại Hub khác hoặc đang gửi xe")
+        if hub is None:
+            raise HTTPException(404, "Hub không tồn tại")
+        from ..parking_reservations import choose_parking_slot
         requested_slot = payload.get("slot_id", "").split(" · ")[-1].strip()
-        if hub and any(s["id"] == requested_slot and (s.get("reserved_by") or s.get("occupied_by")) for s in hub.get("slots", [])):
-            raise HTTPException(409, "Chỗ đỗ đã được giữ hoặc có xe")
-        ticket_code = f"PRK-{900 + len(self.parking_records) + 1}"
-        hub_name = payload.get("hub_name", "Hub Ga Metro ĐHQG")
-        hub = next((h for h in self.hubs if h["name"] == hub_name or h["id"] == payload.get("hub_id")), self.hubs[0])
-        slot_id = payload.get("slot_id", f"P{len(self.parking_records)+1:02d}")
+        try:
+            slot = choose_parking_slot(self, hub, {
+                "personal_plate": payload.get("plate_number"), "parking_slot": requested_slot or None,
+            })
+        except ValueError as exc:
+            raise HTTPException(409, str(exc))
+        numbers = [int(r["ticket_code"][4:]) for r in self.parking_records
+                   if r.get("ticket_code", "").startswith("PRK-") and r["ticket_code"][4:].isdigit()]
+        ticket_code = f"PRK-{max(numbers, default=900) + 1}"
+        slot_id = slot["id"]
 
         record = {
             "ticket_code": ticket_code,
@@ -939,19 +967,20 @@ class MockDatabaseStore:
             "hub_id": hub["id"],
             "hub_name": hub["name"],
             "slot_id": slot_id,
-            "checkin_time": datetime.now().strftime("%d/%m/%Y · %H:%M"),
+            "checkin_time": datetime.now(timezone.utc).isoformat(),
             "checkout_time": None,
             "duration_display": "0 phút",
-            "parking_fee": 5000,
+            "parking_fee": 0,
+            "parking_hourly_rate": slot.get("hourly_rate", hub.get("pricing", {}).get("parking_hourly")),
             "payment_status": "PENDING",
-            "guard_id": "STF-02"
+            "guard_id": payload.get("guard_id", "STF-02")
         }
         self.parking_records.insert(0, record)
-        if hub["available_parking"] > 0:
-            hub["available_parking"] -= 1
+        slot.update(is_available=False, occupied_by=ticket_code)
+        hub["available_parking"] -= 1
         return record
 
-    def parking_checkout_confirm(self, ticket_code: str, payment_method: str):
+    def parking_checkout_confirm(self, ticket_code: str, payment_method: str, quote_token=None, cash_received=None):
         """Xác định duy nhất vé, kiểm tra liên kết rồi thu phí/hoàn chỗ một lần.
 
         Mã vé được ưu tiên. Nếu dùng biển số, chọn vé đang mở duy nhất thay
@@ -1010,8 +1039,16 @@ class MockDatabaseStore:
             if slot and (slot.get('reserved_by') or slot.get('occupied_by') not in (None, record['ticket_code'])):
                 raise HTTPException(409, "Chỗ đỗ đang thuộc vé hoặc booking khác")
 
+        from ..parking_pricing import checkout_quote, verified_quote
+        quote = verified_quote(self, record, quote_token) if quote_token else checkout_quote(self, record)
+        if cash_received is not None and (type(cash_received) is not int or cash_received < quote["parking_fee"]):
+            raise HTTPException(422, "Số tiền nhận chưa đủ hoặc không hợp lệ")
+        record.update({key: quote[key] for key in (
+            "parking_fee", "parking_hourly_rate", "elapsed_minutes", "billable_hours", "duration_display"
+        )})
         blocked = slot is not None and parking_slot_blocked(self, hub, slot)
-        checkout_time = datetime.now(timezone.utc).isoformat()
+        checkout_time = quote["checkout_time"]
+        record["confirmed_at"] = datetime.now(timezone.utc).isoformat()
         # Chỉ ghi sau khi toàn bộ vé, booking và tài nguyên đã được đối chiếu.
         record.update(checkout_time=checkout_time, payment_status='PAID', payment_method=payment_method.strip())
         if booking is not None:
@@ -1022,9 +1059,12 @@ class MockDatabaseStore:
             slot['is_available'] = not blocked
         if not blocked:
             hub['available_parking'] += 1
-        active = self.user['active_services'].get('parking')
-        if active and active.get('ticket_id') == record['ticket_code']:
-            self.user['active_services']['parking'] = None
+        profiles = [self.__dict__["user"]] + [a["profile"] for a in
+            self.operator_mock.get("accounts", []) if a["role"] == "user"]
+        for profile in profiles:
+            active = profile.get("active_services", {}).get("parking")
+            if active and active.get("ticket_id") == record["ticket_code"]:
+                profile["active_services"]["parking"] = None
         return record
 
     def get_kpis(self):

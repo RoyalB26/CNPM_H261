@@ -8,6 +8,13 @@ import unittest
 
 
 class GatewayIntegrationTests(unittest.TestCase):
+    def test_merged_auth_profile_and_transaction_preserve_seed_and_credentials(self):
+        """Auth mới và cấu trúc tách file phải cập nhật đúng tài khoản, cùng transaction."""
+        scenario = Path(__file__).with_name('merged_auth_scenario.py')
+        result = subprocess.run([sys.executable, '-B', str(scenario)],
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_qualified_package_imports_preserve_singleton_paths_and_other_schemas(self):
         """Cấu trúc mới không đổi db, đường dẫn JSON hoặc module schemas khác."""
         scenario = Path(__file__).with_name('package_import_scenario.py')

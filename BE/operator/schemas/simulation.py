@@ -48,6 +48,7 @@ class HubStateSnapshot(BaseModel):
     base_power_kw: float = Field(
         ..., strict=True, ge=0, allow_inf_nan=False, examples=[10.85]
     )
+    available_power_kw: Optional[float] = Field(default=None, ge=0, allow_inf_nan=False)
     max_power_kw: float = Field(
         ..., strict=True, gt=0, allow_inf_nan=False, examples=[100.0]
     )
@@ -74,6 +75,7 @@ class SimulationScenarioConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    target_hub_ids: List[str] = Field(default_factory=list)
     scenario_name: str = Field(
         ..., min_length=1, pattern=r"\S",
         examples=["Nhu cầu sạc tăng 50%"]
@@ -105,6 +107,7 @@ class SimulationRunRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    snapshot_id: Optional[str] = None
     source_type: SourceStateType = SourceStateType.LIVE_STATE_A
     hub_snapshots: Optional[List[HubStateSnapshot]] = None
     config: SimulationScenarioConfig
@@ -186,6 +189,9 @@ class SimulationResultResponse(BaseModel):
     overloaded_chargers: str
     metro_deficit_bikes: int
     recommendations: List[DispatchRecommendationItem]
+    hub_results: List[dict] = Field(default_factory=list)
+    unmet_power_kw: float = 0
+    served_power_kw: float = 0
 
 
 class SimulationSaveRuleRequest(BaseModel):
@@ -204,6 +210,9 @@ class SimulationSaveRuleRequest(BaseModel):
         ..., min_length=1, pattern=r"\S",
         examples=["Điều chuyển xe từ Hub KTX sang Hub Ga Metro."]
     )
+    hub_ids: List[str] = Field(default_factory=list)
+    threshold_pct: int = Field(default=85, ge=50, le=100)
+    actions: List[dict] = Field(default_factory=list)
     auto_match_on_high_load: bool = Field(
         default=True, strict=True, examples=[True]
     )
@@ -232,6 +241,10 @@ class SimulationHistoryItem(BaseModel):
     what_if_params: str
     recorded_result: str
     saved_rule: str = ""
+    attempts: int = 1
+    error: Optional[str] = None
+    operation_plan: str = ""
+    saved_at: Optional[str] = None
 
     # Seed cũ chưa lưu đủ các trường này.
     source: Optional[SimulationSourceState] = None

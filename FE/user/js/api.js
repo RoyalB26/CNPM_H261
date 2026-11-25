@@ -31,7 +31,11 @@ const ApiService = {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ phone, password })
         });
-        if (res.ok) return await res.json();
+        if (res.ok) {
+          const result = await res.json();
+          sessionStorage.setItem("user_access_token", result.token);
+          return result;
+        }
       } catch (e) {
         console.warn("Login API error, fallback to local:", e);
       }
@@ -263,7 +267,7 @@ const ApiService = {
   async getInvoice(type = "rental") {
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/invoices/current?type=${type}`);
+        const res = await fetch(`${API_BASE_URL}/invoices/current?type=${type}`, { headers: { Authorization: "Bearer " + (sessionStorage.getItem("user_access_token") || "") } });
         if (res.ok) return await res.json();
       } catch (e) {
         console.warn("GetInvoice API error:", e);
@@ -273,20 +277,16 @@ const ApiService = {
   },
 
   async payInvoice(payload) {
-    if (this.isBackendAvailable) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/invoices/pay`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-        if (res.ok) return await res.json();
-      } catch (e) {
-        console.warn("PayInvoice API error:", e);
-      }
-    }
-    return { success: true, transaction_id: "TXN-88492019" };
+    const response = await fetch(`${API_BASE_URL}/invoices/pay`, {
+      method: "POST", headers: { "Content-Type": "application/json",
+        Authorization: "Bearer " + (sessionStorage.getItem("user_access_token") || "") },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || result.detail || "Không tạo được phiên thanh toán");
+    return result;
   }
+
 };
 
 // Initialize backend connectivity check

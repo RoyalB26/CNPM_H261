@@ -29,6 +29,8 @@ class VehicleCheckOutLookup(BaseModel):
 
 
 class VehicleCheckOutResponse(BaseModel):
+    quote_token: Optional[str] = None
+    expires_at: Optional[str] = None
     ticket_code: str = Field("SG-20261022-018", example="SG-20261022-018")
     license_plate: str = Field("59-B2 123.45", example="59-B2 123.45")
     checkin_time: str = Field("22/10/2026 · 14:36", example="22/10/2026 · 14:36")

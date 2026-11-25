@@ -43,7 +43,7 @@ async def api_suggest_route(request: Request) -> JSONResponse:
     except ValidationError:
         return JSONResponse({"success": False, "error": "Dữ liệu lộ trình không hợp lệ"}, status_code=422)
     try:
-        response = suggest_route(db, query)
+        response = await suggest_route(db, query)
     except ValueError:
         return JSONResponse({"success": False, "error": "Không có Hub lấy/trả xe khả dụng"}, status_code=409)
     return JSONResponse(response.model_dump(mode="json", exclude_unset=True))

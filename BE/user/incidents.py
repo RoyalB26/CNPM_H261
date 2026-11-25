@@ -72,6 +72,8 @@ def create_report(db: MockDatabaseStore, request: CreateIncidentReportRequest) -
     )
     ticket['incident_id'] = report.id
     ticket['user_id'] = db.user['id']
+    from shared.notifications import notify
+    notify(db, ticket["code"] + ":created", "operator", "User báo sự cố mới", ticket["code"])
     db.maintenance_tickets.insert(0, ticket)
     db.incidents.insert(0, report.model_dump(mode='json', exclude_unset=True))
     return report

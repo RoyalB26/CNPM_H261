@@ -44,6 +44,10 @@ class SharedPersistenceMiddleware:
 
             try:
                 await self.app(scope, receive, capture)
+                if scope.get("persistence_managed"):
+                    for message in messages:
+                        await send(message)
+                    return
 
                 response_start = next(
                     message

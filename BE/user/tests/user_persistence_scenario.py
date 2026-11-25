@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 import os
+from integration_support import authorize_client, confirm_payment, VNPAY_TEST_CONFIG
 from pathlib import Path
 import sys
 import tempfile
@@ -11,6 +12,7 @@ from unittest.mock import patch
 def run(mode: str) -> None:
     """User lưu được độc lập middleware, cả alias cũ và URL versioned."""
     with tempfile.TemporaryDirectory(prefix='be-user-write-contract-') as directory:
+        os.environ.update(VNPAY_TEST_CONFIG)
         os.environ['BE_RUNTIME_PATH'] = str(Path(directory) / 'runtime.json')
         os.environ['BE_BOOKING_EXPIRY_INTERVAL_SECONDS'] = '3600'
         sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -51,6 +53,7 @@ def run(mode: str) -> None:
         assert before == storage.snapshot() and not storage.path.exists()
 
         with TestClient(app) as client:
+            authorize_client(client, db)
             def disk():
                 return storage.path.read_bytes() if storage.path.exists() else None
 

@@ -43,6 +43,9 @@ def current_invoice(db: MockDatabaseStore, query: InvoiceQuery) -> InvoiceRespon
                 continue
             if query.booking_id is not None and record.get('booking_id') != query.booking_id:
                 continue
+            if record.get("checkout_time") is None:
+                from shared.parking_pricing import checkout_quote
+                record = checkout_quote(db, record)
             description = f"Gửi xe tại {record['hub_name']} · {record['slot_id']}"
             invoice = {
                 'user_id': db.user['id'],

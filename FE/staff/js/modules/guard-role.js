@@ -73,7 +73,13 @@
   },
 
   async openCheckoutScreen(plateOrTicket = "59-B2 123.45") {
-    const res = await StaffApi.parkingCheckoutPreview(plateOrTicket);
+    let res;
+    try {
+      res = await StaffApi.parkingCheckoutPreview(plateOrTicket);
+    } catch (error) {
+      alert(error.message);
+      return;
+    }
     if (res) {
       this.lastCheckoutPreview = res;
       const pEl = document.getElementById("checkoutPlate");
@@ -86,10 +92,10 @@
       if (dEl) dEl.innerText = `Tổng thời gian: ${res.duration_str}`;
 
       const fEl = document.getElementById("checkoutFeeDisplay");
-      if (fEl) fEl.innerText = `${(res.total_fee_vnd || 25000).toLocaleString()} VNĐ`;
+      if (fEl) fEl.innerText = `${(res.total_fee_vnd ?? 0).toLocaleString()} VNĐ`;
 
       const cEl = document.getElementById("checkoutCashConfirm");
-      if (cEl) cEl.innerText = `${(res.total_fee_vnd || 25000).toLocaleString()} VNĐ`;
+      if (cEl) cEl.innerText = `${(res.total_fee_vnd ?? 0).toLocaleString()} VNĐ`;
 
       const codeEl = document.getElementById("checkoutTicketCode");
       if (codeEl) codeEl.innerText = `Mã giao dịch: ${res.ticket_code}`;
@@ -102,7 +108,12 @@
     const ticketCode = prev.ticket_code || "SG-20261022-018";
     const fee = prev.total_fee_vnd ?? 25000;
     const plate = prev.license_plate || "59-B2 123.45";
-    await StaffApi.parkingCheckoutConfirm(ticketCode, fee);
+    try {
+      await StaffApi.parkingCheckoutConfirm(ticketCode, fee, prev.quote_token);
+    } catch (error) {
+      alert(error.message);
+      return;
+    }
     alert(`XÁC NHẬN ĐÃ THU ${Number(fee).toLocaleString()} VNĐ TIỀN MẶT THÀNH CÔNG!\nMở barrier cho xe ${plate} ra bãi.`);
     await this.loadShiftSummary();
     this.goToScreen("screen-guard-shift");
