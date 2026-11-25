@@ -16,13 +16,15 @@ def normalize(text: str) -> str:
 
 
 def hub_detail(db: MockDatabaseStore, hub: dict) -> HubDetailResponse:
-    """User xem chỗ còn có thể tiếp nhận xe, không gồm chỗ dành cho điều chuyển.
+    """User xem số xe và danh sách xe cùng có thể đặt, cùng chỗ còn tiếp nhận.
 
-    Chỉ tạo response; không trừ lần nữa vào bộ đếm chung của Operator/Staff.
+    Chỉ tạo response; không sửa danh sách/bộ đếm chung của Operator/Staff.
     """
+    bikes = available_bikes(db, hub)
     batteries = [{**b, 'available_count': 0} if swap_battery_blocked(db, hub, b) else b
                  for b in hub.get('batteries', [])]
-    return HubDetailResponse.model_validate({**hub, 'available_parking': available_parking_capacity(db, hub),
+    return HubDetailResponse.model_validate({**hub, 'available_bikes': len(bikes), 'bikes': bikes,
+        'available_parking': available_parking_capacity(db, hub),
         'available_batteries': available_swap_batteries(db, hub), 'batteries': batteries})
 
 

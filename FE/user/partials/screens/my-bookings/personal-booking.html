@@ -5,12 +5,13 @@
     <span class="nav-title">Đặt chỗ xe cá nhân</span>
   </div>
   <div class="card-box">
-    <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">EMH-1024 · 59-X1 123.45</h3>
-    <div style="font-size: 13px; margin-bottom: 6px;">• Chỗ đỗ xe P-12: 10:00 – 12:00</div>
-    <div style="font-size: 13px; margin-bottom: 12px;">• Trụ sạc nhanh S03: 10:00 – 11:00</div>
-    <div style="font-size: 12px; color: var(--text-muted);">Hub Ga Metro ĐHQG</div>
+    <h3 id="personalBookingTitle" style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">—</h3>
+    <div id="personalBookingParking" style="font-size: 13px; margin-bottom: 6px;">—</div>
+    <div id="personalBookingCharging" style="font-size: 13px; margin-bottom: 12px; display: none;"></div>
+    <div id="personalBookingHub" style="font-size: 12px; color: var(--text-muted);">—</div>
+    <div id="personalBookingHold" style="font-size: 12px; margin-top: 8px;">—</div>
   </div>
-  <button class="btn-primary" style="margin-bottom: 12px; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-parking-arrival')">Đến cổng bãi đỗ (P08)</button>
-  <button class="btn-secondary" style="margin-bottom: 12px; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-charging-start')">Vào cắm sạc pin (S03)</button>
-  <button class="btn-secondary" style="width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-battery-swap')">Xác nhận đổi pin</button>
+  <p>Đến đúng Hub và cung cấp mã đặt chỗ, biển số cho bảo vệ. Bảo vệ xác nhận xe vào bãi; sau đó phiên gửi xe xuất hiện trong mục Đang dùng. Phí gửi xe thanh toán tại quầy khi ra bãi.</p>
+  <button class="btn-primary" style="margin-bottom: 12px; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-active-services')">Kiểm tra trạng thái gửi xe</button>
+  <button class="btn-secondary" onclick="App.navigateTo('screen-cancel-confirm')">Hủy đặt trước</button>
 </section>

@@ -36,6 +36,65 @@ class HubTests(unittest.TestCase):
         self.assertEqual([h['id'] for h in hubs], ['hub-02'])
         self.assertEqual(before, self.db.__dict__)
 
+    def test_library_bike_count_matches_bookable_list_without_changing_shared_counter(self):
+        """Hub seed báo 6 nhưng chỉ có XE-101: response User phải báo đúng 1."""
+        hub = self.db.get_hub('hub-05')
+        before = copy.deepcopy(self.db.__dict__)
+        view = hub_detail(self.db, hub)
+        self.assertEqual(view.available_bikes, 1)
+        self.assertEqual([bike.id for bike in view.bikes], ['XE-101'])
+        self.assertEqual(hub['available_bikes'], 6)
+        self.assertEqual(before, self.db.__dict__)
+
+    def test_bike_views_exclude_holds_active_rides_maintenance_and_relocations(self):
+        """Các Hub dùng cùng điều kiện khả dụng khi xem số lượng và chọn xe."""
+        hub = self.db.get_hub('hub-02')
+        self.assertNotIn('error', self.db.create_booking({
+            'plan_type': 'rental', 'hub_id': hub['id'], 'resource_name': 'XE-052'}))
+        self.db.maintenance_tickets.append({'device_code': 'XE-061', 'hub_id': hub['id'], 'status': 'PENDING'})
+        before = copy.deepcopy(self.db.__dict__)
+        for stored in self.db.hubs:
+            view = hub_detail(self.db, stored)
+            self.assertEqual(view.available_bikes, len(view.bikes))
+            self.assertEqual([bike.id for bike in view.bikes], [bike['id'] for bike in available_bikes(self.db, stored)])
+        self.assertEqual(hub_detail(self.db, hub).available_bikes, 0)
+        self.assertEqual(hub_detail(self.db, self.db.get_hub('hub-03')).available_bikes, 0)
+        self.assertEqual(before, self.db.__dict__)
+
+    def test_bike_count_tracks_reserve_cancel_start_and_cross_hub_return(self):
+        """Giữ/hủy/di chuyển xe không làm số hiển thị lệch danh sách chọn đặt."""
+        self.db.user['active_services']['ride'] = None
+        origin = self.db.get_hub('hub-05')
+        target = self.db.get_hub('hub-04')
+        target_before = hub_detail(self.db, target).available_bikes
+        payload = {'plan_type': 'rental', 'hub_id': origin['id'], 'resource_name': 'XE-101',
+                   'destination_hub_id': target['id']}
+        booking = self.db.create_booking(payload)
+        self.assertNotIn('error', booking)
+        self.assertEqual(hub_detail(self.db, origin).available_bikes, 0)
+        self.assertNotIn('error', self.db.cancel_booking(booking['id']))
+        self.assertEqual(hub_detail(self.db, origin).available_bikes, 1)
+        booking = self.db.create_booking(payload)
+        self.assertNotIn('error', booking)
+        ride = self.db.start_ride(booking['id'])
+        self.assertTrue(ride['success'])
+        self.assertEqual(hub_detail(self.db, origin).available_bikes, 0)
+        returned = self.db.return_vehicle(ride['ride']['trip_id'], target['name'])
+        self.assertTrue(returned['success'])
+        self.assertEqual(hub_detail(self.db, origin).available_bikes, 0)
+        view = hub_detail(self.db, target)
+        self.assertEqual(view.available_bikes, target_before + 1)
+        self.assertIn('XE-101', [bike.id for bike in view.bikes])
+
+    def test_inactive_or_zero_counter_hub_has_no_bookable_bikes_in_response(self):
+        for change in ({'status': 'DEACTIVATED'}, {'available_bikes': 0}):
+            with self.subTest(change=change):
+                hub = copy.deepcopy(self.db.get_hub('hub-05'))
+                hub.update(change)
+                view = hub_detail(self.db, hub)
+                self.assertEqual(view.available_bikes, 0)
+                self.assertEqual(view.bikes, [])
+
     def test_suggestion_skips_seed_active_ride_and_held_bikes(self):
         result = asyncio.run(suggest_route(self.db, self.query))
         self.assertNotEqual(result.recommended_bike.id, 'XE-024')

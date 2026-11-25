@@ -40,6 +40,19 @@
     }
   },
 
+  selectedChargingPlate() {
+    return (document.getElementById("chargingPersonalVehicle")?.value || "").split("·").pop().trim();
+  },
+
+  updateReviewChargingView() {
+    const plate = this.selectedChargingPlate();
+    const hub = document.getElementById("reviewChargingHub");
+    const vehicle = document.getElementById("reviewChargingPlate");
+    if (hub) hub.innerText = AppState.bookingDraft.hubName || "—";
+    if (vehicle) vehicle.innerText = plate || "Chưa chọn xe";
+    this.reviewedChargingPlate = plate;
+  },
+
   async confirmBooking(planType) {
     if (planType === "swap") {
       return this.confirmSwapAndPay();
@@ -47,25 +60,59 @@
     if (planType === "rental") {
       return this.confirmRental();
     }
+    const parkingError = document.getElementById("parkingBookingError");
+    if (parkingError) parkingError.innerText = "";
+    if (this.resourceBookingPending) return;
+    const parkingVehicle = document.getElementById("parkingPersonalVehicle");
+    // Giá trị select có thể là biển số thuần hoặc nhãn "Loại xe · Biển số".
+    const usesChargingVehicle = planType === "personal" || planType === "charging";
+    let plate = AppState.bookingDraft.personalPlate;
+    if (planType === "parking") plate = (parkingVehicle?.value || "").split("·").pop().trim();
+    if (usesChargingVehicle) plate = this.selectedChargingPlate();
     const payload = {
       plan_type: planType,
       hub_id: AppState.bookingDraft.hubId,
-      personal_plate: AppState.bookingDraft.personalPlate,
+      personal_plate: plate,
       services: [
         {
           service_type: planType,
-          detail: "Chỗ đỗ + Sạc",
-          price_est: 20000
+          detail: planType === "parking" ? "Giữ chỗ đỗ xe cá nhân" : "Giữ tài nguyên",
+          price_est: 0
         }
       ]
     };
 
-    const newBooking = await ApiService.createBooking(payload);
+    if (planType === "parking") {
+      payload.duration_hours = parseInt(document.getElementById("parkingDuration")?.value, 10);
+    }
+    let newBooking;
+    this.resourceBookingPending = true;
+    try {
+      if (!payload.hub_id) throw new Error("Vui lòng chọn Hub trước khi đặt chỗ.");
+      if (!plate) throw new Error("Vui lòng chọn phương tiện cá nhân.");
+      if (planType === "personal" && plate !== this.reviewedChargingPlate) {
+        this.updateReviewChargingView();
+        throw new Error("Phương tiện đã thay đổi. Vui lòng kiểm tra lại trước khi xác nhận.");
+      }
+      if (planType === "parking" && !(payload.duration_hours > 0)) throw new Error("Vui lòng chọn thời lượng gửi xe.");
+      newBooking = await ApiService.createBooking(payload);
+      if (!newBooking?.id) throw new Error("Backend chưa trả mã đặt chỗ hợp lệ.");
+    } catch (error) {
+      if (parkingError && planType === "parking") parkingError.innerText = error.message;
+      this.showToast(error.message || "Chưa đặt được chỗ, vui lòng thử lại.", "error");
+      return;
+    } finally {
+      this.resourceBookingPending = false;
+    }
     AppState.bookings.unshift(newBooking);
     AppState.selectedBookingId = newBooking.id;
 
     const successIdEl = document.getElementById("successBookingId");
     if (successIdEl) successIdEl.innerText = `Mã đặt: ${newBooking.id || 'EMH-1024'}`;
+    const successHubEl = document.getElementById("successBookingHub");
+    if (successHubEl) successHubEl.innerText = newBooking.hub_name;
+    const successHoldEl = document.getElementById("successBookingHoldUntil");
+    if (successHoldEl) successHoldEl.innerText = newBooking.hold_until || "—";
 
     this.renderBookings();
     this.showToast("Đặt chỗ giữ tài nguyên thành công!");
@@ -132,8 +179,8 @@
   },
 
   payAndStartRide() {
-    this.showToast("Đang chuyển sang thanh toán cước thuê xe...");
-    this.setupInvoiceAndPay("rental", 10000, "screen-vehicle-ready", true);
+    // Giữ alias cho giao diện cũ; nhận xe không yêu cầu thanh toán hóa đơn trước.
+    return this.startRide();
   },
 
   async confirmSwapAndPay() {
@@ -323,11 +370,43 @@
     }).join("");
   },
 
+  continueSelectedBooking() {
+    const booking = AppState.bookings.find(b => b.id === AppState.selectedBookingId);
+    if (!booking) {
+      this.showToast("Không tìm thấy đặt chỗ đã chọn, vui lòng mở danh sách đặt chỗ.", "error");
+      return;
+    }
+    if ((booking.plan_type || booking.planType) === "rental") {
+      this.navigateTo("screen-pickup");
+      return;
+    }
+    this.openBookingDetail(booking.id);
+  },
+
   openBookingDetail(bookingId) {
-    const bk = AppState.bookings.find(b => b.id === bookingId) || AppState.bookings[0];
+    const bk = AppState.bookings.find(b => b.id === bookingId);
     if (!bk) return;
 
     AppState.selectedBookingId = bk.id;
+    const type = bk.plan_type || bk.planType;
+    if (type === "parking" || type === "personal") {
+      // Đặt chỗ chưa phải phiên gửi xe; Staff xác nhận check-in tại cổng.
+      const setText = (id, text) => {
+        const element = document.getElementById(id);
+        if (element) element.innerText = text;
+      };
+      setText("personalBookingTitle", `${bk.id} · ${bk.personal_plate || "—"}`);
+      setText("personalBookingParking", `Chỗ đỗ: ${bk.parking_slot || "Chưa có mã vị trí"}`);
+      setText("personalBookingHub", bk.hub_name || bk.hubName || "—");
+      setText("personalBookingHold", `Giữ đến: ${bk.hold_until || "—"} · ${bk.status || "Đã xác nhận"}`);
+      const charging = document.getElementById("personalBookingCharging");
+      if (charging) {
+        charging.innerText = bk.charging_port ? `Cổng sạc: ${bk.charging_port}` : "";
+        charging.style.display = bk.charging_port ? "block" : "none";
+      }
+      this.navigateTo("screen-personal-booking");
+      return;
+    }
 
     const subEl = document.getElementById("bookingDetailSubtitle");
     if (subEl) {
@@ -407,7 +486,11 @@
 
   async submitChargingSchedule() {
     const hubId = AppState.bookingDraft.hubId || "hub-01";
-    const plate = (document.getElementById("chargingPersonalVehicle")?.value || "59-X1 123.45").split("·").pop().trim();
+    const plate = this.selectedChargingPlate();
+    if (!plate) {
+      this.showToast("Vui lòng chọn phương tiện cá nhân.", "error");
+      return;
+    }
     const offsetMin = Math.max(0, parseInt(document.getElementById("schedStartOffsetMin")?.value || "15", 10));
     const batteryPct = Math.min(100, Math.max(0, parseInt(document.getElementById("schedBatteryPct")?.value || "35", 10)));
     const start = new Date(Date.now() + offsetMin * 60000);

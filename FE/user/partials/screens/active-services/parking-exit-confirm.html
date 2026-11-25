@@ -2,17 +2,19 @@
 <section id="screen-parking-exit-confirm" class="screen">
   <div class="top-nav" style="background: #ffffff; border-bottom: 1px solid var(--border-color);">
     <button class="nav-back" onclick="App.navigateTo('screen-parking-active')"><i class="fa-solid fa-arrow-left"></i></button>
-    <span class="nav-title">Kết thúc phiên đỗ</span>
+    <span class="nav-title">Hướng dẫn ra bãi</span>
     <span class="nav-icon-badge-p">P</span>
   </div>
 
   <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 20px 0;">
     <div class="card-box" style="padding: 24px 20px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); background: #ffffff; border-radius: var(--radius-md);">
-      <h3 style="font-size: 18px; font-weight: 800; margin-bottom: 14px; color: var(--text-main);">Xác nhận xe đã rời?</h3>
+      <h3 style="font-size: 18px; font-weight: 800; margin-bottom: 14px; color: var(--text-main);">Thanh toán tại quầy bảo vệ</h3>
       <p style="font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 28px;">
-        Chỉ xác nhận sau khi đưa xe ra khỏi vị trí P08. Hệ thống sẽ ghi giờ rời và giải phóng chỗ đỗ.
+        Vui lòng cung cấp mã vé hoặc biển số cho bảo vệ để thanh toán phí gửi xe và xác nhận ra bãi.
+        Nếu dùng gói đỗ xe kèm sạc, hãy kết thúc phiên sạc trước.
+        Phiên gửi xe vẫn hiển thị trong mục Đang dùng cho đến khi bảo vệ hoàn tất xác nhận.
       </p>
-      <button class="btn-primary" style="margin-bottom: 12px; width: 100%; font-weight: 700;" onclick="App.finishParkingExit()">Xác nhận rời chỗ đỗ</button>
+      <button class="btn-primary" style="margin-bottom: 12px; width: 100%; font-weight: 700;" onclick="App.finishParkingExit()">Đã hiểu · Xem trạng thái</button>
       <button class="btn-secondary" style="border: 1.5px solid var(--border-color); background: #ffffff; width: 100%; font-weight: 700;" onclick="App.navigateTo('screen-parking-active')">Quay lại</button>
     </div>
   </div>

@@ -54,6 +54,7 @@ class PaymentSubmitRequest(BaseModel):
     method: Literal["wallet", "bank_transfer", "cash_guard"]
     amount: Optional[int] = Field(None, ge=0)
     account_number: Optional[str] = None
+    simulate: bool = Field(False, description="Thanh toán demo, không trừ tiền thật")
 
     @field_validator("method", mode="before")
     @classmethod
@@ -73,6 +74,7 @@ class PaymentProcessResult(BaseModel):
     payment_url: Optional[str] = None
     expires_at: Optional[str] = None
     message: str
+    is_simulated: bool = False
 
 class PaymentErrorResponse(BaseModel):
     """Lỗi thanh toán, chưa thay đổi trạng thái hóa đơn."""

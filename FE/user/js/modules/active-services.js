@@ -11,11 +11,27 @@
     try {
       const active = await ApiService.getActiveServices();
       if (active) {
-        AppState.activeServices = active;
+        AppState.activeServices = {
+          ...active,
+          has_active: Boolean(active.ride || active.parking || active.charging)
+        };
+        // Đồng bộ cache cũ; parking=null từ BE phải xóa phiên đã checkout.
+        AppState.activeRide = active.ride ?? null;
+        AppState.activeParking = active.parking ?? null;
+        AppState.activeCharging = active.charging ?? null;
         this.renderActiveServices(active);
       }
     } catch (e) {
       console.warn("Could not load active services:", e);
+      const container = document.getElementById("activeServicesContainer");
+      if (container) {
+        container.innerHTML = `
+          <div class="card-box" style="text-align: center;">
+            <p>Chưa tải được trạng thái dịch vụ. Vui lòng kiểm tra kết nối hoặc đăng nhập lại.</p>
+            <button class="btn-secondary" onclick="App.loadActiveServices()">Thử lại</button>
+          </div>
+        `;
+      }
     }
   },
 
@@ -43,7 +59,7 @@
         <div class="card-box selectable" onclick="App.navigateTo('screen-ride-active')">
           <div>
             <div style="font-weight: 700; font-size: 14px;">Xe đạp điện ${data.ride.vehicle_id || data.ride.vehicleId}</div>
-            <div style="font-size: 12px; color: var(--text-muted);">${data.ride.status || 'Đang sử dụng'} · ${data.ride.elapsed_minutes || data.ride.elapsedMinutes || 13} phút</div>
+            <div style="font-size: 12px; color: var(--text-muted);">${data.ride.status || 'Đang sử dụng'} · ${data.ride.elapsed_minutes ?? data.ride.elapsedMinutes ?? 0} phút</div>
           </div>
           <span style="font-size: 11px; background: #ecfdf5; color: #10b981; font-weight: 700; padding: 2px 8px; border-radius: 4px;">Hoạt động</span>
         </div>
@@ -52,9 +68,9 @@
       const rideSub = document.getElementById("rideActiveSubtitle");
       if (rideSub) rideSub.innerText = `${data.ride.vehicle_id || data.ride.vehicleId} · ${data.ride.origin_hub || data.ride.originHub} → ${data.ride.destination_hub || data.ride.destHub}`;
       const timerEl = document.getElementById("rideTimer");
-      if (timerEl) timerEl.innerText = `${data.ride.elapsed_minutes || data.ride.elapsedMinutes || 13} phút`;
+      if (timerEl) this.updateRideClock();
       const batEl = document.getElementById("rideBatteryLevel");
-      if (batEl) batEl.innerText = `${data.ride.battery_level || data.ride.batteryLevel || 78}%`;
+      if (batEl) batEl.innerText = `${data.ride.battery_level ?? data.ride.batteryLevel ?? 0}%`;
       const stEl = document.getElementById("rideStatusBadge");
       if (stEl) stEl.innerText = data.ride.status || "Đang sử dụng";
     }
@@ -71,7 +87,7 @@
       `);
 
       const parkSub = document.getElementById("parkingActiveSubtitle");
-      if (parkSub) parkSub.innerText = `EMH-1024 · ${data.parking.hub_name || data.parking.hubName}`;
+      if (parkSub) parkSub.innerText = `${data.parking.ticket_id || "Vé gửi xe"} · ${data.parking.hub_name || data.parking.hubName}`;
       const parkPlate = document.getElementById("parkingActivePlate");
       if (parkPlate) parkPlate.innerText = data.parking.plate_number || data.parking.plate;
       const parkSlot = document.getElementById("parkingActiveSlot");
@@ -181,10 +197,12 @@
         ride: result.ride
       };
 
-      AppState.activeRide = {
-        vehicleId: result.ride.vehicle_id,
-        elapsedMinutes: result.ride.elapsed_minutes,
-        status: result.ride.status
+      AppState.activeRide = result.ride;
+      // Chuyến mới không dùng lại hóa đơn hoặc mã chuyến đã trả trước đó.
+      AppState.lastReturnedTripId = null;
+      AppState.currentInvoice = {
+        ...AppState.currentInvoice, type: "rental", id: null, amount: 0,
+        trip_id: null, startRideOnSuccess: false
       };
 
       // Cập nhật trạng thái Booking
@@ -196,8 +214,9 @@
         booking.status = "Đang sử dụng";
       }
 
+      this.renderActiveServices(AppState.activeServices);
       // Chỉ chuyển màn hình khi Backend thành công
-      this.showToast("Bắt đầu tính thời gian di chuyển!");
+      this.showToast("Đã nhận xe. Chuyến đi đang hoạt động, thanh toán sau khi trả xe.");
       this.navigateTo("screen-ride-active");
 
     } catch (error) {
@@ -206,34 +225,77 @@
     }
   },
 
+  updateRideClock(now = Date.now()) {
+    // Tính lại từ mốc BE mỗi lần vẽ, tránh lệch khi tab ngủ hoặc đổi chuyến.
+    const ride = AppState.activeServices?.ride || AppState.activeRide;
+    const setText = (id, text) => {
+      const element = document.getElementById(id);
+      if (element) element.innerText = text;
+    };
+    const time = value => {
+      const timestamp = value ? Date.parse(value) : NaN;
+      return Number.isFinite(timestamp)
+        ? new Date(timestamp).toLocaleTimeString("vi-VN", { hour12: false }) : "—";
+    };
+    if (!ride) {
+      for (const id of ["rideTimer", "rideBookedAt", "rideStartedAt", "rideClockUpdatedAt"]) setText(id, "—");
+      return;
+    }
+    const start = Date.parse(ride.billing_started_at || ride.started_at || "");
+    if (Number.isFinite(start)) {
+      const seconds = Math.max(0, Math.floor((now - start) / 1000));
+      setText("rideTimer", `${Math.floor(seconds / 60)} phút ${String(seconds % 60).padStart(2, "0")} giây`);
+    } else {
+      // Seed cũ chỉ có snapshot số phút; không bịa mốc bắt đầu để chạy đồng hồ.
+      setText("rideTimer", `${ride.elapsed_minutes ?? ride.elapsedMinutes ?? 0} phút (dữ liệu mẫu)`);
+    }
+    setText("rideBookedAt", time(ride.billing_started_at));
+    setText("rideStartedAt", time(ride.started_at));
+    setText("rideClockUpdatedAt", time(new Date(now).toISOString()));
+  },
+
   startRideTicker() {
-    let minutes = AppState.activeServices?.ride?.elapsed_minutes || AppState.activeRide?.elapsedMinutes || 0;
-    setInterval(() => {
-      minutes++;
-      const timerEl = document.getElementById("rideTimer");
-      if (timerEl) {
-        timerEl.innerText = `${minutes} phút`;
-      }
-    }, 60000);
+    // Chỉ tạo một bộ đếm, kể cả khi khởi tạo lại giao diện.
+    if (this.rideTickerId != null) clearInterval(this.rideTickerId);
+    this.updateRideClock();
+    this.rideTickerId = setInterval(() => this.updateRideClock(), 1000);
   },
 
   async finishReturnRental() {
+    const activeRide = AppState.activeServices?.ride || AppState.activeRide;
+    if (!activeRide?.trip_id) {
+      this.showToast("Không tìm thấy chuyến đang sử dụng. Vui lòng mở lại mục Đang dùng.");
+      return;
+    }
+    let returned;
     try {
-      const activeRide = AppState.activeServices?.ride || AppState.activeRide;
-      const vehId = activeRide?.vehicle_id || activeRide?.vehicleId || "XE-024";
-      const hubId = activeRide?.destination_hub_id || AppState.bookingDraft.hubId || "hub-02";
-
-      const res = await ApiService.returnVehicle({ vehicle_id: vehId, hub_id: hubId });
-      if (res && res.success) {
-        this.showToast(res.message || "Xe đã được khóa chốt tại Hub!");
-        this.navigateTo("screen-invoice-rental");
-      } else {
-        this.navigateTo("screen-service-rejected");
+      const destination = activeRide.destination_hub_id
+        ? { hub_id: activeRide.destination_hub_id }
+        : { hub_name: activeRide.destination_hub };
+      if (!destination.hub_id && !destination.hub_name) {
+        throw new Error("Chuyến đi thiếu Hub trả xe, vui lòng kiểm tra lại đặt chỗ.");
+      }
+      returned = await ApiService.returnVehicle({ trip_id: activeRide.trip_id, ...destination });
+      if (returned?.success !== true || returned.trip_id !== activeRide.trip_id) {
+        throw new Error("Kết quả trả xe không khớp chuyến đang sử dụng.");
       }
     } catch (e) {
-      this.showToast("Xe đã được khóa chốt tại Hub!");
-      this.navigateTo("screen-invoice-rental");
+      this.showToast(e.message || "Chưa thể trả xe, vui lòng thử lại.");
+      return;
     }
+
+    AppState.lastReturnedTripId = returned.trip_id;
+    AppState.activeRide = null;
+    AppState.activeServices = {
+      ...AppState.activeServices, ride: null,
+      has_active: Boolean(AppState.activeServices?.parking || AppState.activeServices?.charging)
+    };
+    const booking = AppState.bookings.find(b => b.id === activeRide.booking_id);
+    if (booking) booking.status = "Hoàn thành";
+    this.renderActiveServices(AppState.activeServices);
+    this.showToast("Đã trả xe thành công. Đang tải hóa đơn của chuyến vừa kết thúc.");
+    this.navigateTo("screen-invoice-rental");
+    await this.loadRentalInvoice(returned.trip_id);
   },
 
   selectChargerSlot(slotText, elementId) {
@@ -270,8 +332,9 @@
   },
 
   finishParkingExit() {
-    this.showToast("Đã xác nhận xe rời chỗ đỗ P08!");
-    this.navigateTo("screen-map-home");
+    // User chỉ xem hướng dẫn; Staff xác nhận checkout mới kết thúc phiên và hoàn chỗ.
+    this.showToast("Vui lòng đến quầy bảo vệ để thanh toán và xác nhận ra bãi.");
+    this.navigateTo("screen-active-services");
   },
 
   async finishChargingSession() {

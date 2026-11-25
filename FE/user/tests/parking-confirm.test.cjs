@@ -1,0 +1,67 @@
+/** Kiểm tra đặt chỗ đỗ: xe đang chọn, lỗi API và chặn gửi trùng. */
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+async function run() {
+  let calls = 0, payload, fail = false, release;
+  const nodes = new Map();
+  const node = id => { if (!nodes.has(id)) nodes.set(id, { value: '', innerText: '', style: {} }); return nodes.get(id); };
+  node('parkingPersonalVehicle').value = 'Xe đạp điện · 59-MD 889.92';
+  node('parkingDuration').value = '3 giờ';
+  const state = { bookingDraft: { hubId: 'hub-02', personalPlate: 'OLD' }, bookings: [] };
+  const messages = [], screens = [];
+  const context = { AppState: state, document: { getElementById: node }, ApiService: {
+    createBooking: async data => { calls++; payload = data;
+      if (fail) throw new Error('Hub hết chỗ đỗ');
+      if (release) await new Promise(resolve => { release = resolve; });
+      return { id: 'BOOK-P', hub_name: 'Hub thật', hold_until: '12:15' };
+    }
+  }};
+  context.window = context;
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/modules/booking.js'), 'utf8'), context);
+  const app = { ...context.UserModules.Booking, renderBookings() {}, showToast: msg => messages.push(msg), navigateTo: id => screens.push(id) };
+  await app.confirmBooking('parking');
+  assert.equal(payload.personal_plate, '59-MD 889.92');
+  assert.equal(payload.duration_hours, 3);
+  assert.equal(state.selectedBookingId, 'BOOK-P');
+  assert.equal(screens.at(-1), 'screen-booking-success');
+  fail = true; screens.length = 0;
+  await app.confirmBooking('parking');
+  assert.equal(node('parkingBookingError').innerText, 'Hub hết chỗ đỗ');
+  assert.equal(state.bookings.length, 1);
+  assert.equal(screens.length, 0);
+  fail = false; state.bookingDraft.hubId = null;
+  const before = calls;
+  await app.confirmBooking('parking');
+  assert.equal(calls, before);
+  assert(node('parkingBookingError').innerText.includes('chọn Hub'));
+  state.bookingDraft.hubId = 'hub-02'; release = true;
+  const first = app.confirmBooking('parking');
+  await app.confirmBooking('parking');
+  assert.equal(calls, before + 1);
+  release(); await first;
+  assert.equal(app.resourceBookingPending, false);
+  const parking = { id: 'PARK', plan_type: 'parking', personal_plate: '59-MD 889.92', parking_slot: 'P10', hub_name: 'Hub thật', hold_until: '12:15' };
+  state.bookings.push(parking);
+  state.selectedBookingId = parking.id;
+  app.continueSelectedBooking();
+  assert.equal(screens.at(-1), 'screen-personal-booking');
+  assert(node('personalBookingTitle').innerText.includes(parking.personal_plate));
+  assert.equal(node('personalBookingParking').innerText, 'Chỗ đỗ: P10');
+  assert.equal(node('personalBookingCharging').style.display, 'none');
+  app.openBookingDetail('PARK');
+  assert.equal(screens.at(-1), 'screen-personal-booking');
+  state.bookings.push({ id: 'RENT', plan_type: 'rental' });
+  state.selectedBookingId = 'RENT';
+  app.continueSelectedBooking();
+  assert.equal(screens.at(-1), 'screen-pickup');
+  state.selectedBookingId = 'MISSING';
+  const previous = screens.length;
+  app.continueSelectedBooking();
+  assert.equal(screens.length, previous);
+  return { passed: 7 };
+}
+module.exports = { run };
+if (require.main === module) run().then(console.log);

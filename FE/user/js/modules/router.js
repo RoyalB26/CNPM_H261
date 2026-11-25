@@ -94,6 +94,8 @@
         this.updateReviewRentalView();
       } else if (screenId === "screen-review-parking") {
         this.updateReviewParkingView();
+      } else if (screenId === "screen-review-booking") {
+        this.updateReviewChargingView();
       } else if (screenId === "screen-review-swap") {
         this.updateReviewSwapView();
       } else if (screenId === "screen-select-charging" && typeof this.loadChargingSchedules === "function") {

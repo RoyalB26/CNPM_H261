@@ -136,6 +136,14 @@ không phân biệt hoa thường. `vehicle_type=bike` lọc Hub có xe thực s
 đặt; `vehicle_type=personal` lọc Hub hoạt động còn chỗ đỗ. Không gửi bộ lọc
 thì API trả toàn bộ Hub, bao gồm trạng thái ngừng hoạt động.
 
+Response danh sách/chi tiết Hub và gợi ý User dùng cùng danh sách xe có thể
+đặt: `available_bikes = len(bikes)`. Xe đã giữ, đang đi, bảo trì hoặc điều
+chuyển không nằm trong danh sách này. Hub không hoạt động hoặc bộ đếm chung
+không còn xe trả danh sách rỗng. Ví dụ seed Hub Thư viện Trung tâm có bộ đếm
+6 nhưng chỉ khai báo XE-101, response User hiển thị 1 xe. Đặt xe đó hiển thị
+0; hủy hợp lệ hiển thị lại 1. Đây là phép chiếu khi đọc, không sửa bộ đếm,
+danh sách xe trong store dùng chung, seed hoặc runtime của Operator/Staff.
+
 `POST /api/hubs/suggest-route` nhận `origin_lat`, `origin_lng`, `dest_lat`,
 `dest_lng`, `vehicle_type=bike` (mặc định). Gợi ý loại xe đã đặt, đang đi,
 điều chuyển hoặc bảo trì và Hub trả hết chỗ/ngừng hoạt động. Khoảng cách/thời
