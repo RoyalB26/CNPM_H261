@@ -194,12 +194,6 @@
           .addTo(this.map);
 
         this.overviewMarkers.push(marker);
-
-        if (hub.is_high_load) {
-          setTimeout(() => {
-            marker.togglePopup();
-          }, 500);
-        }
       });
     },
 

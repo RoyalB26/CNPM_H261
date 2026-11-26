@@ -7,19 +7,85 @@
   global.StaffModules = global.StaffModules || {};
 
   global.StaffModules.MaintenanceRole = {
+  currentMaintTab: "new",
+  cachedMaintLists: { new: [], in_progress: [], completed: [] },
+
+  switchMaintTab(tab) {
+    this.currentMaintTab = tab || "new";
+    const tabMap = {
+      new: document.getElementById("maintTabNew"),
+      in_progress: document.getElementById("maintTabInProgress"),
+      completed: document.getElementById("maintTabCompleted")
+    };
+    Object.entries(tabMap).forEach(([key, el]) => {
+      if (!el) return;
+      if (key === this.currentMaintTab) el.classList.add("active");
+      else el.classList.remove("active");
+    });
+    this.renderMaintenanceTasks();
+  },
+
   async loadMaintenanceTasks() {
-    const data = await StaffApi.getMaintenanceTasks();
-    const list = Array.isArray(data)
-      ? data
-      : [...((data && data.new_tasks) || []), ...((data && data.in_progress_tasks) || [])];
+    const [data, profile, notifications] = await Promise.all([
+      StaffApi.getMaintenanceTasks(),
+      StaffApi.getProfile().catch(() => null),
+      StaffApi.getNotifications().catch(() => [])
+    ]);
+
+    const notifTicketCodes = new Set(
+      (notifications || [])
+        .map(n => n && n.reference_id)
+        .filter(id => typeof id === "string" && id.startsWith("TICK-"))
+    );
+
+    const filterAssigned = (arr) =>
+      (Array.isArray(arr) ? arr : []).filter(t => notifTicketCodes.has(t.task_code));
+
+    const newList = Array.isArray(data) ? filterAssigned(data) : filterAssigned(data && data.new_tasks);
+    const inProgressList = Array.isArray(data) ? [] : filterAssigned(data && data.in_progress_tasks);
+    const completedList = Array.isArray(data) ? [] : filterAssigned(data && data.completed_tasks);
+
+    this.cachedMaintLists = {
+      new: newList,
+      in_progress: inProgressList,
+      completed: completedList
+    };
+
+    const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
+    setTxt("maintTabNew", `Mới tiếp nhận (${newList.length})`);
+    setTxt("maintTabInProgress", `Đang xử lý (${inProgressList.length})`);
+    setTxt("maintTabCompleted", `Hoàn tất (${completedList.length})`);
+    setTxt("maintTotalBadge", `${newList.length + inProgressList.length} nhiệm vụ`);
+
+    if (profile) {
+      setTxt("maintProfileAvatar", profile.avatar_initials || "MT");
+    }
+
+    this.renderMaintenanceTasks();
+  },
+
+  renderMaintenanceTasks() {
+    const tab = this.currentMaintTab || "new";
+    const list = (this.cachedMaintLists && this.cachedMaintLists[tab]) || [];
     const badge = document.getElementById("maintCountBadge");
     if (badge) badge.innerText = `${list.length} nhiệm vụ`;
     const container = document.getElementById("maintTasksContainer");
-    if (!container || !list.length) return;
+    if (!container) return;
+    if (!list.length) {
+      const emptyMsg = tab === "in_progress"
+        ? "Chưa có phiếu nào đang xử lý."
+        : (tab === "completed" ? "Chưa có phiếu nào đã hoàn tất." : "Chưa có phiếu bảo trì mới nào được giao cho tài khoản này.");
+      container.innerHTML = `<div style="text-align: center; padding: 32px 16px; color: var(--text-muted); font-size: 13px;">${emptyMsg}</div>`;
+      return;
+    }
 
     container.innerHTML = list.map(t => {
       const pri = (t.priority || "THƯỜNG").toUpperCase();
       const tagClass = pri.includes("KHẨN") ? "badge-urgent-tag" : (pri.includes("CẢNH") ? "badge-warning-tag" : "badge-neutral-tag");
+      const isCompleted = tab === "completed";
+      const statusLabel = isCompleted ? "Đã hoàn tất" : (t.due_label || t.status || "Đã phân công");
+      const btnLabel = isCompleted ? "XEM CHI TIẾT" : "XEM VÀ TIẾP NHẬN";
+      const btnClass = isCompleted ? "btn-staff-secondary" : "btn-staff-primary";
       return `
         <div class="staff-card" style="margin-bottom: 12px; padding: 14px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -31,8 +97,8 @@
           <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">${t.hub_name || ""}</div>
           <div style="font-size: 11.5px; color: #94a3b8; margin-bottom: 12px;">Tạo lúc: ${t.created_at_label || ""}</div>
           <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 10px;">
-            <span style="font-size: 12px; color: var(--accent-red); font-weight: 700;">${t.due_label || t.status}</span>
-            <button class="btn-staff-primary" style="width: auto; padding: 7px 14px; font-size: 12px;" onclick="StaffApp.openMaintenanceDetail('${t.task_code}')">XEM VÀ TIẾP NHẬN</button>
+            <span style="font-size: 12px; color: ${isCompleted ? '#16a34a' : 'var(--accent-red)'}; font-weight: 700;">${statusLabel}</span>
+            <button class="${btnClass}" style="width: auto; padding: 7px 14px; font-size: 12px; margin-top: 0;" onclick="StaffApp.openMaintenanceDetail('${t.task_code}')">${btnLabel}</button>
           </div>
         </div>
       `;

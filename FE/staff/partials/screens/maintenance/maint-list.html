@@ -2,20 +2,20 @@
 <section id="screen-maint-list" class="staff-screen">
   <!-- Tech Profile Header -->
   <div class="staff-profile-header-card">
-    <div class="avatar-black-circle">MT</div>
+    <div class="avatar-black-circle" id="maintProfileAvatar">MT</div>
     <div style="flex: 1;">
-      <div style="font-size: 15px; font-weight: 800;">Nguyen Van B</div>
+      <div class="staff-name-text" id="maintProfileName" style="font-size: 15px; font-weight: 800;">Nguyen Van B</div>
       <div style="font-size: 12px; color: var(--text-muted);">Nhân viên bảo trì</div>
-      <div style="font-size: 11.5px; color: #94a3b8;">Ca chiều · 13:00 - 17:00</div>
+      <div class="staff-shift-text" id="maintProfileShift" style="font-size: 11.5px; color: #94a3b8;">Ca chiều · 13:00 - 17:00</div>
     </div>
-    <span class="tag-badge-pill">4 nhiệm vụ</span>
+    <span class="tag-badge-pill" id="maintTotalBadge">0 nhiệm vụ</span>
   </div>
 
-  <!-- Filter Segmented Tabs matching 6.jpg -->
+  <!-- Filter Segmented Tabs -->
   <div class="segmented-tabs-line">
-    <button class="tab-line-btn active">Mới tiếp nhận (3)</button>
-    <button class="tab-line-btn">Đang xử lý (1)</button>
-    <button class="tab-line-btn">Hoàn tất</button>
+    <button id="maintTabNew" class="tab-line-btn active" onclick="StaffApp.switchMaintTab('new')">Mới tiếp nhận (0)</button>
+    <button id="maintTabInProgress" class="tab-line-btn" onclick="StaffApp.switchMaintTab('in_progress')">Đang xử lý (0)</button>
+    <button id="maintTabCompleted" class="tab-line-btn" onclick="StaffApp.switchMaintTab('completed')">Hoàn tất (0)</button>
   </div>
 
   <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; margin: 14px 0 10px;">

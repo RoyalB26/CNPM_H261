@@ -244,6 +244,19 @@
       return data;
     },
 
+    async activateHub(hubId) {
+      const res = await fetch(`${OPERATOR_API_BASE}/hubs/${hubId}/config`, {
+        method: "PUT",
+        headers: this._authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ hub_id: hubId, status: "Hoạt động" })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || `HTTP ${res.status}`);
+      }
+      return data;
+    },
+
     async deactivateHub(hubId, reason = "Tạm ngưng vận hành từ bảng điều khiển Operator") {
       try {
         const res = await fetch(`${OPERATOR_API_BASE}/hubs/${hubId}/deactivate`, {

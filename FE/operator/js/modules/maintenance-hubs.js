@@ -138,6 +138,10 @@
 
       tbody.innerHTML = hubs.map(h => {
         const isNormal = h.status === "Bình thường" || h.status === "Normal" || h.status === "Hoạt động";
+        const isDeactivated = h.status === "Tạm ngưng" || h.status === "DEACTIVATED";
+        const statusActionBtn = isDeactivated
+          ? `<button class="btn-secondary-light" style="padding: 4px 8px; font-size: 11.5px; color: #16a34a; border-color: #86efac;" onclick="OperatorApp.activateHub('${h.hub_id}', '${h.hub_name}')">Hoạt động</button>`
+          : `<button class="btn-secondary-light" style="padding: 4px 8px; font-size: 11.5px; color: var(--accent-red);" onclick="OperatorApp.openDeactivateModal('${h.hub_id}', '${h.hub_name}')">Tạm ngưng</button>`;
         return `
           <tr>
             <td><strong>${h.hub_name}</strong></td>
@@ -148,7 +152,7 @@
             <td>
               <button class="btn-secondary-light" style="padding: 4px 8px; font-size: 11.5px; margin-right: 4px;" onclick="OperatorApp.openHubConfigModal('${h.hub_id}', '${h.hub_name}', ${h.parking_capacity}, ${h.charger_capacity}, ${h.lat}, ${h.lng})">Chỉnh sửa</button>
               <button class="btn-secondary-light" style="padding: 4px 8px; font-size: 11.5px; margin-right: 4px;" onclick="OperatorApp.openHubDevicesModal('${h.hub_id}', '${h.hub_name}')">Thiết bị</button>
-              <button class="btn-secondary-light" style="padding: 4px 8px; font-size: 11.5px; color: var(--accent-red);" onclick="OperatorApp.openDeactivateModal('${h.hub_id}', '${h.hub_name}')">Tạm ngưng</button>
+              ${statusActionBtn}
             </td>
           </tr>
         `;
@@ -395,7 +399,21 @@
       this.closeModal("modalDeactivateHub");
       alert(`Đã tạm ngưng hoạt động của ${this.currentDeactivatingHub}. Trụ sạc và chỗ đỗ đã khóa trên ứng dụng người dùng.`);
       await this.loadHubsConfig();
-      await this.loadKpis();
+      if (typeof this.loadKpis === "function") await this.loadKpis();
+      if (typeof this.refreshOverviewMapMarkers === "function") await this.refreshOverviewMapMarkers();
+    },
+
+    async activateHub(hubId, hubName) {
+      try {
+        await OperatorApi.activateHub(hubId);
+        alert(`Đã kích hoạt lại hoạt động của ${hubName || hubId}!`);
+        await this.loadHubsConfig();
+        if (typeof this.loadKpis === "function") await this.loadKpis();
+        if (typeof this.refreshOverviewMapMarkers === "function") await this.refreshOverviewMapMarkers();
+      } catch (err) {
+        console.error("Lỗi kích hoạt Hub:", err);
+        alert("Không thể kích hoạt lại Hub: " + (err.message || "Lỗi kết nối"));
+      }
     }
   };
 })(window);

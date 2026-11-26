@@ -91,6 +91,20 @@ const StaffApp = {
       this.loadMaintenanceTasks(),
       this.loadShiftSummary()
     ]);
+    this.startAutoSync();
+  },
+
+  startAutoSync() {
+    if (this._syncTimer) return;
+    const syncMs = (window.EMobilityConfig && window.EMobilityConfig.POLLING && window.EMobilityConfig.POLLING.operatorSyncMs) || 8000;
+    this._syncTimer = setInterval(() => {
+      if (!sessionStorage.getItem("staff_access_token")) return;
+      if (this.currentRole === "maintenance" && this.currentScreen === "screen-maint-list") {
+        this.loadMaintenanceTasks();
+      } else if (this.currentRole === "relocation" && this.currentScreen === "screen-reloc-route") {
+        this.loadRelocationTask();
+      }
+    }, syncMs);
   },
 
   /**
@@ -123,8 +137,14 @@ const StaffApp = {
 
     if (role === "relocation") {
       this.goToScreen("screen-reloc-route");
+      if (sessionStorage.getItem("staff_access_token") && typeof this.loadRelocationTask === "function") {
+        this.loadRelocationTask();
+      }
     } else if (role === "maintenance") {
       this.goToScreen("screen-maint-list");
+      if (sessionStorage.getItem("staff_access_token") && typeof this.loadMaintenanceTasks === "function") {
+        this.loadMaintenanceTasks();
+      }
     } else if (role === "security") {
       this.goToScreen("screen-guard-checkin");
     }
@@ -198,8 +218,15 @@ const StaffApp = {
       else if (tabIndex === 3) this.openStaffNotifications();
       else this.goToScreen("screen-staff-profile");
     } else if (this.currentRole === "maintenance") {
-      if (tabIndex === 1) this.goToScreen("screen-maint-list");
-      else if (tabIndex === 2) this.loadMaintenanceTasks();
+      if (tabIndex === 1) {
+        this.goToScreen("screen-maint-list");
+        this.switchMaintTab("new");
+        this.loadMaintenanceTasks();
+      } else if (tabIndex === 2) {
+        this.goToScreen("screen-maint-list");
+        this.switchMaintTab("completed");
+        this.loadMaintenanceTasks();
+      }
       else if (tabIndex === 3) this.openStaffNotifications();
       else this.goToScreen("screen-staff-profile");
     }
