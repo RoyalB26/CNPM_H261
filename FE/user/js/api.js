@@ -175,13 +175,7 @@ const ApiService = {
       }
       return data;
     }
-    return {
-      id: `EMH-${Math.floor(1000 + Math.random() * 9000)}`,
-      ...bookingPayload,
-      status: "Đã xác nhận",
-      holdUntil: "15 phút kể từ hiện tại",
-      createdAt: "Vừa xong"
-    };
+    throw new Error("Chưa kết nối Backend, chưa thể xác nhận đặt chỗ.");
   },
 
   async startRide(bookingId) {
@@ -219,36 +213,35 @@ const ApiService = {
   },
 
   async getActiveServices() {
-    if (this.isBackendAvailable) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/services/active`, { headers: this._authHeaders() });
-        if (res.ok) return await res.json();
-      } catch (e) {
-        console.warn("GetActiveServices API error:", e);
-      }
+    // Trạng thái gửi xe phải do BE xác nhận, không dùng phiên cũ thay kết quả lỗi.
+    if (!this.isBackendAvailable) {
+      throw new Error("Chưa kết nối Backend. Vui lòng kiểm tra kết nối và thử lại.");
     }
-    return {
-      has_active: true,
-      ride: AppState.activeRide,
-      parking: AppState.activeParking,
-      charging: AppState.activeCharging
-    };
+    const res = await fetch(`${API_BASE_URL}/services/active`, { headers: this._authHeaders() });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(data?.detail || data?.error || `Không tải được trạng thái dịch vụ (HTTP ${res.status}).`);
+    }
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      throw new Error("Backend trả trạng thái dịch vụ không hợp lệ.");
+    }
+    return data;
   },
 
   async returnVehicle(payload) {
-    if (this.isBackendAvailable) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/services/return-vehicle`, {
-          method: "POST",
-          headers: this._authHeaders({ "Content-Type": "application/json" }),
-          body: JSON.stringify(payload)
-        });
-        if (res.ok) return await res.json();
-      } catch (e) {
-        console.warn("ReturnVehicle API error:", e);
-      }
+    if (!this.isBackendAvailable) {
+      throw new Error("Chưa kết nối Backend, chưa thể xác nhận trả xe.");
     }
-    return { success: true, message: "Xe đã được khóa chốt tại Hub thành công!" };
+    const res = await fetch(`${API_BASE_URL}/services/return-vehicle`, {
+      method: "POST",
+      headers: this._authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || data?.success !== true) {
+      throw new Error(data?.error || data?.detail || "Backend chưa xác nhận trả xe thành công.");
+    }
+    return data;
   },
 
   async getIncidents() {
@@ -285,16 +278,20 @@ const ApiService = {
     };
   },
 
-  async getInvoice(type = "rental") {
-    if (this.isBackendAvailable) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/invoices/current?type=${type}`, { headers: { Authorization: "Bearer " + (sessionStorage.getItem("user_access_token") || "") } });
-        if (res.ok) return await res.json();
-      } catch (e) {
-        console.warn("GetInvoice API error:", e);
-      }
+  async getInvoice(type = "rental", selectors = {}) {
+    if (!this.isBackendAvailable) {
+      throw new Error("Chưa kết nối Backend, chưa tải được hóa đơn.");
     }
-    return null;
+    const params = new URLSearchParams({ type });
+    Object.entries(selectors).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") params.set(key, value);
+    });
+    const res = await fetch(`${API_BASE_URL}/invoices/current?${params}`, { headers: this._authHeaders() });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(data?.error || data?.detail || `Không tải được hóa đơn (HTTP ${res.status}).`);
+    }
+    return data;
   },
 
   async payInvoice(payload) {

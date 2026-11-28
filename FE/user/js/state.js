@@ -54,12 +54,14 @@ const AppState = {
   },
 
   // Current invoice being settled
+  lastReturnedTripId: null,
   currentInvoice: {
-    id: "INV-2026-901",
+    id: null,
     type: "rental",
     title: "Hóa đơn thuê xe điện",
-    amount: 15000,
-    details: "Thời gian sử dụng: 45 phút",
+    amount: 0,
+    trip_id: null,
+    details: "",
     channel: "online" // "online" or "cash_guard"
   },
 

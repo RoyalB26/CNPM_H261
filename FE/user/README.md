@@ -62,3 +62,40 @@ Khởi chạy máy chủ HTTP từ thư mục gốc dự án:
 python -m http.server 3000 --directory FE
 ```
 Mở trình duyệt truy cập: **`http://localhost:3000/user/`** (hoặc mở `http://localhost:3000` để truy cập Cổng điều hướng chung).
+
+## Ra bãi và kết thúc gửi xe
+
+Nút **Hướng dẫn ra bãi** đưa User đến hướng dẫn thanh toán tại quầy bảo vệ.
+User không tự đóng vé hoặc giải phóng chỗ đỗ. Staff xem phí và xác nhận
+checkout bằng đúng mã vé/biển số; với gói đỗ + sạc cần kết thúc sạc trước.
+
+Khi mở lại **Đang dùng**, FE tải trạng thái từ BE. Staff chưa checkout thì
+xe vẫn đang đỗ; BE trả `parking: null` thì FE xóa phiên khỏi cache và giao
+diện. Lỗi mạng/phiên đăng nhập hiện thông báo thử lại, không dùng dữ liệu
+dự phòng để báo đã hoàn tất hoặc phục hồi một phiên gửi xe cũ.
+
+## Nhận, trả xe thuê và thanh toán
+
+Luồng thuê xe: đặt xe → xác nhận nhận xe → sử dụng → trả xe thành công →
+xem hóa đơn đúng chuyến → chọn thanh toán. Nhận xe gọi API `start`, chưa
+gọi thanh toán. Cước vẫn tính theo quy tắc BE từ lúc đặt thành công đến khi trả.
+
+FE giữ đầy đủ `trip_id` của chuyến đang chạy. Khi trả xe thành công, truy vấn
+`/api/invoices/current?type=rental&trip_id=...` và dùng ID/số tiền của hóa đơn
+đó để thanh toán. Chuyến trả xe lỗi vẫn đang hoạt động; không mở hóa đơn.
+Trả xe thành công nhưng tải hóa đơn lỗi thì giữ mã chuyến để thử tải lại,
+khóa thanh toán, không lấy hóa đơn chuyến cũ thay thế. Mã chuyến vừa trả đang
+giữ trong state của trang; reload trang xóa context này, không tự chọn hóa đơn cũ.
+
+Thanh toán xong trở về trang chính, không tự gọi nhận xe. VNPAY vẫn cần cấu
+hình Backend và IPN hợp lệ; kiểm thử dưới đây không gọi cổng thanh toán thật.
+
+Có Node.js thì chạy kiểm thử độc lập (HTTP/DOM giả lập, không đổi dữ liệu demo):
+
+```bash
+node FE/user/tests/rental-flow.test.cjs
+```
+
+### Thanh toán demo
+
+FE gửi `simulate: true` tới API thanh toán. BE đối chiếu chủ hóa đơn, trạng thái dịch vụ và số tiền, sau đó lưu `paid` cùng mã `DEMO-...` trước khi trả thành công. Không trừ tiền thật, không cần cấu hình VNPAY. Request không có cờ này vẫn dùng VNPAY; hóa đơn đã trả hoặc đang chờ VNPAY không được mô phỏng lại. Trang thành công hiển thị mã giao dịch từ BE; lỗi hiển thị trên trang thất bại.

@@ -61,6 +61,21 @@ def validate_final_invoice(booking: dict, key: str, invoice: dict) -> None:
 
 
 def pay_invoice(db: MockDatabaseStore, payment: PaymentSubmitRequest, ip_address="127.0.0.1") -> PaymentProcessResult:
-    """Tạo phiên VNPAY; trạng thái paid được xác nhận tại IPN."""
-    from .payment_gateway import create_payment
+    """Demo ghi nhận tại store; luồng VNPAY vẫn chờ xác nhận tại IPN."""
+    from .payment_gateway import create_payment, eligible_invoice, find_invoice
+    if payment.simulate:
+        booking, key, invoice = find_invoice(db, payment.invoice_id, db.user['id'])
+        eligible_invoice(booking, key, invoice)
+        # Không dùng mô phỏng để ghi đè giao dịch cổng thanh toán đang chờ.
+        if invoice['status'] != 'unpaid':
+            raise PaymentError('Hóa đơn đang chờ cổng thanh toán, chưa thể mô phỏng', 409)
+        if payment.method == 'cash_guard':
+            raise PaymentError('Thanh toán tại bảo vệ không thuộc mô phỏng online', 409)
+        if payment.amount is not None and payment.amount != invoice['total_amount']:
+            raise PaymentError('Số tiền không khớp hóa đơn', 409)
+        reference = 'DEMO-' + uuid4().hex
+        invoice.update(status='paid', transaction_id=reference,
+                       paid_at=datetime.now(timezone.utc).isoformat(), payment_method=payment.method)
+        return PaymentProcessResult(transaction_id=reference, status='completed',
+                                    is_simulated=True, message='Thanh toán mô phỏng thành công, không trừ tiền thật')
     return create_payment(db, payment, ip_address)

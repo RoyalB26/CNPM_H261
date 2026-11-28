@@ -54,7 +54,12 @@
           const optionsHtml = vehicles.map(v => `<option value="${v.type} · ${v.plate_number}">${v.type} · ${v.plate_number} (${v.model || ''})</option>`).join("");
           ["parkingPersonalVehicle", "chargingPersonalVehicle", "swapPersonalVehicle"].forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.innerHTML = optionsHtml;
+            if (!el) return;
+            const previousValue = el.value;
+            el.innerHTML = optionsHtml;
+            if (Array.from(el.options).some(option => option.value === previousValue)) {
+              el.value = previousValue;
+            }
           });
           if (vehicles[0]) {
             AppState.bookingDraft.personalPlate = vehicles[0].plate_number;

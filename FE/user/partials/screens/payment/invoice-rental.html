@@ -7,8 +7,8 @@
   <div class="card-box">
     <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 12px;" id="invoiceRentalTitle">Hóa đơn thuê xe điện</h3>
     <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
-      <span style="color: var(--text-muted);" id="invoiceRentalItemLabel">Thời gian sử dụng (45 phút)</span>
-      <span style="font-weight: 600;" id="invoiceRentalItemCost">15,000 đ</span>
+      <span style="color: var(--text-muted);" id="invoiceRentalItemLabel">Cước thuê xe sau khi trả</span>
+      <span style="font-weight: 600;" id="invoiceRentalItemCost">—</span>
     </div>
     <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 12px;">
       <span style="color: var(--text-muted);">Phụ phí trễ hạn</span>
@@ -16,8 +16,10 @@
     </div>
     <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; display: flex; justify-content: space-between; font-size: 16px; font-weight: 800;">
       <span>Tổng thanh toán</span>
-      <span id="invoiceRentalTotalCost">15,000 đ</span>
+      <span id="invoiceRentalTotalCost">—</span>
     </div>
   </div>
-  <button class="btn-primary" id="btnPayRental" onclick="App.setupInvoiceAndPay('rental', 15000)">Chọn thanh toán</button>
+  <p id="invoiceRentalNotice" role="status">Trả xe thành công để xem hóa đơn của chuyến đi.</p>
+  <button class="btn-secondary" id="retryRentalInvoice" style="display: none; margin-bottom: 12px;" onclick="App.loadRentalInvoice()">Thử tải lại hóa đơn</button>
+  <button class="btn-primary" id="btnPayRental" disabled onclick="App.setupInvoiceAndPay('rental', 0)">Chọn thanh toán</button>
 </section>

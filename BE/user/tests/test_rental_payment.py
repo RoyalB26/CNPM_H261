@@ -81,3 +81,38 @@ class RentalPaymentTests(unittest.TestCase):
         result = pay_invoice(self.db, PaymentSubmitRequest(invoice_id=self.invoice['id'], method='wallet'))
         self.assertTrue(result.success)
         self.assertEqual(self.invoice['status'], 'pending')
+
+    def test_simulated_payment_completes_without_gateway_config(self):
+        with patch.dict(os.environ, {}, clear=True):
+            result = pay_invoice(self.db, PaymentSubmitRequest(
+                invoice_id=self.invoice['id'], method='wallet',
+                amount=self.invoice['total_amount'], simulate=True))
+        self.assertEqual(result.status, 'completed')
+        self.assertTrue(result.is_simulated)
+        self.assertTrue(result.transaction_id.startswith('DEMO-'))
+        self.assertEqual(self.invoice['status'], 'paid')
+        self.assertEqual(self.invoice['transaction_id'], result.transaction_id)
+        before = copy.deepcopy(self.db.__dict__)
+        with self.assertRaises(PaymentError):
+            pay_invoice(self.db, PaymentSubmitRequest(invoice_id=self.invoice['id'], method='wallet', simulate=True))
+        self.assertEqual(before, self.db.__dict__)
+
+    def test_simulation_rejects_wrong_amount_and_other_owner(self):
+        for changes in ({'amount': 1}, {'invoice_id': 'UNKNOWN'}, {'method': 'cash_guard'}):
+            with self.subTest(changes=changes):
+                before = copy.deepcopy(self.db.__dict__)
+                request = PaymentSubmitRequest.model_validate(dict(
+                    {'invoice_id': self.invoice['id'], 'method': 'wallet', 'simulate': True}, **changes))
+                with self.assertRaises(PaymentError):
+                    pay_invoice(self.db, request)
+                self.assertEqual(before, self.db.__dict__)
+        self.invoice['user_id'] = 'OTHER'
+        with self.assertRaises(PaymentError):
+            pay_invoice(self.db, PaymentSubmitRequest(invoice_id=self.invoice['id'], method='wallet', simulate=True))
+
+    def test_simulation_cannot_override_pending_gateway_payment(self):
+        pay_invoice(self.db, PaymentSubmitRequest(invoice_id=self.invoice['id'], method='wallet'))
+        before = copy.deepcopy(self.db.__dict__)
+        with self.assertRaises(PaymentError):
+            pay_invoice(self.db, PaymentSubmitRequest(invoice_id=self.invoice['id'], method='wallet', simulate=True))
+        self.assertEqual(before, self.db.__dict__)

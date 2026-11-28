@@ -184,6 +184,17 @@ def run_scenario(mode: str, directory: str) -> None:
             assert response.status_code == 200, (path, response.text)
         response = client.get(prefix + "/hubs/missing")
         assert response.status_code == 404, response.text
+        # Cả hai nhóm alias và hai màn hình lấy cùng số xe thực sự chọn đặt được.
+        for base in ('/api', prefix):
+            for path in ('/hubs', '/hubs/hub-05'):
+                response = client.get(base + path)
+                assert response.status_code == 200, response.text
+                views = response.json() if path == '/hubs' else [response.json()]
+                assert all(h['available_bikes'] == len(h['bikes']) for h in views)
+                library = next(h for h in views if h['id'] == 'hub-05')
+                assert library['available_bikes'] == 1
+                assert [b['id'] for b in library['bikes']] == ['XE-101']
+        assert db.get_hub('hub-05')['available_bikes'] == 6, 'GET không được sửa bộ đếm chung'
         assert before == storage.snapshot()
 
         # Báo cáo không hợp lệ phải trả đúng HTTP và không sinh phiếu bảo trì.
